@@ -1,0 +1,354 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Clock, FileText, Plus, Trash2, Check } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import { type CalendarEvent, type EventTodo } from '@/types'
+import { generateId, formatDate, cn } from '@/lib/utils'
+
+const COLOR_OPTIONS = [
+  { value: 'seval',  bg: 'bg-seval-400',   label: 'Purple' },
+  { value: 'mateo',  bg: 'bg-mateo-400',   label: 'Teal' },
+  { value: 'pink',   bg: 'bg-pink-400',    label: 'Pink' },
+  { value: 'yellow', bg: 'bg-yellow-400',  label: 'Yellow' },
+  { value: 'green',  bg: 'bg-emerald-400', label: 'Green' },
+] as const
+
+interface EventModalProps {
+  isOpen: boolean
+  onClose: () => void
+  date: string // YYYY-MM-DD
+  event?: CalendarEvent | null
+}
+
+export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
+  const currentUser = useAppStore(s => s.currentUser)
+  const addEvent = useAppStore(s => s.addEvent)
+  const updateEvent = useAppStore(s => s.updateEvent)
+  const deleteEvent = useAppStore(s => s.deleteEvent)
+
+  const [title, setTitle]         = useState('')
+  const [selectedDate, setDate]   = useState(date)
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime]     = useState('')
+  const [notes, setNotes]         = useState('')
+  const [color, setColor]         = useState<CalendarEvent['color']>('seval')
+  const [todos, setTodos]         = useState<EventTodo[]>([])
+  const [newTodo, setNewTodo]     = useState('')
+  const [showDelete, setShowDelete] = useState(false)
+
+  const isEdit = !!event
+
+  useEffect(() => {
+    if (event) {
+      setTitle(event.title)
+      setDate(event.date)
+      setStartTime(event.startTime ?? '')
+      setEndTime(event.endTime ?? '')
+      setNotes(event.notes ?? '')
+      setColor(event.color)
+      setTodos(event.todos ?? [])
+    } else {
+      setTitle('')
+      setDate(date)
+      setStartTime('')
+      setEndTime('')
+      setNotes('')
+      setColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+      setTodos([])
+    }
+    setShowDelete(false)
+    setNewTodo('')
+  }, [event, date, currentUser, isOpen])
+
+  function handleSave() {
+    if (!title.trim() || !currentUser) return
+    const data = {
+      title: title.trim(),
+      date: selectedDate,
+      startTime: startTime || undefined,
+      endTime: endTime || undefined,
+      notes: notes.trim() || undefined,
+      color,
+      todos: todos.length ? todos : undefined,
+      createdBy: currentUser,
+    }
+    if (isEdit && event) {
+      updateEvent(event.id, data)
+    } else {
+      addEvent(data)
+    }
+    onClose()
+  }
+
+  function handleDelete() {
+    if (event) deleteEvent(event.id)
+    onClose()
+  }
+
+  function addTodoItem() {
+    if (!newTodo.trim()) return
+    setTodos(prev => [...prev, { id: generateId(), title: newTodo.trim(), isCompleted: false }])
+    setNewTodo('')
+  }
+
+  function toggleTodo(id: string) {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t))
+  }
+
+  function removeTodo(id: string) {
+    setTodos(prev => prev.filter(t => t.id !== id))
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+          />
+
+          {/* Sheet */}
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                       max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+          >
+            <div className="px-5 pt-4 pb-10">
+              <div className="drag-handle" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-800">
+                  {isEdit ? 'Edit Event' : `New Event · ${formatDate(date, 'MMM d')}`}
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Title */}
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Event title..."
+                className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
+                           border-b-2 border-gray-100 focus:border-gray-200 pb-3 mb-5 outline-none
+                           transition-colors bg-transparent"
+                autoFocus={!isEdit}
+              />
+
+              {/* Date & Time */}
+              <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
+                    <Clock size={14} className="text-gray-400" />
+                  </div>
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={e => setDate(e.target.value)}
+                      className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8" />
+                  <div className="flex gap-3 flex-1">
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={e => setStartTime(e.target.value)}
+                      placeholder="Start"
+                      className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
+                                 outline-none shadow-card"
+                    />
+                    <span className="text-gray-300 self-center">—</span>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={e => setEndTime(e.target.value)}
+                      placeholder="End"
+                      className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
+                                 outline-none shadow-card"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex gap-3">
+                <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
+                  <FileText size={14} className="text-gray-400" />
+                </div>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Add notes..."
+                  rows={3}
+                  className="flex-1 text-sm text-gray-700 bg-transparent outline-none resize-none
+                             placeholder:text-gray-300"
+                />
+              </div>
+
+              {/* Color picker */}
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Color</p>
+                <div className="flex gap-2">
+                  {COLOR_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setColor(opt.value as CalendarEvent['color'])}
+                      className={cn(
+                        'w-9 h-9 rounded-full transition-transform active:scale-90',
+                        opt.bg,
+                        color === opt.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Todos */}
+              <div className="mb-6">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Checklist
+                </p>
+                <div className="space-y-2">
+                  {todos.map(todo => (
+                    <div key={todo.id} className="flex items-center gap-3 group">
+                      <button
+                        onClick={() => toggleTodo(todo.id)}
+                        className={cn(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                          todo.isCompleted
+                            ? 'border-emerald-400 bg-emerald-400'
+                            : 'border-gray-300'
+                        )}
+                      >
+                        {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
+                      </button>
+                      <span
+                        className={cn(
+                          'flex-1 text-sm',
+                          todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                        )}
+                      >
+                        {todo.title}
+                      </span>
+                      <button
+                        onClick={() => removeTodo(todo.id)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
+                                   transition-all"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-dashed border-gray-200 shrink-0" />
+                    <input
+                      type="text"
+                      value={newTodo}
+                      onChange={e => setNewTodo(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addTodoItem()}
+                      placeholder="Add item..."
+                      className="flex-1 text-sm text-gray-600 placeholder:text-gray-300 outline-none
+                                 bg-transparent"
+                    />
+                    {newTodo && (
+                      <button
+                        onClick={addTodoItem}
+                        className="text-gray-400 active:text-gray-600"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <button
+                onClick={handleSave}
+                disabled={!title.trim()}
+                className="btn-primary mb-3 disabled:opacity-40"
+                style={{
+                  background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)',
+                }}
+              >
+                {isEdit ? 'Save Changes' : 'Add Event'}
+              </button>
+
+              {isEdit && (
+                <button
+                  onClick={() => setShowDelete(true)}
+                  className="w-full py-3 rounded-2xl text-sm font-medium text-red-400
+                             active:bg-red-50 transition-colors"
+                >
+                  Delete Event
+                </button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Delete confirm */}
+          <AnimatePresence>
+            {showDelete && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] flex items-end justify-center p-4"
+              >
+                <div
+                  className="absolute inset-0 bg-black/40"
+                  onClick={() => setShowDelete(false)}
+                />
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+                >
+                  <div className="text-4xl mb-3">🗑️</div>
+                  <h3 className="font-bold text-gray-800 mb-1">Delete Event?</h3>
+                  <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDelete(false)}
+                      className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
