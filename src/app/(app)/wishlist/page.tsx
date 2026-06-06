@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Check, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, Check, X } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { type WishlistCategory } from '@/types'
+import { type WishlistItem, type WishlistCategory } from '@/types'
 import { WISHLIST_CATEGORY_CONFIG, cn } from '@/lib/utils'
 
 const CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [
@@ -13,10 +13,11 @@ const CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [
 ][]
 
 export default function WishlistPage() {
-  const currentUser       = useAppStore(s => s.currentUser)!
-  const wishlistItems     = useAppStore(s => s.wishlistItems)
-  const addWishlistItem   = useAppStore(s => s.addWishlistItem)
+  const currentUser        = useAppStore(s => s.currentUser)!
+  const wishlistItems      = useAppStore(s => s.wishlistItems)
+  const addWishlistItem    = useAppStore(s => s.addWishlistItem)
   const toggleWishlistItem = useAppStore(s => s.toggleWishlistItem)
+  const updateWishlistItem = useAppStore(s => s.updateWishlistItem)
   const deleteWishlistItem = useAppStore(s => s.deleteWishlistItem)
 
   const [showForm, setShowForm]         = useState(false)
@@ -24,6 +25,7 @@ export default function WishlistPage() {
   const [newCategory, setNewCategory]   = useState<WishlistCategory>('date')
   const [newNotes, setNewNotes]         = useState('')
   const [activeFilter, setActiveFilter] = useState<WishlistCategory | 'all'>('all')
+  const [detailItem, setDetailItem]     = useState<WishlistItem | null>(null)
 
   const isSeval      = currentUser === 'seval'
   const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
@@ -34,12 +36,11 @@ export default function WishlistPage() {
     addWishlistItem(newTitle.trim(), newCategory, newNotes.trim() || undefined)
     setNewTitle('')
     setNewNotes('')
+    setNewCategory('date')
     setShowForm(false)
   }
 
-  const filtered = wishlistItems.filter(
-    i => activeFilter === 'all' || i.category === activeFilter
-  )
+  const filtered  = wishlistItems.filter(i => activeFilter === 'all' || i.category === activeFilter)
   const pending   = filtered.filter(i => !i.isCompleted)
   const completed = filtered.filter(i => i.isCompleted)
 
@@ -48,8 +49,8 @@ export default function WishlistPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Wishlist</h1>
-          <p className="text-sm text-gray-400 mt-0.5">things to do together</p>
+          <h1 className="text-2xl font-bold text-gray-800">Our Wishes</h1>
+          <p className="text-sm text-gray-400 mt-0.5">dreams waiting to happen</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -75,13 +76,12 @@ export default function WishlistPage() {
                 type="text"
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
-                placeholder="What do you want to do?"
+                placeholder="What do you wish for?"
                 autoFocus
                 className="w-full text-sm text-gray-700 placeholder:text-gray-400 bg-transparent
                            outline-none border-b border-gray-200 pb-2 mb-3"
               />
-
-              {/* Category selector */}
+              {/* Category picker */}
               <div className="flex gap-2 flex-wrap mb-3">
                 {CATEGORIES.map(([cat, cfg]) => (
                   <button
@@ -89,9 +89,7 @@ export default function WishlistPage() {
                     onClick={() => setNewCategory(cat)}
                     className={cn(
                       'flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-                      newCategory === cat
-                        ? 'text-white shadow-sm'
-                        : 'bg-white text-gray-500'
+                      newCategory === cat ? 'text-white shadow-sm' : 'bg-white text-gray-500'
                     )}
                     style={newCategory === cat ? { background: primaryColor } : {}}
                   >
@@ -100,7 +98,6 @@ export default function WishlistPage() {
                   </button>
                 ))}
               </div>
-
               <input
                 type="text"
                 value={newNotes}
@@ -109,10 +106,9 @@ export default function WishlistPage() {
                 className="w-full text-xs text-gray-500 placeholder:text-gray-300 bg-transparent
                            outline-none mb-3"
               />
-
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setShowForm(false); setNewTitle(''); setNewNotes('') }}
+                  onClick={() => { setShowForm(false); setNewTitle(''); setNewNotes(''); setNewCategory('date') }}
                   className="flex-1 py-2.5 rounded-2xl bg-white text-gray-500 text-sm font-medium"
                 >
                   Cancel
@@ -120,8 +116,7 @@ export default function WishlistPage() {
                 <button
                   onClick={handleAdd}
                   disabled={!newTitle.trim()}
-                  className="flex-1 py-2.5 rounded-2xl text-white text-sm font-semibold
-                             disabled:opacity-40"
+                  className="flex-1 py-2.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
                   style={{ background: primaryColor }}
                 >
                   Add
@@ -132,7 +127,7 @@ export default function WishlistPage() {
         )}
       </AnimatePresence>
 
-      {/* Category filter */}
+      {/* Category filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
         <button
           onClick={() => setActiveFilter('all')}
@@ -168,16 +163,17 @@ export default function WishlistPage() {
           className="flex flex-col items-center justify-center pt-16 text-center"
         >
           <div className="text-5xl mb-4">✨</div>
-          <p className="font-semibold text-gray-600 mb-1">Your wishlist is empty</p>
-          <p className="text-sm text-gray-400">Add restaurants, movies, date ideas...</p>
+          <p className="font-semibold text-gray-600 mb-1">Your wishlist awaits ✨</p>
+          <p className="text-sm text-gray-400">Add wishes, date ideas, dreams...</p>
         </motion.div>
       ) : (
         <>
           <AnimatePresence mode="popLayout">
             {pending.map(item => (
-              <WishlistItemCard
+              <WishlistCard
                 key={item.id}
                 item={item}
+                onTap={() => setDetailItem(item)}
                 onToggle={() => toggleWishlistItem(item.id)}
                 onDelete={() => deleteWishlistItem(item.id)}
                 primaryColor={primaryColor}
@@ -188,13 +184,14 @@ export default function WishlistPage() {
           {completed.length > 0 && (
             <div className="mt-6">
               <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3">
-                Done ({completed.length})
+                Made real ✨ ({completed.length})
               </p>
               <AnimatePresence mode="popLayout">
                 {completed.map(item => (
-                  <WishlistItemCard
+                  <WishlistCard
                     key={item.id}
                     item={item}
+                    onTap={() => setDetailItem(item)}
                     onToggle={() => toggleWishlistItem(item.id)}
                     onDelete={() => deleteWishlistItem(item.id)}
                     primaryColor={primaryColor}
@@ -206,14 +203,36 @@ export default function WishlistPage() {
           )}
         </>
       )}
+
+      {/* Detail / edit modal */}
+      <AnimatePresence>
+        {detailItem && (
+          <WishDetailModal
+            item={detailItem}
+            primaryColor={primaryColor}
+            lightBg={lightBg}
+            onClose={() => setDetailItem(null)}
+            onSave={updates => {
+              updateWishlistItem(detailItem.id, updates)
+              setDetailItem(null)
+            }}
+            onDelete={() => {
+              deleteWishlistItem(detailItem.id)
+              setDetailItem(null)
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-function WishlistItemCard({
-  item, onToggle, onDelete, primaryColor, isDone,
+/* ─── Wishlist card ─────────────────────────────────────────────────────────── */
+function WishlistCard({
+  item, onTap, onToggle, onDelete, primaryColor, isDone,
 }: {
-  item: ReturnType<typeof useAppStore.getState>['wishlistItems'][number]
+  item: WishlistItem
+  onTap: () => void
   onToggle: () => void
   onDelete: () => void
   primaryColor: string
@@ -227,21 +246,24 @@ function WishlistItemCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex items-start gap-3 bg-white rounded-2xl p-4 mb-2 shadow-card group"
+      onClick={onTap}
+      className="flex items-start gap-3 bg-white rounded-2xl p-4 mb-2 shadow-card group
+                 active:scale-[0.98] transition-transform cursor-pointer"
     >
       <button
-        onClick={onToggle}
+        onClick={e => { e.stopPropagation(); onToggle() }}
         className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5
                    transition-all active:scale-90"
         style={{
           borderColor: isDone ? primaryColor : '#d1d5db',
-          background: isDone ? primaryColor : 'transparent',
+          background:  isDone ? primaryColor : 'transparent',
         }}
       >
         {isDone && <Check size={13} color="white" strokeWidth={3} />}
       </button>
 
       <div className="flex-1 min-w-0">
+        {/* Category badge */}
         <div className="flex items-center gap-1.5 mb-0.5">
           <span className="text-xs">{cat.emoji}</span>
           <span className="text-[10px] text-gray-400 font-medium">{cat.label}</span>
@@ -250,17 +272,183 @@ function WishlistItemCard({
           {item.title}
         </p>
         {item.notes && (
-          <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">{item.notes}</p>
         )}
       </div>
 
       <button
-        onClick={onDelete}
+        onClick={e => { e.stopPropagation(); onDelete() }}
         className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
                    transition-all shrink-0 mt-0.5"
       >
         <Trash2 size={15} />
       </button>
     </motion.div>
+  )
+}
+
+/* ─── Detail / edit modal ────────────────────────────────────────────────────── */
+function WishDetailModal({
+  item, primaryColor, lightBg, onClose, onSave, onDelete,
+}: {
+  item: WishlistItem
+  primaryColor: string
+  lightBg: string
+  onClose: () => void
+  onSave: (updates: Partial<WishlistItem>) => void
+  onDelete: () => void
+}) {
+  const [title, setTitle]       = useState(item.title)
+  const [category, setCategory] = useState<WishlistCategory>(item.category)
+  const [notes, setNotes]       = useState(item.notes ?? '')
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+
+  const cat = WISHLIST_CATEGORY_CONFIG[category]
+  const hasChanges =
+    title !== item.title || category !== item.category || notes !== (item.notes ?? '')
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+
+      {/* Sheet */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
+      >
+        <div className="px-5 pt-4 pb-10">
+          <div className="drag-handle" />
+
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{cat.emoji}</span>
+              <span className="text-sm font-medium text-gray-400">{cat.label}</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Title */}
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Wish title..."
+            className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
+                       border-b-2 border-gray-100 focus:border-gray-200 pb-3 mb-5 outline-none
+                       transition-colors bg-transparent"
+            autoFocus
+          />
+
+          {/* Category */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+          <div className="flex gap-2 flex-wrap mb-5">
+            {CATEGORIES.map(([cat, cfg]) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                  category === cat ? 'text-white shadow-sm' : 'bg-gray-50 text-gray-500'
+                )}
+                style={category === cat ? { background: primaryColor } : {}}
+              >
+                <span>{cfg.emoji}</span>
+                {cfg.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Notes / content */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notes</p>
+          <div className={cn('rounded-2xl p-4 mb-5', lightBg)}>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Add details, links, ideas..."
+              rows={5}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent
+                         outline-none resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          {hasChanges && (
+            <motion.button
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => onSave({ title: title.trim(), category, notes: notes.trim() || undefined })}
+              disabled={!title.trim()}
+              className="w-full py-4 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40
+                         transition-opacity"
+              style={{ background: primaryColor }}
+            >
+              Save Changes
+            </motion.button>
+          )}
+
+          <button
+            onClick={() => setShowConfirmDelete(true)}
+            className="w-full py-3 rounded-2xl text-sm font-medium text-red-400 active:bg-red-50 transition-colors"
+          >
+            Delete Wish
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Delete confirm */}
+      <AnimatePresence>
+        {showConfirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+          >
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmDelete(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+            >
+              <div className="text-4xl mb-3">🗑️</div>
+              <h3 className="font-bold text-gray-800 mb-1">Delete this wish?</h3>
+              <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDelete(false)}
+                  className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onDelete}
+                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

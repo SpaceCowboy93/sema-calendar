@@ -9,6 +9,7 @@ import { USERS, type UserName } from '@/types'
 export default function LandingPage() {
   const router = useRouter()
   const currentUser = useAppStore(s => s.currentUser)
+  const setCurrentUser = useAppStore(s => s.setCurrentUser)
 
   useEffect(() => {
     if (currentUser) {
@@ -17,7 +18,8 @@ export default function LandingPage() {
   }, [currentUser, router])
 
   function handleSelect(user: UserName) {
-    router.push(`/auth/${user}`)
+    setCurrentUser(user)
+    router.replace('/calendar')
   }
 
   return (
@@ -103,7 +105,7 @@ export default function LandingPage() {
                     className="text-xs font-medium mt-0.5"
                     style={{ color: isSeval ? '#8b5cf6' : '#14b8a6' }}
                   >
-                    tap to sign in
+                    tap to enter
                   </p>
                 </div>
               </motion.button>

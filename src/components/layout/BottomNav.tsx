@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Heart, CheckSquare, Sparkles, Users } from 'lucide-react'
+import { CalendarDays, Heart, CheckSquare, Sparkles, Users, Target } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/calendar',  label: 'Calendar', icon: CalendarDays },
-  { href: '/notes',     label: 'Notes',    icon: Heart },
-  { href: '/todos',     label: 'Todos',    icon: CheckSquare },
+  { href: '/calendar',  label: 'Our Time', icon: CalendarDays },
+  { href: '/todos',     label: 'Plans',    icon: CheckSquare },
+  { href: '/goals',     label: 'Dreams',   icon: Target },
   { href: '/wishlist',  label: 'Wishes',   icon: Sparkles },
   { href: '/us',        label: 'Us',       icon: Users },
 ]

@@ -1,43 +1,46 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Trash2, Check } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Palette } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
 
-const COLOR_OPTIONS = [
-  { value: 'seval',  bg: 'bg-seval-400',   label: 'Purple' },
-  { value: 'mateo',  bg: 'bg-mateo-400',   label: 'Teal' },
-  { value: 'pink',   bg: 'bg-pink-400',    label: 'Pink' },
-  { value: 'yellow', bg: 'bg-yellow-400',  label: 'Yellow' },
-  { value: 'green',  bg: 'bg-emerald-400', label: 'Green' },
+export const COLOR_OPTIONS = [
+  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
+  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
+  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
+  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
+  { value: 'green',  hex: '#34d399', label: 'Green'  },
 ] as const
 
 interface EventModalProps {
   isOpen: boolean
   onClose: () => void
-  date: string // YYYY-MM-DD
+  date: string
   event?: CalendarEvent | null
+  initialColor?: CalendarEvent['color']
 }
 
-export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
+export function EventModal({ isOpen, onClose, date, event, initialColor }: EventModalProps) {
   const currentUser = useAppStore(s => s.currentUser)
-  const addEvent = useAppStore(s => s.addEvent)
+  const addEvent    = useAppStore(s => s.addEvent)
   const updateEvent = useAppStore(s => s.updateEvent)
   const deleteEvent = useAppStore(s => s.deleteEvent)
 
-  const [title, setTitle]         = useState('')
-  const [selectedDate, setDate]   = useState(date)
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime]     = useState('')
-  const [notes, setNotes]         = useState('')
-  const [color, setColor]         = useState<CalendarEvent['color']>('seval')
-  const [todos, setTodos]         = useState<EventTodo[]>([])
-  const [newTodo, setNewTodo]     = useState('')
+  const [title, setTitle]           = useState('')
+  const [selectedDate, setDate]     = useState(date)
+  const [startTime, setStartTime]   = useState('')
+  const [endTime, setEndTime]       = useState('')
+  const [notes, setNotes]           = useState('')
+  const [color, setColor]           = useState<CalendarEvent['color']>('seval')
+  const [todos, setTodos]           = useState<EventTodo[]>([])
+  const [newTodo, setNewTodo]       = useState('')
   const [showDelete, setShowDelete] = useState(false)
+  const [colorPopup, setColorPopup] = useState(false)
 
+  const colorBtnRef = useRef<HTMLButtonElement>(null)
   const isEdit = !!event
 
   useEffect(() => {
@@ -55,12 +58,13 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
       setStartTime('')
       setEndTime('')
       setNotes('')
-      setColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+      setColor(initialColor ?? (currentUser === 'mateo' ? 'mateo' : 'seval'))
       setTodos([])
     }
     setShowDelete(false)
+    setColorPopup(false)
     setNewTodo('')
-  }, [event, date, currentUser, isOpen])
+  }, [event, date, currentUser, isOpen, initialColor])
 
   function handleSave() {
     if (!title.trim() || !currentUser) return
@@ -74,11 +78,8 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
       todos: todos.length ? todos : undefined,
       createdBy: currentUser,
     }
-    if (isEdit && event) {
-      updateEvent(event.id, data)
-    } else {
-      addEvent(data)
-    }
+    if (isEdit && event) updateEvent(event.id, data)
+    else addEvent(data)
     onClose()
   }
 
@@ -100,6 +101,8 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
   function removeTodo(id: string) {
     setTodos(prev => prev.filter(t => t.id !== id))
   }
+
+  const activeColor = COLOR_OPTIONS.find(c => c.value === color)
 
   return (
     <AnimatePresence>
@@ -139,17 +142,81 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                 </button>
               </div>
 
-              {/* Title */}
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Event title..."
-                className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
-                           border-b-2 border-gray-100 focus:border-gray-200 pb-3 mb-5 outline-none
-                           transition-colors bg-transparent"
-                autoFocus={!isEdit}
-              />
+              {/* Title + color row */}
+              <div className="flex items-end gap-3 mb-5">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Event title..."
+                  className="flex-1 text-xl font-semibold text-gray-800 placeholder:text-gray-300
+                             border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
+                             transition-colors bg-transparent"
+                  autoFocus={!isEdit}
+                />
+
+                {/* Color picker button */}
+                <div className="relative pb-1">
+                  <button
+                    ref={colorBtnRef}
+                    onClick={() => setColorPopup(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gray-50
+                               hover:bg-gray-100 transition-colors active:scale-95 shrink-0"
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full shrink-0"
+                      style={{ background: activeColor?.hex }}
+                    />
+                    <span className="text-xs font-medium text-gray-500">{activeColor?.label}</span>
+                    <Palette size={13} className="text-gray-400" />
+                  </button>
+
+                  {/* Color popup */}
+                  <AnimatePresence>
+                    {colorPopup && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[55]"
+                          onClick={() => setColorPopup(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 bottom-full mb-2 z-[56] bg-white rounded-2xl
+                                     shadow-modal p-3 min-w-[160px]"
+                        >
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                            Category color
+                          </p>
+                          {COLOR_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => { setColor(opt.value as CalendarEvent['color']); setColorPopup(false) }}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
+                                color === opt.value ? 'bg-gray-50' : 'hover:bg-gray-50'
+                              )}
+                            >
+                              <div
+                                className="w-5 h-5 rounded-full shrink-0"
+                                style={{ background: opt.hex }}
+                              />
+                              <span className="text-sm text-gray-700 flex-1 text-left">
+                                {opt.label}
+                              </span>
+                              {color === opt.value && (
+                                <Check size={13} className="text-gray-400 shrink-0" />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
 
               {/* Date & Time */}
               <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
@@ -157,14 +224,12 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                   <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
                     <Clock size={14} className="text-gray-400" />
                   </div>
-                  <div className="flex-1 flex gap-2">
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={e => setDate(e.target.value)}
-                      className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setDate(e.target.value)}
+                    className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                  />
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8" />
@@ -173,7 +238,6 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                       type="time"
                       value={startTime}
                       onChange={e => setStartTime(e.target.value)}
-                      placeholder="Start"
                       className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
                                  outline-none shadow-card"
                     />
@@ -182,7 +246,6 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                       type="time"
                       value={endTime}
                       onChange={e => setEndTime(e.target.value)}
-                      placeholder="End"
                       className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
                                  outline-none shadow-card"
                     />
@@ -205,25 +268,7 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                 />
               </div>
 
-              {/* Color picker */}
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Color</p>
-                <div className="flex gap-2">
-                  {COLOR_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setColor(opt.value as CalendarEvent['color'])}
-                      className={cn(
-                        'w-9 h-9 rounded-full transition-transform active:scale-90',
-                        opt.bg,
-                        color === opt.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Todos */}
+              {/* Checklist */}
               <div className="mb-6">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Checklist
@@ -235,19 +280,15 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                         onClick={() => toggleTodo(todo.id)}
                         className={cn(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-                          todo.isCompleted
-                            ? 'border-emerald-400 bg-emerald-400'
-                            : 'border-gray-300'
+                          todo.isCompleted ? 'border-emerald-400 bg-emerald-400' : 'border-gray-300'
                         )}
                       >
                         {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
                       </button>
-                      <span
-                        className={cn(
-                          'flex-1 text-sm',
-                          todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
-                        )}
-                      >
+                      <span className={cn(
+                        'flex-1 text-sm',
+                        todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                      )}>
                         {todo.title}
                       </span>
                       <button
@@ -272,10 +313,7 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                                  bg-transparent"
                     />
                     {newTodo && (
-                      <button
-                        onClick={addTodoItem}
-                        className="text-gray-400 active:text-gray-600"
-                      >
+                      <button onClick={addTodoItem} className="text-gray-400 active:text-gray-600">
                         <Plus size={16} />
                       </button>
                     )}
@@ -283,14 +321,12 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* Save */}
               <button
                 onClick={handleSave}
                 disabled={!title.trim()}
                 className="btn-primary mb-3 disabled:opacity-40"
-                style={{
-                  background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)',
-                }}
+                style={{ background: `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)` }}
               >
                 {isEdit ? 'Save Changes' : 'Add Event'}
               </button>
@@ -316,10 +352,7 @@ export function EventModal({ isOpen, onClose, date, event }: EventModalProps) {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[60] flex items-end justify-center p-4"
               >
-                <div
-                  className="absolute inset-0 bg-black/40"
-                  onClick={() => setShowDelete(false)}
-                />
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowDelete(false)} />
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}

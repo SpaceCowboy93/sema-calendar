@@ -17,6 +17,8 @@ export const OTHER_USER: Record<UserName, UserName> = {
   mateo: 'seval',
 }
 
+export type EventColor = 'seval' | 'mateo' | 'pink' | 'yellow' | 'green'
+
 export interface CalendarEvent {
   id: string
   title: string
@@ -25,11 +27,13 @@ export interface CalendarEvent {
   endTime?: string // HH:MM
   notes?: string
   emoji?: string
-  color: 'seval' | 'mateo' | 'pink' | 'yellow' | 'green'
+  color: EventColor
   todos?: EventTodo[]
   createdBy: UserName
   createdAt: string
   updatedAt: string
+  linkedTodoId?: string
+  linkedGoalId?: string
 }
 
 export interface EventTodo {
@@ -41,10 +45,15 @@ export interface EventTodo {
 export interface SharedTodo {
   id: string
   title: string
+  items?: string[]       // sub-items / checklist entries
+  notes?: string         // free-form notes (not synced to calendar)
   isCompleted: boolean
   completedBy?: UserName
   createdBy: UserName
   createdAt: string
+  date?: string          // YYYY-MM-DD (optional, syncs to calendar)
+  color?: EventColor
+  linkedEventId?: string // ID of the linked CalendarEvent (if any)
 }
 
 export type MoodType = 'happy' | 'relaxed' | 'tired' | 'sad' | 'stressed'
@@ -82,6 +91,38 @@ export interface Countdown {
   date: string // YYYY-MM-DD
   emoji: string
   createdBy: UserName
+}
+
+export type GoalCategory =
+  | 'travel'
+  | 'money'
+  | 'fitness'
+  | 'life'
+  | 'learning'
+  | 'hobbies'
+  | 'challenges'
+
+export interface Goal {
+  id: string
+  categoryId: GoalCategory
+  title: string
+  notes?: string
+  targetDate?: string        // YYYY-MM-DD
+  progressCurrent: number    // how many steps done
+  progressTarget: number     // 0 = simple done/not-done; >0 = counter goal
+  isCompleted: boolean
+  createdBy: UserName
+  createdAt: string
+  linkedEventId?: string     // ID of the linked CalendarEvent (if targetDate is set)
+}
+
+export interface PartnerNote {
+  id: string
+  from: UserName
+  to: UserName
+  content: string
+  createdAt: string
+  isRead: boolean
 }
 
 export interface Memory {
