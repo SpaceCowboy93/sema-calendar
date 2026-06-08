@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
+import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const currentUser = useAppStore(s => s.currentUser)
+  useSupabaseSync()
 
   useEffect(() => {
     if (currentUser === null) {
@@ -25,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <main className="pb-24">
         {children}
       </main>
