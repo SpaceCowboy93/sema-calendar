@@ -6,6 +6,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
+import { SyncStatusDot } from '@/components/SyncStatusDot'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -33,6 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
       <BottomNav />
       <PartnerNoteNotification />
+      <SyncStatusDot />
     </div>
   )
 }
