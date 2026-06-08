@@ -4,10 +4,11 @@ import { useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 
-const COUPLE_ID = 'sema'
+const COUPLE_ID  = 'sema'
 const DEBOUNCE_MS = 1200
+const POLL_MS     = 8_000   // polling fallback — works even without realtime
 
-// currentUser is per-device — never sync it to the shared database
+// currentUser is per-device, never shared
 const SKIP_KEYS = new Set(['currentUser'])
 
 function getSyncableState(state: Record<string, unknown>) {
@@ -16,48 +17,69 @@ function getSyncableState(state: Record<string, unknown>) {
   )
 }
 
+async function fetchRemote() {
+  const { data, error } = await supabase
+    .from('couple_state')
+    .select('state, updated_at')
+    .eq('id', COUPLE_ID)
+    .maybeSingle()
+  if (error) { console.error('[Sync] fetch failed:', error.message); return null }
+  return data as { state: Record<string, unknown>; updated_at: string } | null
+}
+
+async function writeRemote(syncable: Record<string, unknown>) {
+  const updated_at = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('couple_state')
+    .upsert({ id: COUPLE_ID, state: syncable, updated_at })
+    .select('updated_at')
+    .single()
+  if (error) { console.error('[Sync] write failed:', error.message); return null }
+  return data?.updated_at ?? null
+}
+
 export function useSupabaseSync() {
-  const justWrote        = useRef(false)
-  const justWroteTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isMergingRemote  = useRef(false)
-  const debounceRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMerging      = useRef(false)   // true while we're applying remote state
+  const justWrote      = useRef(false)   // true for 5s after we write, to skip echo
+  const justWroteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastRemoteAt   = useRef<string | null>(null)  // updated_at of last applied remote
 
-  // ── 1. Hydrate from Supabase on mount ──────────────────────────────────────
+  function applyRemote(state: Record<string, unknown>, updatedAt: string) {
+    lastRemoteAt.current = updatedAt
+    isMerging.current    = true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useAppStore.setState(state as any)
+    isMerging.current = false
+  }
+
+  // ── 1. Hydrate from Supabase on first load ─────────────────────────────────
   useEffect(() => {
-    async function hydrate() {
-      const { data, error } = await supabase
-        .from('couple_state')
-        .select('state')
-        .eq('id', COUPLE_ID)
-        .maybeSingle()
-
-      if (!error && data?.state && Object.keys(data.state as object).length > 0) {
-        isMergingRemote.current = true
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        useAppStore.setState(data.state as any)
-        isMergingRemote.current = false
+    fetchRemote().then(data => {
+      if (data?.state && Object.keys(data.state).length > 0) {
+        applyRemote(data.state, data.updated_at)
       }
-    }
-    hydrate()
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── 2. Write to Supabase on any state change (debounced) ───────────────────
+  // ── 2. Write to Supabase on any Zustand state change (debounced) ───────────
   useEffect(() => {
     const unsub = useAppStore.subscribe((state) => {
-      if (isMergingRemote.current) return
+      if (isMerging.current) return   // don't write what we just read
 
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(async () => {
         const syncable = getSyncableState(state as unknown as Record<string, unknown>)
 
-        // Flag so we ignore the echo that comes back from the real-time subscription
+        // Suppress echo for 5 seconds after writing
         justWrote.current = true
         if (justWroteTimer.current) clearTimeout(justWroteTimer.current)
-        justWroteTimer.current = setTimeout(() => { justWrote.current = false }, 3000)
+        justWroteTimer.current = setTimeout(() => { justWrote.current = false }, 5000)
 
-        await supabase
-          .from('couple_state')
-          .upsert({ id: COUPLE_ID, state: syncable, updated_at: new Date().toISOString() })
+        const savedAt = await writeRemote(syncable)
+        if (savedAt) lastRemoteAt.current = savedAt
+        else justWrote.current = false   // write failed, allow retries
       }, DEBOUNCE_MS)
     })
 
@@ -66,30 +88,39 @@ export function useSupabaseSync() {
       if (debounceRef.current)    clearTimeout(debounceRef.current)
       if (justWroteTimer.current) clearTimeout(justWroteTimer.current)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── 3. Real-time subscription — apply changes from the other device ────────
+  // ── 3. Polling fallback every 8s (reliable even without realtime) ──────────
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      if (justWrote.current) return   // skip if we just wrote
+
+      const data = await fetchRemote()
+      if (!data?.state) return
+      if (data.updated_at === lastRemoteAt.current) return   // nothing new
+
+      applyRemote(data.state, data.updated_at)
+    }, POLL_MS)
+
+    return () => clearInterval(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 4. Real-time subscription (instant when properly configured) ───────────
   useEffect(() => {
     const channel = supabase
-      .channel('couple_state_changes')
+      .channel('couple_state_rt')
       .on(
         'postgres_changes',
-        {
-          event:  'UPDATE',
-          schema: 'public',
-          table:  'couple_state',
-          filter: `id=eq.${COUPLE_ID}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: `id=eq.${COUPLE_ID}` },
         (payload) => {
-          if (justWrote.current) return // skip our own write echoed back
+          if (justWrote.current) return   // skip our own echo
 
-          const remoteState = (payload.new as { state: Record<string, unknown> }).state
-          if (!remoteState) return
+          const remote = payload.new as { state: Record<string, unknown>; updated_at: string }
+          if (!remote?.state || remote.updated_at === lastRemoteAt.current) return
 
-          isMergingRemote.current = true
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          useAppStore.setState(remoteState as any)
-          isMergingRemote.current = false
+          applyRemote(remote.state, remote.updated_at)
         }
       )
       .subscribe()

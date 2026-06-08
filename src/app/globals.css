@@ -23,11 +23,10 @@ body {
   overscroll-behavior: none;
 }
 
-/* Prevent horizontal scroll — only on body, NOT html (iOS Safari bug if both) */
+/* Body itself doesn't scroll — the <main> inside the layout is the scroll container */
 body {
-  overflow-x: hidden;
+  overflow: hidden;
   max-width: 100vw;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Safe area padding for notched phones */

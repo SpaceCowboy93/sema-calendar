@@ -27,8 +27,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen">
-      <main className="pb-24">
+    <div className="h-dvh overflow-hidden">
+      <main className="h-full overflow-y-auto overscroll-none pb-20">
         {children}
       </main>
       <BottomNav />
