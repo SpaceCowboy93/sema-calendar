@@ -29,6 +29,7 @@ export interface CalendarEvent {
   emoji?: string
   color: EventColor
   todos?: EventTodo[]
+  photos?: string[] // Supabase Storage public URLs
   createdBy: UserName
   createdAt: string
   updatedAt: string

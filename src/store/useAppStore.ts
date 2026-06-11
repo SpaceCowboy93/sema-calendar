@@ -10,6 +10,7 @@ import {
   OTHER_USER,
 } from '@/types'
 import { generateId, getTodayString } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 interface AppState {
   // Session
@@ -21,6 +22,7 @@ interface AppState {
   addEvent: (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt' | 'linkedTodoId'>) => void
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   deleteEvent: (id: string) => void
+  uploadEventPhoto: (eventId: string, file: File) => Promise<void>
 
   // Todos
   todos: SharedTodo[]
@@ -163,6 +165,23 @@ export const useAppStore = create<AppState>()(
               : s.goals,
           }
         }),
+
+      uploadEventPhoto: async (eventId, file) => {
+        const path = `${eventId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+        const { data, error } = await supabase.storage
+          .from('event-photos')
+          .upload(path, file, { upsert: false })
+        if (error || !data) return
+        const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(data.path)
+        const url = urlData.publicUrl
+        set(s => ({
+          events: s.events.map(e =>
+            e.id === eventId
+              ? { ...e, photos: [...(e.photos ?? []), url], updatedAt: new Date().toISOString() }
+              : e
+          ),
+        }))
+      },
 
       // ── Todos ───────────────────────────────────────────────────────────────
       todos: [],

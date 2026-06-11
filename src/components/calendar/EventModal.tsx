@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Palette } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Palette, Camera } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
@@ -24,10 +24,11 @@ interface EventModalProps {
 }
 
 export function EventModal({ isOpen, onClose, date, event, initialColor }: EventModalProps) {
-  const currentUser = useAppStore(s => s.currentUser)
-  const addEvent    = useAppStore(s => s.addEvent)
-  const updateEvent = useAppStore(s => s.updateEvent)
-  const deleteEvent = useAppStore(s => s.deleteEvent)
+  const currentUser       = useAppStore(s => s.currentUser)
+  const addEvent          = useAppStore(s => s.addEvent)
+  const updateEvent       = useAppStore(s => s.updateEvent)
+  const deleteEvent       = useAppStore(s => s.deleteEvent)
+  const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
 
   const [title, setTitle]           = useState('')
   const [selectedDate, setDate]     = useState(date)
@@ -39,8 +40,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [newTodo, setNewTodo]       = useState('')
   const [showDelete, setShowDelete] = useState(false)
   const [colorPopup, setColorPopup] = useState(false)
+  const [photos, setPhotos]         = useState<string[]>([])
+  const [uploading, setUploading]   = useState(false)
 
-  const colorBtnRef = useRef<HTMLButtonElement>(null)
+  const colorBtnRef  = useRef<HTMLButtonElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const isEdit = !!event
 
   useEffect(() => {
@@ -52,6 +56,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setNotes(event.notes ?? '')
       setColor(event.color)
       setTodos(event.todos ?? [])
+      setPhotos(event.photos ?? [])
     } else {
       setTitle('')
       setDate(date)
@@ -60,10 +65,12 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setNotes('')
       setColor(initialColor ?? (currentUser === 'mateo' ? 'mateo' : 'seval'))
       setTodos([])
+      setPhotos([])
     }
     setShowDelete(false)
     setColorPopup(false)
     setNewTodo('')
+    setUploading(false)
   }, [event, date, currentUser, isOpen, initialColor])
 
   function handleSave() {
@@ -75,11 +82,23 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       notes: notes.trim() || undefined,
       color,
       todos: todos.length ? todos : undefined,
+      photos: photos.length ? photos : undefined,
       createdBy: currentUser,
     }
     if (isEdit && event) updateEvent(event.id, data)
     else addEvent(data)
     onClose()
+  }
+
+  async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !event) return
+    setUploading(true)
+    await uploadEventPhoto(event.id, file)
+    const updated = useAppStore.getState().events.find(ev => ev.id === event.id)
+    if (updated?.photos) setPhotos(updated.photos)
+    setUploading(false)
+    if (e.target) e.target.value = ''
   }
 
   function handleDelete() {
@@ -310,6 +329,43 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   </div>
                 </div>
               </div>
+
+              {/* Photos */}
+              {isEdit && (
+                <div className="mb-6">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Photos
+                  </p>
+                  {photos.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mb-3">
+                      {photos.map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          className="w-20 h-20 rounded-2xl object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                  />
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50
+                               text-sm text-gray-500 font-medium active:bg-gray-100 disabled:opacity-50"
+                  >
+                    <Camera size={15} className="text-gray-400" />
+                    {uploading ? 'Uploading...' : 'Add photo'}
+                  </button>
+                </div>
+              )}
 
               {/* Save */}
               <button
