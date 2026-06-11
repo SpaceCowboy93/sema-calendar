@@ -13,13 +13,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (currentUser) {
-      router.replace('/calendar')
+      router.replace('/together')
     }
   }, [currentUser, router])
 
   function handleSelect(user: UserName) {
     setCurrentUser(user)
-    router.replace('/calendar')
+    router.replace('/together')
   }
 
   return (
