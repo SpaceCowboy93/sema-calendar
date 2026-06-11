@@ -8,21 +8,32 @@ import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent } from '@/types'
 import { EventModal } from '@/components/calendar/EventModal'
 import {
-  MOOD_CONFIG, getCalendarDays, toDateString, formatTime,
+  MOOD_CONFIG, WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
   getTodayString, cn, EVENT_COLOR_CLASS,
 } from '@/lib/utils'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; label: string }][]
 
+type CategoryType = 'wishes' | 'plans' | 'dreams' | 'moments'
+const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string }[] = [
+  { id: 'wishes',  emoji: '💫', label: 'Wishes'  },
+  { id: 'plans',   emoji: '✅', label: 'Plans'   },
+  { id: 'dreams',  emoji: '✨', label: 'Dreams'  },
+  { id: 'moments', emoji: '📅', label: 'Moments' },
+]
+
 export default function TogetherPage() {
-  const currentUser    = useAppStore(s => s.currentUser)!
-  const events         = useAppStore(s => s.events)
-  const getMood        = useAppStore(s => s.getMoodForUser)
-  const setMood        = useAppStore(s => s.setMood)
-  const partnerNotes   = useAppStore(s => s.partnerNotes)
-  const markRead       = useAppStore(s => s.markPartnerNoteRead)
-  const sendNote       = useAppStore(s => s.sendPartnerNote)
+  const currentUser  = useAppStore(s => s.currentUser)!
+  const events       = useAppStore(s => s.events)
+  const todos        = useAppStore(s => s.todos)
+  const goals        = useAppStore(s => s.goals)
+  const wishlist     = useAppStore(s => s.wishlistItems)
+  const getMood      = useAppStore(s => s.getMoodForUser)
+  const setMood      = useAppStore(s => s.setMood)
+  const partnerNotes = useAppStore(s => s.partnerNotes)
+  const markRead     = useAppStore(s => s.markPartnerNoteRead)
+  const sendNote     = useAppStore(s => s.sendPartnerNote)
 
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
@@ -34,6 +45,9 @@ export default function TogetherPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayString())
   const [modalOpen, setModalOpen]       = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+
+  // Category hub
+  const [openCategory, setOpenCategory] = useState<CategoryType | null>(null)
 
   // Mood / note sheets
   const [moodOpen, setMoodOpen]       = useState(false)
@@ -62,6 +76,14 @@ export default function TogetherPage() {
 
   const selectedEvents = eventsByDate[selectedDate] ?? []
 
+  // Category counts
+  const categoryCounts: Record<CategoryType, number> = {
+    wishes:  wishlist.filter(i => !i.isCompleted).length,
+    plans:   todos.filter(t => !t.isCompleted).length,
+    dreams:  goals.filter(g => !g.isCompleted).length,
+    moments: events.length,
+  }
+
   function saveMood() {
     if (!pendingMood) return
     setMood(pendingMood, moodMsg.trim() || undefined)
@@ -77,7 +99,7 @@ export default function TogetherPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* ── Calendar header ── */}
       <div
         className="px-5 pt-14 pb-3"
         style={{
@@ -86,66 +108,13 @@ export default function TogetherPage() {
             : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
         }}
       >
-        {/* Mood chips strip */}
-        <div className="flex gap-2 mb-3 flex-wrap">
-          {([currentUser, partnerUser] as UserName[]).map(uid => {
-            const mood  = getMood(uid)
-            const color = uid === 'seval' ? '#8b5cf6' : '#14b8a6'
-            const isMe  = uid === currentUser
-            return (
-              <motion.button
-                key={uid}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => isMe && setMoodOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: `${color}15`, color }}
-              >
-                <span>{USERS[uid].emoji}</span>
-                {mood
-                  ? <>{MOOD_CONFIG[mood.mood].emoji} {MOOD_CONFIG[mood.mood].label}</>
-                  : <>{isMe ? 'Set mood' : 'No mood'}</>
-                }
-              </motion.button>
-            )
-          })}
-        </div>
-
-        {/* Unread partner note banner */}
-        <AnimatePresence>
-          {unreadNote && !readingNote && (
-            <motion.button
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              onClick={() => setReadingNote(true)}
-              className="w-full rounded-2xl px-4 py-3 mb-3 text-left"
-              style={{ background: `${primary}12`, border: `1.5px solid ${primary}30` }}
-            >
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-base">💌</span>
-                <p className="text-xs font-bold" style={{ color: primary }}>
-                  Note from {USERS[partnerUser].displayName}
-                </p>
-              </div>
-              <p className="text-xs text-gray-600 line-clamp-1">{unreadNote.content}</p>
-            </motion.button>
-          )}
-        </AnimatePresence>
-
         {/* Month navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">{format(viewDate, 'MMMM')}</h1>
             <p className="text-xs text-gray-400">{format(viewDate, 'yyyy')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setNoteOpen(true)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: `${primary}15`, color: primary }}
-            >
-              💌 Note
-            </button>
             <button
               onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
               className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
@@ -160,18 +129,16 @@ export default function TogetherPage() {
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="px-4">
         {/* Day-of-week headers */}
-        <div className="grid grid-cols-7 mt-2 mb-1">
+        <div className="grid grid-cols-7 mb-1">
           {DOW_LABELS.map((d, i) => (
             <div key={i} className="text-center text-[11px] font-semibold text-gray-400 py-1">{d}</div>
           ))}
         </div>
 
         {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-y-1 mb-5">
+        <div className="grid grid-cols-7 gap-y-1 mb-1">
           {calendarDays.map((day, i) => {
             const dateStr        = toDateString(day)
             const isCurrentMonth = isSameMonth(day, viewDate)
@@ -222,9 +189,72 @@ export default function TogetherPage() {
             )
           })}
         </div>
+      </div>
 
-        {/* Selected date events */}
-        <div className="mb-8">
+      <div className="px-4 py-4 space-y-4">
+        {/* ── Mood chips strip ── */}
+        <div className="flex gap-2 flex-wrap">
+          {([currentUser, partnerUser] as UserName[]).map(uid => {
+            const mood  = getMood(uid)
+            const color = uid === 'seval' ? '#8b5cf6' : '#14b8a6'
+            const isMe  = uid === currentUser
+            return (
+              <motion.button
+                key={uid}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => isMe && setMoodOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: `${color}15`, color }}
+              >
+                <span>{USERS[uid].emoji}</span>
+                {mood
+                  ? <>{MOOD_CONFIG[mood.mood].emoji} {MOOD_CONFIG[mood.mood].label}</>
+                  : <>{isMe ? 'Set mood' : 'No mood'}</>
+                }
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* ── Unread partner note banner ── */}
+        <AnimatePresence>
+          {unreadNote && !readingNote && (
+            <motion.button
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              onClick={() => setReadingNote(true)}
+              className="w-full rounded-2xl px-4 py-3 text-left"
+              style={{ background: `${primary}12`, border: `1.5px solid ${primary}30` }}
+            >
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-base">💌</span>
+                <p className="text-xs font-bold" style={{ color: primary }}>
+                  Note from {USERS[partnerUser].displayName}
+                </p>
+              </div>
+              <p className="text-xs text-gray-600 line-clamp-1">{unreadNote.content}</p>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* ── Leave a note button ── */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setNoteOpen(true)}
+          className="w-full flex items-center gap-3 rounded-2xl px-4 py-3"
+          style={{ background: `${primary}10`, border: `1.5px solid ${primary}20` }}
+        >
+          <span className="text-xl">💌</span>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-gray-800">Leave a note</p>
+            <p className="text-xs text-gray-400">Send {USERS[partnerUser].displayName} a little love message</p>
+          </div>
+          <span className="text-gray-300 text-sm">›</span>
+        </motion.button>
+
+        {/* ── Selected date events ── */}
+        <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700">
               {selectedDate === getTodayString()
@@ -272,9 +302,7 @@ export default function TogetherPage() {
                         <p className="text-xs text-gray-400">{formatTime(ev.startTime)}</p>
                       </div>
                     )}
-                    {ev.notes && (
-                      <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>
-                    )}
+                    {ev.notes && <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>}
                     {ev.photos && ev.photos.length > 0 && (
                       <p className="text-xs text-gray-300 mt-1">📸 {ev.photos.length} photo{ev.photos.length !== 1 ? 's' : ''}</p>
                     )}
@@ -295,9 +323,33 @@ export default function TogetherPage() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* ── Category hub ── */}
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Overview</p>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORY_DEFS.map(cat => (
+              <motion.button
+                key={cat.id}
+                whileTap={{ scale: 0.93 }}
+                onClick={() => setOpenCategory(cat.id)}
+                className="bg-white rounded-2xl shadow-card p-3 flex flex-col items-center gap-1.5"
+              >
+                <span className="text-2xl">{cat.emoji}</span>
+                <span className="text-[10px] font-semibold text-gray-500">{cat.label}</span>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: `${primary}18`, color: primary }}
+                >
+                  {categoryCounts[cat.id]}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* EventModal */}
+      {/* ── EventModal ── */}
       <EventModal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
@@ -305,7 +357,22 @@ export default function TogetherPage() {
         event={editingEvent}
       />
 
-      {/* ── Mood picker sheet ──────────────────────────────────────────────────── */}
+      {/* ── Category hub sheet ── */}
+      <AnimatePresence>
+        {openCategory && (
+          <CategoryHubSheet
+            type={openCategory}
+            todos={todos}
+            goals={goals}
+            wishlist={wishlist}
+            events={events}
+            primary={primary}
+            onClose={() => setOpenCategory(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Mood picker sheet ── */}
       <AnimatePresence>
         {moodOpen && (
           <>
@@ -323,10 +390,8 @@ export default function TogetherPage() {
                 <div className="drag-handle" />
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-base font-bold text-gray-800">How are you feeling?</h3>
-                  <button
-                    onClick={() => setMoodOpen(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-                  >
+                  <button onClick={() => setMoodOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                     <X size={16} />
                   </button>
                 </div>
@@ -371,7 +436,7 @@ export default function TogetherPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Note compose sheet ──────────────────────────────────────────────────── */}
+      {/* ── Note compose sheet ── */}
       <AnimatePresence>
         {noteOpen && (
           <>
@@ -389,35 +454,22 @@ export default function TogetherPage() {
                 <div className="drag-handle" />
                 <AnimatePresence mode="wait">
                   {noteSent ? (
-                    <motion.div
-                      key="sent"
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col items-center py-10 text-center"
-                    >
-                      <motion.div
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ repeat: 2, duration: 0.4 }}
-                        className="text-5xl mb-4"
-                      >💌</motion.div>
+                    <motion.div key="sent" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center py-10 text-center">
+                      <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: 2, duration: 0.4 }}
+                        className="text-5xl mb-4">💌</motion.div>
                       <p className="font-bold text-gray-800 mb-1">Sent with love 💕</p>
-                      <p className="text-sm text-gray-400">
-                        {USERS[partnerUser].displayName} will see it when they open the app
-                      </p>
+                      <p className="text-sm text-gray-400">{USERS[partnerUser].displayName} will see it when they open the app</p>
                     </motion.div>
                   ) : (
                     <motion.div key="compose" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <div className="flex items-center justify-between mb-5">
                         <div>
                           <h3 className="text-base font-bold text-gray-800">Leave a note 💌</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}
-                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
                         </div>
-                        <button
-                          onClick={() => { setNoteOpen(false); setNoteText('') }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-                        >
+                        <button onClick={() => { setNoteOpen(false); setNoteText('') }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                           <X size={16} />
                         </button>
                       </div>
@@ -428,16 +480,14 @@ export default function TogetherPage() {
                           placeholder="Write something from the heart..."
                           rows={5}
                           autoFocus
-                          className="w-full text-sm text-gray-700 placeholder:text-gray-300
-                                     bg-transparent outline-none resize-none leading-relaxed"
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none leading-relaxed"
                         />
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={handleSendNote}
                         disabled={!noteText.trim()}
-                        className="w-full py-4 rounded-2xl text-white text-sm font-semibold
-                                   disabled:opacity-40 flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
                         style={{ background: primary }}
                       >
                         <Send size={15} /> Send with love 💌
@@ -451,7 +501,7 @@ export default function TogetherPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Read note modal ──────────────────────────────────────────────────────── */}
+      {/* ── Read note modal ── */}
       <AnimatePresence>
         {readingNote && unreadNote && (
           <motion.div
@@ -460,26 +510,18 @@ export default function TogetherPage() {
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-8"
           >
             <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
               className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-modal"
             >
               <div className="text-center mb-5">
-                <motion.div
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ repeat: 2, duration: 0.5 }}
-                  className="text-4xl mb-2"
-                >💌</motion.div>
-                <p className="text-xs font-bold text-gray-400">
-                  From {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}
-                </p>
+                <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: 2, duration: 0.5 }}
+                  className="text-4xl mb-2">💌</motion.div>
+                <p className="text-xs font-bold text-gray-400">From {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
               </div>
-              <p className="text-gray-700 text-sm leading-relaxed text-center mb-6">
-                {unreadNote.content}
-              </p>
+              <p className="text-gray-700 text-sm leading-relaxed text-center mb-6">{unreadNote.content}</p>
               <button
                 onClick={() => { markRead(unreadNote.id); setReadingNote(false) }}
                 className="w-full py-3 rounded-2xl text-white text-sm font-semibold"
@@ -492,5 +534,124 @@ export default function TogetherPage() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/* ── Category Hub Sheet ───────────────────────────────────────────────────────── */
+function CategoryHubSheet({
+  type, todos, goals, wishlist, events, primary, onClose,
+}: {
+  type: CategoryType
+  todos: ReturnType<typeof useAppStore.getState>['todos']
+  goals: ReturnType<typeof useAppStore.getState>['goals']
+  wishlist: ReturnType<typeof useAppStore.getState>['wishlistItems']
+  events: ReturnType<typeof useAppStore.getState>['events']
+  primary: string
+  onClose: () => void
+}) {
+  const def = CATEGORY_DEFS.find(d => d.id === type)!
+
+  type ListItem = { id: string; title: string; sub?: string; done: boolean }
+
+  const items: ListItem[] = useMemo(() => {
+    switch (type) {
+      case 'wishes':
+        return wishlist.map(i => ({
+          id: i.id,
+          title: i.title,
+          sub: i.notes || WISHLIST_CATEGORY_CONFIG[i.category].label,
+          done: i.isCompleted,
+        }))
+      case 'plans':
+        return todos.map(t => ({
+          id: t.id,
+          title: t.title,
+          sub: t.notes || (t.date ? t.date : undefined),
+          done: t.isCompleted,
+        }))
+      case 'dreams':
+        return goals.map(g => ({
+          id: g.id,
+          title: g.title,
+          sub: g.notes || g.targetDate,
+          done: g.isCompleted,
+        }))
+      case 'moments':
+        return [...events]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(e => ({
+            id: e.id,
+            title: e.title,
+            sub: e.date + (e.startTime ? ` · ${e.startTime}` : ''),
+            done: false,
+          }))
+    }
+  }, [type, todos, goals, wishlist, events])
+
+  const pending   = items.filter(i => !i.done)
+  const completed = items.filter(i => i.done)
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[80vh] flex flex-col"
+      >
+        <div className="px-5 pt-4 pb-3 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{def.emoji}</span>
+              <div>
+                <h2 className="text-base font-bold text-gray-800">{def.label}</h2>
+                <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-5xl mb-3 opacity-30">{def.emoji}</span>
+              <p className="text-sm text-gray-400">Nothing here yet</p>
+            </div>
+          ) : (
+            <>
+              {pending.map(item => (
+                <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5">
+                  <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                  {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
+                </div>
+              ))}
+              {completed.length > 0 && (
+                <>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider pt-2 px-1">
+                    Completed ({completed.length})
+                  </p>
+                  {completed.map(item => (
+                    <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5 opacity-50">
+                      <p className="text-sm text-gray-400 line-through">{item.title}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
   )
 }

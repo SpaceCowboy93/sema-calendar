@@ -4,17 +4,24 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { WISHLIST_CATEGORY_CONFIG } from '@/lib/utils'
-import type { WishlistCategory, GoalCategory } from '@/types'
+import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
 
-type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note' | null
+type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
-const QUICK_OPTIONS: { id: QuickType; emoji: string; label: string; sub: string }[] = [
-  { id: 'plan',   emoji: '✅', label: 'Plan',   sub: 'a todo or shared task' },
-  { id: 'dream',  emoji: '✨', label: 'Dream',  sub: 'a goal you want to reach' },
-  { id: 'wish',   emoji: '💫', label: 'Wish',   sub: 'something to do together' },
-  { id: 'moment', emoji: '📅', label: 'Moment', sub: 'a date or event' },
-  { id: 'note',   emoji: '💌', label: 'Note',   sub: 'a love message to send' },
+const TYPES: { id: QuickType; emoji: string; label: string }[] = [
+  { id: 'plan',   emoji: '✅', label: 'Plan'   },
+  { id: 'dream',  emoji: '✨', label: 'Dream'  },
+  { id: 'wish',   emoji: '💫', label: 'Wish'   },
+  { id: 'moment', emoji: '📅', label: 'Moment' },
+  { id: 'note',   emoji: '💌', label: 'Note'   },
+]
+
+const COLOR_OPTIONS: { value: EventColor; hex: string; label: string }[] = [
+  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
+  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
+  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
+  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
+  { value: 'green',  hex: '#34d399', label: 'Green'  },
 ]
 
 interface Props {
@@ -24,52 +31,58 @@ interface Props {
 }
 
 export function QuickAddSheet({ open, onClose, primary }: Props) {
-  const currentUser    = useAppStore(s => s.currentUser)!
-  const addTodo        = useAppStore(s => s.addTodo)
-  const addGoal        = useAppStore(s => s.addGoal)
+  const currentUser     = useAppStore(s => s.currentUser)!
+  const addTodo         = useAppStore(s => s.addTodo)
+  const addGoal         = useAppStore(s => s.addGoal)
   const addWishlistItem = useAppStore(s => s.addWishlistItem)
-  const addEvent       = useAppStore(s => s.addEvent)
-  const sendNote       = useAppStore(s => s.sendPartnerNote)
+  const addEvent        = useAppStore(s => s.addEvent)
+  const sendNote        = useAppStore(s => s.sendPartnerNote)
 
-  const [type, setType]     = useState<QuickType>(null)
-  const [title, setTitle]   = useState('')
-  const [date, setDate]     = useState('')
-  const [time, setTime]     = useState('')
-  const [sent, setSent]     = useState(false)
+  const [type, setType]   = useState<QuickType>('plan')
+  const [title, setTitle] = useState('')
+  const [notes, setNotes] = useState('')
+  const [date, setDate]   = useState('')
+  const [time, setTime]   = useState('')
+  const [color, setColor] = useState<EventColor>(currentUser === 'mateo' ? 'mateo' : 'seval')
+  const [sent, setSent]   = useState(false)
 
   function reset() {
-    setType(null); setTitle(''); setDate(''); setTime(''); setSent(false)
+    setTitle(''); setNotes(''); setDate(''); setTime(''); setSent(false)
+    setColor(currentUser === 'mateo' ? 'mateo' : 'seval')
   }
 
   function close() { reset(); onClose() }
 
   function handleSubmit() {
-    if (!title.trim() && type !== 'note') return
     switch (type) {
       case 'plan':
-        addTodo(title.trim(), undefined, date || undefined, undefined, undefined, time || undefined)
+        if (!title.trim()) return
+        addTodo(title.trim(), undefined, date || undefined, undefined, notes.trim() || undefined, time || undefined)
         break
       case 'dream':
-        addGoal('life', title.trim(), undefined, date || undefined, 0, time || undefined)
+        if (!title.trim()) return
+        addGoal('life', title.trim(), notes.trim() || undefined, date || undefined, 0, time || undefined)
         break
       case 'wish':
-        addWishlistItem(title.trim(), 'plan')
+        if (!title.trim()) return
+        addWishlistItem(title.trim(), 'plan', notes.trim() || undefined)
         break
       case 'moment':
-        if (!date) return
-        addEvent({ title: title.trim(), date, color: currentUser === 'seval' ? 'seval' : 'mateo', createdBy: currentUser })
+        if (!title.trim() || !date) return
+        addEvent({ title: title.trim(), date, startTime: time || undefined, notes: notes.trim() || undefined, color, createdBy: currentUser })
         break
       case 'note':
         if (!title.trim()) return
         sendNote(title.trim())
         setSent(true)
-        setTimeout(() => { close() }, 1800)
+        setTimeout(() => close(), 1800)
         return
     }
     close()
   }
 
   const canSubmit = type === 'moment' ? !!(title.trim() && date) : !!title.trim()
+  const showDatetime = type === 'plan' || type === 'dream' || type === 'moment'
 
   return (
     <AnimatePresence>
@@ -91,133 +104,155 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
 
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  {type && (
-                    <button onClick={() => { setType(null); setTitle(''); setDate('') }}
-                      className="text-xs text-gray-400 font-medium">
-                      ← back
-                    </button>
-                  )}
-                  <h3 className="text-base font-bold text-gray-800">
-                    {type ? `Add a ${type}` : 'Add something 💕'}
-                  </h3>
-                </div>
+                <h3 className="text-base font-bold text-gray-800">Add something 💕</h3>
                 <button onClick={close}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                   <X size={16} />
                 </button>
               </div>
 
-              <AnimatePresence mode="wait">
-                {/* ── Type picker ── */}
-                {!type && (
-                  <motion.div
-                    key="picker"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="space-y-2"
+              {/* Type chips — always visible */}
+              <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+                {TYPES.map(t => (
+                  <motion.button
+                    key={t.id}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => { setType(t.id); setTitle(''); setNotes('') }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
+                    style={type === t.id
+                      ? { background: primary, color: 'white' }
+                      : { background: '#f3f4f6', color: '#6b7280' }
+                    }
                   >
-                    {QUICK_OPTIONS.map(opt => (
-                      <motion.button
-                        key={opt.id}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setType(opt.id)}
-                        className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50
-                                   active:bg-gray-100 transition-colors text-left"
-                      >
-                        <span className="text-2xl">{opt.emoji}</span>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
-                          <p className="text-xs text-gray-400">{opt.sub}</p>
-                        </div>
-                      </motion.button>
-                    ))}
-                  </motion.div>
-                )}
+                    {t.emoji} {t.label}
+                  </motion.button>
+                ))}
+              </div>
 
-                {/* ── Mini form ── */}
-                {type && (
+              <AnimatePresence mode="wait">
+                {sent ? (
                   <motion.div
-                    key="form"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    key="sent"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center py-8 text-center"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ repeat: 2, duration: 0.4 }}
+                      className="text-5xl mb-3"
+                    >💌</motion.div>
+                    <p className="font-bold text-gray-800">Sent with love 💕</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={type}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="space-y-3"
                   >
-                    {sent ? (
-                      <div className="flex flex-col items-center py-8 text-center">
-                        <motion.div
-                          animate={{ scale: [1, 1.3, 1] }}
-                          transition={{ repeat: 2, duration: 0.4 }}
-                          className="text-5xl mb-3"
-                        >💌</motion.div>
-                        <p className="font-bold text-gray-800">Sent with love 💕</p>
+                    {/* Main title / message input */}
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      {type === 'note' ? (
+                        <textarea
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          placeholder="Write something from the heart..."
+                          rows={4}
+                          autoFocus
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300
+                                     bg-transparent outline-none resize-none leading-relaxed"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          placeholder={
+                            type === 'plan'   ? 'What do you want to plan?' :
+                            type === 'dream'  ? 'What do you dream of?' :
+                            type === 'wish'   ? 'What do you wish for?' :
+                            'Name this moment...'
+                          }
+                          autoFocus
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300
+                                     bg-transparent outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Notes field (all types except note) */}
+                    {type !== 'note' && (
+                      <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                        <textarea
+                          value={notes}
+                          onChange={e => setNotes(e.target.value)}
+                          placeholder="Notes (optional)..."
+                          rows={2}
+                          className="w-full text-sm text-gray-500 placeholder:text-gray-300
+                                     bg-transparent outline-none resize-none"
+                        />
                       </div>
-                    ) : (
-                      <>
-                        {/* Note uses "message" label */}
-                        <div className="rounded-2xl bg-gray-50 p-4">
-                          {type === 'note' ? (
-                            <textarea
-                              value={title}
-                              onChange={e => setTitle(e.target.value)}
-                              placeholder="Write something from the heart..."
-                              rows={4}
-                              autoFocus
-                              className="w-full text-sm text-gray-700 placeholder:text-gray-300
-                                         bg-transparent outline-none resize-none leading-relaxed"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              value={title}
-                              onChange={e => setTitle(e.target.value)}
-                              placeholder={
-                                type === 'plan'   ? 'What do you want to plan?' :
-                                type === 'dream'  ? 'What do you dream of?' :
-                                type === 'wish'   ? 'What do you wish for?' :
-                                'Name this moment...'
-                              }
-                              autoFocus
-                              className="w-full text-sm text-gray-700 placeholder:text-gray-300
-                                         bg-transparent outline-none"
-                            />
-                          )}
-                        </div>
-
-                        {/* Date + time (for plan / dream / moment / wish) */}
-                        {(type === 'plan' || type === 'moment' || type === 'dream' || type === 'wish') && (
-                          <div className="flex gap-2">
-                            <input
-                              type="date"
-                              value={date}
-                              onChange={e => setDate(e.target.value)}
-                              className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3
-                                         outline-none"
-                            />
-                            <input
-                              type="time"
-                              value={time}
-                              onChange={e => setTime(e.target.value)}
-                              placeholder="time"
-                              className="w-32 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3
-                                         outline-none"
-                            />
-                          </div>
-                        )}
-
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={handleSubmit}
-                          disabled={!canSubmit}
-                          className="w-full py-4 rounded-2xl text-white text-sm font-semibold
-                                     disabled:opacity-40 flex items-center justify-center gap-2"
-                          style={{ background: primary }}
-                        >
-                          <Plus size={16} />
-                          {type === 'note' ? 'Send with love 💌' : 'Kept with love ✨'}
-                        </motion.button>
-                      </>
                     )}
+
+                    {/* Date + time */}
+                    {showDatetime && (
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={e => setDate(e.target.value)}
+                          className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+                        />
+                        <input
+                          type="time"
+                          value={time}
+                          onChange={e => setTime(e.target.value)}
+                          className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {/* Color picker (moments only) */}
+                    {type === 'moment' && (
+                      <div>
+                        <p className="text-xs text-gray-400 font-medium mb-2 px-1">Color</p>
+                        <div className="flex gap-3 px-1">
+                          {COLOR_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setColor(opt.value)}
+                              className="flex flex-col items-center gap-1"
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full transition-transform"
+                                style={{
+                                  background: opt.hex,
+                                  transform: color === opt.value ? 'scale(1.2)' : 'scale(1)',
+                                  boxShadow: color === opt.value ? `0 0 0 3px white, 0 0 0 5px ${opt.hex}` : 'none',
+                                }}
+                              />
+                              <span className="text-[9px] text-gray-400 font-medium">{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submit */}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleSubmit}
+                      disabled={!canSubmit}
+                      className="w-full py-4 rounded-2xl text-white text-sm font-semibold
+                                 disabled:opacity-40 flex items-center justify-center gap-2"
+                      style={{ background: primary }}
+                    >
+                      <Plus size={16} />
+                      {type === 'note' ? 'Send with love 💌' : 'Save 💕'}
+                    </motion.button>
                   </motion.div>
                 )}
               </AnimatePresence>

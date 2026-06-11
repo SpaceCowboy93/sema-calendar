@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react'
+import { Check, Calendar, Clock, X, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
-import type { Goal, GoalCategory } from '@/types'
+import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
 
 const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string }> = {
   travel:     { emoji: '✈️', label: 'Travel' },
@@ -16,6 +16,9 @@ const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string 
   hobbies:    { emoji: '🎨', label: 'Hobbies' },
   challenges: { emoji: '🏆', label: 'Challenges' },
 }
+
+const GOAL_CATEGORIES = Object.entries(GOAL_CATEGORY_CONFIG) as [GoalCategory, { emoji: string; label: string }][]
+const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCategory, { emoji: string; label: string }][]
 
 type PlanTab = 'plans' | 'dreams' | 'wishes'
 
@@ -34,13 +37,11 @@ export default function PlansPage() {
 
   return (
     <div className="min-h-screen pt-14 pb-32">
-      {/* Header */}
       <div className="px-5 mb-5">
         <h1 className="text-2xl font-bold text-gray-800">Plans</h1>
         <p className="text-sm text-gray-400">what's ahead for you two</p>
       </div>
 
-      {/* Tab switcher */}
       <div className="flex gap-2 px-5 mb-6">
         {TABS.map(tab => (
           <motion.button
@@ -58,7 +59,6 @@ export default function PlansPage() {
         ))}
       </div>
 
-      {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -80,7 +80,7 @@ export default function PlansPage() {
 function TodosSection({ primary }: { primary: string }) {
   const todos      = useAppStore(s => s.todos)
   const toggleTodo = useAppStore(s => s.toggleTodo)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [editing, setEditing] = useState<SharedTodo | null>(null)
 
   const pending   = todos.filter(t => !t.isCompleted)
   const completed = todos.filter(t => t.isCompleted)
@@ -100,52 +100,33 @@ function TodosSection({ primary }: { primary: string }) {
           className="bg-white rounded-2xl shadow-card overflow-hidden"
         >
           <div
-            className="flex items-center gap-3 p-4 cursor-pointer"
-            onClick={() => setExpanded(expanded === todo.id ? null : todo.id)}
+            className="flex items-center gap-3 p-4 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(todo)}
           >
             <button
               onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
               className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
               style={{ borderColor: '#d1d5db' }}
             />
-            <p className="flex-1 text-sm font-medium text-gray-700 min-w-0 truncate">{todo.title}</p>
-            {(todo.items?.length || todo.notes) && (
-              expanded === todo.id
-                ? <ChevronUp size={14} className="text-gray-300 shrink-0" />
-                : <ChevronDown size={14} className="text-gray-300 shrink-0" />
-            )}
-          </div>
-          <AnimatePresence>
-            {expanded === todo.id && (todo.items?.length || todo.notes || todo.date) && (
-              <motion.div
-                initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="px-4 pb-4 space-y-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700 truncate">{todo.title}</p>
+              {(todo.date || todo.notes) && (
+                <div className="flex items-center gap-2 mt-0.5">
                   {todo.date && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                      <Calendar size={11} />
-                      {formatDate(todo.date, 'MMM d, yyyy')}
-                      {todo.startTime && (
-                        <span className="flex items-center gap-1 ml-1">
-                          <Clock size={10} /> {formatTime(todo.startTime)}
-                        </span>
-                      )}
-                    </div>
+                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                      <Calendar size={10} />
+                      {formatDate(todo.date, 'MMM d')}
+                      {todo.startTime && <><Clock size={10} className="ml-1" />{formatTime(todo.startTime)}</>}
+                    </span>
                   )}
                   {todo.notes && (
-                    <p className="text-xs text-gray-500 leading-relaxed">{todo.notes}</p>
+                    <span className="text-[11px] text-gray-300 truncate">· {todo.notes}</span>
                   )}
-                  {todo.items?.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                      {item}
-                    </div>
-                  ))}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              )}
+            </div>
+            <span className="text-xs text-gray-300 shrink-0">›</span>
+          </div>
         </motion.div>
       ))}
 
@@ -158,10 +139,11 @@ function TodosSection({ primary }: { primary: string }) {
             <motion.div
               key={todo.id}
               layout
-              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50"
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(todo)}
             >
               <button
-                onClick={() => toggleTodo(todo.id)}
+                onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
                 className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center"
                 style={{ borderColor: primary, background: primary }}
               >
@@ -172,16 +154,22 @@ function TodosSection({ primary }: { primary: string }) {
           ))}
         </div>
       )}
+
+      {editing && (
+        <TodoEditSheet
+          todo={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
 
 /* ── Goals / Dreams ─────────────────────────────────────────────────────────── */
 function DreamsSection({ primary }: { primary: string }) {
-  const goals             = useAppStore(s => s.goals)
-  const incrementProgress = useAppStore(s => s.incrementGoalProgress)
-  const updateGoal        = useAppStore(s => s.updateGoal)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const goals  = useAppStore(s => s.goals)
+  const [editing, setEditing] = useState<Goal | null>(null)
 
   const active    = goals.filter(g => !g.isCompleted)
   const completed = goals.filter(g => g.isCompleted)
@@ -193,10 +181,9 @@ function DreamsSection({ primary }: { primary: string }) {
   return (
     <div className="px-5 space-y-2">
       {active.map(goal => {
-        const cat     = GOAL_CATEGORY_CONFIG[goal.categoryId]
-        const hasBar  = goal.progressTarget > 0
-        const pct     = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
-        const isOpen  = expanded === goal.id
+        const cat    = GOAL_CATEGORY_CONFIG[goal.categoryId]
+        const hasBar = goal.progressTarget > 0
+        const pct    = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
 
         return (
           <motion.div
@@ -204,21 +191,19 @@ function DreamsSection({ primary }: { primary: string }) {
             layout
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-card overflow-hidden"
+            className="bg-white rounded-2xl shadow-card p-4 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(goal)}
           >
-            <div
-              className="flex items-center gap-3 p-4 cursor-pointer"
-              onClick={() => setExpanded(isOpen ? null : goal.id)}
-            >
+            <div className="flex items-center gap-3">
               <span className="text-xl shrink-0">{cat.emoji}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800 truncate">{goal.title}</p>
+                {goal.notes && (
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5">{goal.notes}</p>
+                )}
                 {hasBar && (
                   <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: primary }}
-                    />
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: primary }} />
                   </div>
                 )}
               </div>
@@ -227,46 +212,8 @@ function DreamsSection({ primary }: { primary: string }) {
                   {goal.progressCurrent}/{goal.progressTarget}
                 </span>
               )}
-              {isOpen ? <ChevronUp size={14} className="text-gray-300 shrink-0" /> : <ChevronDown size={14} className="text-gray-300 shrink-0" />}
+              <span className="text-xs text-gray-300 shrink-0">›</span>
             </div>
-
-            <AnimatePresence>
-              {isOpen && (
-                <motion.div
-                  initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="px-4 pb-4 space-y-3">
-                    {goal.notes && (
-                      <p className="text-xs text-gray-500 leading-relaxed">{goal.notes}</p>
-                    )}
-                    {goal.targetDate && (
-                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                        <Calendar size={11} />
-                        {formatDate(goal.targetDate, 'MMM d, yyyy')}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      {hasBar && (
-                        <button
-                          onClick={() => incrementProgress(goal.id)}
-                          className="flex-1 py-2 rounded-xl text-xs font-semibold text-white"
-                          style={{ background: primary }}
-                        >
-                          +1 Progress
-                        </button>
-                      )}
-                      <button
-                        onClick={() => updateGoal(goal.id, { isCompleted: true })}
-                        className="flex-1 py-2 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600"
-                      >
-                        Mark done ✓
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )
       })}
@@ -277,12 +224,24 @@ function DreamsSection({ primary }: { primary: string }) {
             Dreams achieved 🎉 ({completed.length})
           </p>
           {completed.map(goal => (
-            <div key={goal.id} className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50">
+            <div
+              key={goal.id}
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(goal)}
+            >
               <span className="text-lg">{GOAL_CATEGORY_CONFIG[goal.categoryId].emoji}</span>
               <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{goal.title}</p>
             </div>
           ))}
         </div>
+      )}
+
+      {editing && (
+        <GoalEditSheet
+          goal={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   )
@@ -292,6 +251,7 @@ function DreamsSection({ primary }: { primary: string }) {
 function WishesSection({ primary }: { primary: string }) {
   const items  = useAppStore(s => s.wishlistItems)
   const toggle = useAppStore(s => s.toggleWishlistItem)
+  const [editing, setEditing] = useState<WishlistItem | null>(null)
 
   const pending   = items.filter(i => !i.isCompleted)
   const completed = items.filter(i => i.isCompleted)
@@ -310,10 +270,11 @@ function WishesSection({ primary }: { primary: string }) {
             layout
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-card p-4 flex items-center gap-3"
+            className="bg-white rounded-2xl shadow-card p-4 flex items-center gap-3 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(item)}
           >
             <button
-              onClick={() => toggle(item.id)}
+              onClick={e => { e.stopPropagation(); toggle(item.id) }}
               className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
               style={{ borderColor: '#d1d5db' }}
             />
@@ -325,6 +286,7 @@ function WishesSection({ primary }: { primary: string }) {
               <p className="text-sm font-medium text-gray-700 truncate">{item.title}</p>
               {item.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.notes}</p>}
             </div>
+            <span className="text-xs text-gray-300 shrink-0">›</span>
           </motion.div>
         )
       })}
@@ -335,9 +297,12 @@ function WishesSection({ primary }: { primary: string }) {
             Made real ✨ ({completed.length})
           </p>
           {completed.map(item => (
-            <div key={item.id} className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: primary }}>
+            <div
+              key={item.id}
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(item)}
+            >
+              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: primary }}>
                 <Check size={12} color="white" strokeWidth={3} />
               </div>
               <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{item.title}</p>
@@ -345,11 +310,375 @@ function WishesSection({ primary }: { primary: string }) {
           ))}
         </div>
       )}
+
+      {editing && (
+        <WishEditSheet
+          item={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
 
-/* ── Shared empty state ──────────────────────────────────────────────────────── */
+/* ── Todo Edit Sheet ─────────────────────────────────────────────────────────── */
+function TodoEditSheet({ todo, primary, onClose }: { todo: SharedTodo; primary: string; onClose: () => void }) {
+  const updateTodo = useAppStore(s => s.updateTodo)
+  const deleteTodo = useAppStore(s => s.deleteTodo)
+  const toggleTodo = useAppStore(s => s.toggleTodo)
+
+  const [title, setTitle] = useState(todo.title)
+  const [notes, setNotes] = useState(todo.notes ?? '')
+  const [date, setDate]   = useState(todo.date ?? '')
+  const [time, setTime]   = useState(todo.startTime ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function save() {
+    if (!title.trim()) return
+    updateTodo(todo.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      date: date || undefined,
+      startTime: time || undefined,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title={todo.isCompleted ? 'Completed plan' : 'Edit plan'} onClose={onClose}>
+      <TitleInput value={title} onChange={setTitle} placeholder="What's the plan?" />
+      <NotesInput value={notes} onChange={setNotes} />
+      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} />
+
+      <button
+        onClick={() => { toggleTodo(todo.id); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {todo.isCompleted ? 'Mark as pending' : 'Mark as done ✓'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteTodo(todo.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Goal Edit Sheet ─────────────────────────────────────────────────────────── */
+function GoalEditSheet({ goal, primary, onClose }: { goal: Goal; primary: string; onClose: () => void }) {
+  const updateGoal        = useAppStore(s => s.updateGoal)
+  const deleteGoal        = useAppStore(s => s.deleteGoal)
+  const incrementProgress = useAppStore(s => s.incrementGoalProgress)
+
+  const [title, setTitle]       = useState(goal.title)
+  const [notes, setNotes]       = useState(goal.notes ?? '')
+  const [date, setDate]         = useState(goal.targetDate ?? '')
+  const [time, setTime]         = useState(goal.startTime ?? '')
+  const [category, setCategory] = useState<GoalCategory>(goal.categoryId)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const hasBar = goal.progressTarget > 0
+  const pct    = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
+
+  function save() {
+    if (!title.trim()) return
+    updateGoal(goal.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      targetDate: date || undefined,
+      startTime: time || undefined,
+      categoryId: category,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title="Edit dream" onClose={onClose}>
+      {/* Category picker */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+        <div className="flex flex-wrap gap-2">
+          {GOAL_CATEGORIES.map(([id, cfg]) => (
+            <button
+              key={id}
+              onClick={() => setCategory(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+              )}
+              style={category === id ? { background: primary } : {}}
+            >
+              {cfg.emoji} {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <TitleInput value={title} onChange={setTitle} placeholder="What do you dream of?" />
+      <NotesInput value={notes} onChange={setNotes} />
+      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} label="Target date" />
+
+      {hasBar && (
+        <div className="mb-4 bg-gray-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500">Progress</p>
+            <span className="text-xs font-bold" style={{ color: primary }}>
+              {goal.progressCurrent}/{goal.progressTarget}
+            </span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: primary }} />
+          </div>
+          <button
+            onClick={() => { incrementProgress(goal.id); onClose() }}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
+            style={{ background: primary }}
+          >
+            +1 Progress
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={() => { updateGoal(goal.id, { isCompleted: !goal.isCompleted }); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {goal.isCompleted ? 'Reopen dream' : 'Mark as achieved 🎉'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteGoal(goal.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Wish Edit Sheet ─────────────────────────────────────────────────────────── */
+function WishEditSheet({ item, primary, onClose }: { item: WishlistItem; primary: string; onClose: () => void }) {
+  const updateWishlistItem = useAppStore(s => s.updateWishlistItem)
+  const deleteWishlistItem = useAppStore(s => s.deleteWishlistItem)
+  const toggleWishlistItem = useAppStore(s => s.toggleWishlistItem)
+
+  const [title, setTitle]       = useState(item.title)
+  const [notes, setNotes]       = useState(item.notes ?? '')
+  const [category, setCategory] = useState<WishlistCategory>(item.category)
+  const [date, setDate]         = useState(item.date ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function save() {
+    if (!title.trim()) return
+    updateWishlistItem(item.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      category,
+      date: date || undefined,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title="Edit wish" onClose={onClose}>
+      {/* Category picker */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+        <div className="flex flex-wrap gap-2">
+          {WISH_CATEGORIES.map(([id, cfg]) => (
+            <button
+              key={id}
+              onClick={() => setCategory(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+              )}
+              style={category === id ? { background: primary } : {}}
+            >
+              {cfg.emoji} {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <TitleInput value={title} onChange={setTitle} placeholder="What do you wish for?" />
+      <NotesInput value={notes} onChange={setNotes} />
+
+      {/* Optional date */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Date (optional)</p>
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="w-full text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+        />
+      </div>
+
+      <button
+        onClick={() => { toggleWishlistItem(item.id); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {item.isCompleted ? 'Mark as pending' : 'Mark as made real ✨'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteWishlistItem(item.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Shared edit sheet primitives ────────────────────────────────────────────── */
+function EditSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <AnimatePresence>
+      <>
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        />
+        <motion.div
+          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                     max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
+        >
+          <div className="px-5 pt-4 pb-10">
+            <div className="drag-handle" />
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-gray-800">{title}</h3>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {children}
+          </div>
+        </motion.div>
+      </>
+    </AnimatePresence>
+  )
+}
+
+function TitleInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="mb-4">
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full text-base font-semibold text-gray-800 placeholder:text-gray-300
+                   border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none bg-transparent"
+      />
+    </div>
+  )
+}
+
+function NotesInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Notes 📝</p>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Add context, ideas, or extra details..."
+        rows={3}
+        className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50
+                   rounded-2xl px-4 py-3 outline-none resize-none leading-relaxed"
+      />
+    </div>
+  )
+}
+
+function DateTimeRow({
+  date, time, onDate, onTime, label = 'Date & time',
+}: {
+  date: string; time: string
+  onDate: (v: string) => void; onTime: (v: string) => void
+  label?: string
+}) {
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex gap-2">
+        <input
+          type="date"
+          value={date}
+          onChange={e => onDate(e.target.value)}
+          className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+        />
+        <input
+          type="time"
+          value={time}
+          onChange={e => onTime(e.target.value)}
+          className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
+        />
+      </div>
+    </div>
+  )
+}
+
+function DeleteRow({
+  show, onAsk, onCancel, onConfirm,
+}: {
+  show: boolean; onAsk: () => void; onCancel: () => void; onConfirm: () => void
+}) {
+  if (!show) {
+    return (
+      <button
+        onClick={onAsk}
+        className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm"
+      >
+        <Trash2 size={13} /> Delete
+      </button>
+    )
+  }
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={onCancel}
+        className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={onConfirm}
+        className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium"
+      >
+        Delete
+      </button>
+    </div>
+  )
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────────── */
 function EmptyState({ emoji, text, sub }: { emoji: string; text: string; sub: string }) {
   return (
     <div className="flex flex-col items-center justify-center pt-16 text-center px-8">
