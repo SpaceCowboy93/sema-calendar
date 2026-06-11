@@ -7,7 +7,7 @@ import { LogOut, ChevronRight, X, Send } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type MoodType } from '@/types'
-import { MOOD_CONFIG, getDaysUntil, getTodayString, cn } from '@/lib/utils'
+import { MOOD_CONFIG, getDaysUntil, getTodayString, formatTime, cn } from '@/lib/utils'
 
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; label: string }][]
 
@@ -165,6 +165,11 @@ export default function TogetherPage() {
             <p className="text-base font-bold text-gray-800 mb-1">{nextEvent.title}</p>
             <p className="text-sm text-gray-400">
               {format(new Date(nextEvent.date + 'T12:00:00'), 'EEEE, MMMM d')}
+              {nextEvent.startTime && (
+                <span className="ml-2 font-semibold" style={{ color: primary }}>
+                  ⏰ {formatTime(nextEvent.startTime)}
+                </span>
+              )}
             </p>
             {nextEvent.notes && (
               <p className="text-xs text-gray-400 mt-2 leading-relaxed">{nextEvent.notes}</p>

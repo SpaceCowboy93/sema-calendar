@@ -72,7 +72,6 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       title: title.trim(),
       date: selectedDate,
       startTime: startTime || undefined,
-      endTime: endTime || undefined,
       notes: notes.trim() || undefined,
       color,
       todos: todos.length ? todos : undefined,
@@ -233,23 +232,14 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8" />
-                  <div className="flex gap-3 flex-1">
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={e => setStartTime(e.target.value)}
-                      className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                                 outline-none shadow-card"
-                    />
-                    <span className="text-gray-300 self-center">—</span>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={e => setEndTime(e.target.value)}
-                      className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                                 outline-none shadow-card"
-                    />
-                  </div>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={e => setStartTime(e.target.value)}
+                    className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
+                               outline-none shadow-card"
+                  />
+                  <span className="text-xs text-gray-400">start time (optional)</span>
                 </div>
               </div>
 

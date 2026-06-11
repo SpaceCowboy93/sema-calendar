@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
+import { useNotifications } from '@/hooks/useNotifications'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
 
   useSupabaseSync()
+  useNotifications()
 
   const [quickAddOpen, setQuickAddOpen] = useState(false)
 

@@ -24,7 +24,7 @@ interface AppState {
 
   // Todos
   todos: SharedTodo[]
-  addTodo: (title: string, items?: string[], date?: string, color?: EventColor, notes?: string) => void
+  addTodo: (title: string, items?: string[], date?: string, color?: EventColor, notes?: string, startTime?: string) => void
   updateTodo: (id: string, updates: Partial<SharedTodo>) => void
   toggleTodo: (id: string) => void
   deleteTodo: (id: string) => void
@@ -60,7 +60,7 @@ interface AppState {
 
   // Goals
   goals: Goal[]
-  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number) => void
+  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string) => void
   updateGoal: (id: string, updates: Partial<Goal>) => void
   deleteGoal: (id: string) => void
   incrementGoalProgress: (id: string) => void
@@ -167,7 +167,7 @@ export const useAppStore = create<AppState>()(
       // ── Todos ───────────────────────────────────────────────────────────────
       todos: [],
 
-      addTodo: (title, items, date, color, notes) => {
+      addTodo: (title, items, date, color, notes, startTime) => {
         const { currentUser } = get()
         if (!currentUser) return
         const now    = new Date().toISOString()
@@ -183,6 +183,7 @@ export const useAppStore = create<AppState>()(
           createdBy: currentUser,
           createdAt: now,
           date,
+          startTime: startTime || undefined,
           color,
         }
 
@@ -399,7 +400,7 @@ export const useAppStore = create<AppState>()(
       // ── Goals ─────────────────────────────────────────────────────────────────
       goals: [],
 
-      addGoal: (categoryId, title, notes, targetDate, progressTarget = 0) => {
+      addGoal: (categoryId, title, notes, targetDate, progressTarget = 0, startTime) => {
         const { currentUser } = get()
         if (!currentUser) return
         const now    = new Date().toISOString()
@@ -411,6 +412,7 @@ export const useAppStore = create<AppState>()(
           title,
           notes,
           targetDate,
+          startTime: startTime || undefined,
           progressCurrent: 0,
           progressTarget,
           isCompleted: false,

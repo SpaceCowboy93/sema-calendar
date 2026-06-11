@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { WISHLIST_CATEGORY_CONFIG, cn, formatDate } from '@/lib/utils'
+import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
 import type { Goal, GoalCategory } from '@/types'
 
 const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string }> = {
@@ -126,6 +126,11 @@ function TodosSection({ primary }: { primary: string }) {
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
                       <Calendar size={11} />
                       {formatDate(todo.date, 'MMM d, yyyy')}
+                      {todo.startTime && (
+                        <span className="flex items-center gap-1 ml-1">
+                          <Clock size={10} /> {formatTime(todo.startTime)}
+                        </span>
+                      )}
                     </div>
                   )}
                   {todo.notes && (

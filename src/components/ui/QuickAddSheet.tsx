@@ -31,13 +31,14 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
   const addEvent       = useAppStore(s => s.addEvent)
   const sendNote       = useAppStore(s => s.sendPartnerNote)
 
-  const [type, setType]   = useState<QuickType>(null)
-  const [title, setTitle] = useState('')
-  const [date, setDate]   = useState('')
-  const [sent, setSent]   = useState(false)
+  const [type, setType]     = useState<QuickType>(null)
+  const [title, setTitle]   = useState('')
+  const [date, setDate]     = useState('')
+  const [time, setTime]     = useState('')
+  const [sent, setSent]     = useState(false)
 
   function reset() {
-    setType(null); setTitle(''); setDate(''); setSent(false)
+    setType(null); setTitle(''); setDate(''); setTime(''); setSent(false)
   }
 
   function close() { reset(); onClose() }
@@ -46,10 +47,10 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
     if (!title.trim() && type !== 'note') return
     switch (type) {
       case 'plan':
-        addTodo(title.trim(), undefined, date || undefined)
+        addTodo(title.trim(), undefined, date || undefined, undefined, undefined, time || undefined)
         break
       case 'dream':
-        addGoal('life', title.trim(), undefined, date || undefined)
+        addGoal('life', title.trim(), undefined, date || undefined, 0, time || undefined)
         break
       case 'wish':
         addWishlistItem(title.trim(), 'plan')
@@ -183,15 +184,25 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                           )}
                         </div>
 
-                        {/* Date (for plan + moment) */}
-                        {(type === 'plan' || type === 'moment' || type === 'dream') && (
-                          <input
-                            type="date"
-                            value={date}
-                            onChange={e => setDate(e.target.value)}
-                            className="w-full text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3
-                                       outline-none"
-                          />
+                        {/* Date + time (for plan / dream / moment / wish) */}
+                        {(type === 'plan' || type === 'moment' || type === 'dream' || type === 'wish') && (
+                          <div className="flex gap-2">
+                            <input
+                              type="date"
+                              value={date}
+                              onChange={e => setDate(e.target.value)}
+                              className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3
+                                         outline-none"
+                            />
+                            <input
+                              type="time"
+                              value={time}
+                              onChange={e => setTime(e.target.value)}
+                              placeholder="time"
+                              className="w-32 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3
+                                         outline-none"
+                            />
+                          </div>
                         )}
 
                         <motion.button

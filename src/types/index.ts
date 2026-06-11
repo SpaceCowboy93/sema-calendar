@@ -52,6 +52,7 @@ export interface SharedTodo {
   createdBy: UserName
   createdAt: string
   date?: string          // YYYY-MM-DD (optional, syncs to calendar)
+  startTime?: string     // HH:MM (optional)
   color?: EventColor
   linkedEventId?: string // ID of the linked CalendarEvent (if any)
 }
@@ -80,6 +81,8 @@ export interface WishlistItem {
   title: string
   category: WishlistCategory
   notes?: string
+  date?: string          // YYYY-MM-DD (optional target/desired date)
+  startTime?: string     // HH:MM (optional)
   isCompleted: boolean
   createdBy: UserName
   createdAt: string
@@ -108,6 +111,7 @@ export interface Goal {
   title: string
   notes?: string
   targetDate?: string        // YYYY-MM-DD
+  startTime?: string         // HH:MM (optional, for day-of reminder)
   progressCurrent: number    // how many steps done
   progressTarget: number     // 0 = simple done/not-done; >0 = counter goal
   isCompleted: boolean
