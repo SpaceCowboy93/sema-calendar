@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
@@ -8,14 +7,7 @@ import { USERS, type UserName } from '@/types'
 
 export default function LandingPage() {
   const router = useRouter()
-  const currentUser = useAppStore(s => s.currentUser)
   const setCurrentUser = useAppStore(s => s.setCurrentUser)
-
-  useEffect(() => {
-    if (currentUser) {
-      router.replace('/together')
-    }
-  }, [currentUser, router])
 
   function handleSelect(user: UserName) {
     setCurrentUser(user)

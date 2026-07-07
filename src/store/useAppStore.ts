@@ -571,6 +571,6 @@ export const useAppStore = create<AppState>()(
           ),
         })),
     }),
-    { name: 'semacalendar-v1' }
+    { name: 'semacalendar-v1', partialize: (s) => { const { currentUser, ...rest } = s; return rest } }
   )
 )
