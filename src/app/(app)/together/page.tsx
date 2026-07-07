@@ -362,12 +362,14 @@ export default function TogetherPage() {
         {openCategory && (
           <CategoryHubSheet
             type={openCategory}
-            todos={todos}
-            goals={goals}
-            wishlist={wishlist}
-            events={events}
             primary={primary}
+            currentUser={currentUser}
             onClose={() => setOpenCategory(null)}
+            onEditMoment={ev => {
+              setOpenCategory(null)
+              setEditingEvent(ev)
+              setModalOpen(true)
+            }}
           />
         )}
       </AnimatePresence>
@@ -539,16 +541,28 @@ export default function TogetherPage() {
 
 /* ── Category Hub Sheet ───────────────────────────────────────────────────────── */
 function CategoryHubSheet({
-  type, todos, goals, wishlist, events, primary, onClose,
+  type, primary, currentUser, onClose, onEditMoment,
 }: {
   type: CategoryType
-  todos: ReturnType<typeof useAppStore.getState>['todos']
-  goals: ReturnType<typeof useAppStore.getState>['goals']
-  wishlist: ReturnType<typeof useAppStore.getState>['wishlistItems']
-  events: ReturnType<typeof useAppStore.getState>['events']
   primary: string
+  currentUser: UserName
   onClose: () => void
+  onEditMoment: (ev: CalendarEvent) => void
 }) {
+  const todos          = useAppStore(s => s.todos)
+  const goals          = useAppStore(s => s.goals)
+  const wishlist       = useAppStore(s => s.wishlistItems)
+  const events         = useAppStore(s => s.events)
+  const toggleTodo     = useAppStore(s => s.toggleTodo)
+  const toggleWishlist = useAppStore(s => s.toggleWishlistItem)
+  const updateTodo     = useAppStore(s => s.updateTodo)
+  const updateGoal     = useAppStore(s => s.updateGoal)
+  const updateWishlist = useAppStore(s => s.updateWishlistItem)
+  const deleteTodo     = useAppStore(s => s.deleteTodo)
+  const deleteGoal     = useAppStore(s => s.deleteGoal)
+  const deleteWishlist = useAppStore(s => s.deleteWishlistItem)
+  const sendNote       = useAppStore(s => s.sendPartnerNote)
+
   const def = CATEGORY_DEFS.find(d => d.id === type)!
 
   type ListItem = { id: string; title: string; sub?: string; done: boolean }
@@ -557,36 +571,79 @@ function CategoryHubSheet({
     switch (type) {
       case 'wishes':
         return wishlist.map(i => ({
-          id: i.id,
-          title: i.title,
+          id: i.id, title: i.title,
           sub: i.notes || WISHLIST_CATEGORY_CONFIG[i.category].label,
           done: i.isCompleted,
         }))
       case 'plans':
         return todos.map(t => ({
-          id: t.id,
-          title: t.title,
-          sub: t.notes || (t.date ? t.date : undefined),
+          id: t.id, title: t.title,
+          sub: t.notes || t.date,
           done: t.isCompleted,
         }))
       case 'dreams':
         return goals.map(g => ({
-          id: g.id,
-          title: g.title,
+          id: g.id, title: g.title,
           sub: g.notes || g.targetDate,
           done: g.isCompleted,
         }))
       case 'moments':
-        return [...events]
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .map(e => ({
-            id: e.id,
-            title: e.title,
-            sub: e.date + (e.startTime ? ` · ${e.startTime}` : ''),
-            done: false,
-          }))
+        return [...events].sort((a, b) => a.date.localeCompare(b.date)).map(e => ({
+          id: e.id, title: e.title,
+          sub: e.date + (e.startTime ? ` · ${formatTime(e.startTime)}` : ''),
+          done: false,
+        }))
     }
   }, [type, todos, goals, wishlist, events])
+
+  // ── edit state ──
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [editDate,  setEditDate]  = useState('')
+  const [editTime,  setEditTime]  = useState('')
+
+  function openEdit(id: string) {
+    if (type === 'moments') {
+      const ev = events.find(e => e.id === id)
+      if (ev) { onClose(); onEditMoment(ev) }
+      return
+    }
+    let src: { title: string; notes?: string; date?: string; startTime?: string; targetDate?: string } | undefined
+    if (type === 'wishes') src = wishlist.find(i => i.id === id)
+    if (type === 'plans')  src = todos.find(t => t.id === id)
+    if (type === 'dreams') src = goals.find(g => g.id === id)
+    if (!src) return
+    setEditTitle(src.title)
+    setEditNotes(src.notes ?? '')
+    setEditDate(src.date ?? src.targetDate ?? '')
+    setEditTime(src.startTime ?? '')
+    setEditingId(id)
+  }
+
+  function saveEdit() {
+    if (!editingId || !editTitle.trim()) return
+    const base = { title: editTitle.trim(), notes: editNotes.trim() || undefined, startTime: editTime || undefined }
+    if (type === 'plans')  updateTodo(editingId,     { ...base, date:       editDate || undefined })
+    if (type === 'dreams') updateGoal(editingId,     { ...base, targetDate: editDate || undefined })
+    if (type === 'wishes') updateWishlist(editingId, { ...base, date:       editDate || undefined })
+    setEditingId(null)
+  }
+
+  function handleDelete() {
+    if (!editingId) return
+    if (type === 'plans')  deleteTodo(editingId)
+    if (type === 'dreams') deleteGoal(editingId)
+    if (type === 'wishes') deleteWishlist(editingId)
+    setEditingId(null)
+  }
+
+  function handleToggle(id: string, title: string, done: boolean) {
+    if (type === 'plans')  toggleTodo(id)
+    if (type === 'wishes') toggleWishlist(id)
+    if (type === 'dreams') updateGoal(id, { isCompleted: !done })
+    if (!done) sendNote(`${USERS[currentUser].emoji} just confirmed "${title}" ✅`)
+  }
 
   const pending   = items.filter(i => !i.done)
   const completed = items.filter(i => i.done)
@@ -631,9 +688,20 @@ function CategoryHubSheet({
           ) : (
             <>
               {pending.map(item => (
-                <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5">
-                  <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-                  {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
+                <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5 flex items-center gap-3">
+                  {type !== 'moments' && (
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => handleToggle(item.id, item.title, item.done)}
+                      className="w-6 h-6 rounded-full border-2 shrink-0 transition-all"
+                      style={{ borderColor: primary }}
+                    />
+                  )}
+                  <button onClick={() => openEdit(item.id)} className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                    {item.sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.sub}</p>}
+                  </button>
+                  <span className="text-gray-300 text-lg shrink-0">›</span>
                 </div>
               ))}
               {completed.length > 0 && (
@@ -642,8 +710,18 @@ function CategoryHubSheet({
                     Completed ({completed.length})
                   </p>
                   {completed.map(item => (
-                    <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5 opacity-50">
-                      <p className="text-sm text-gray-400 line-through">{item.title}</p>
+                    <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5 flex items-center gap-3 opacity-50">
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => handleToggle(item.id, item.title, item.done)}
+                        className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                        style={{ background: primary }}
+                      >
+                        ✓
+                      </motion.button>
+                      <button onClick={() => openEdit(item.id)} className="flex-1 text-left min-w-0">
+                        <p className="text-sm text-gray-400 line-through truncate">{item.title}</p>
+                      </button>
                     </div>
                   ))}
                 </>
@@ -652,6 +730,93 @@ function CategoryHubSheet({
           )}
         </div>
       </motion.div>
+
+      {/* ── Edit sub-sheet ── */}
+      <AnimatePresence>
+        {editingId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditingId(null)}
+              className="fixed inset-0 z-[60] bg-black/20"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+            >
+              <div className="px-5 pt-4 pb-10">
+                <div className="drag-handle mb-4" />
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-base font-bold text-gray-800">Edit {def.label.slice(0, -1)}</h3>
+                  <button onClick={() => setEditingId(null)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="space-y-3 mb-5">
+                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
+                    <input
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      className="w-full text-sm text-gray-800 bg-transparent outline-none"
+                      placeholder="Title..."
+                    />
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
+                    <textarea
+                      value={editNotes}
+                      onChange={e => setEditNotes(e.target.value)}
+                      rows={3}
+                      className="w-full text-sm text-gray-700 bg-transparent outline-none resize-none placeholder:text-gray-300"
+                      placeholder="Add notes..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={e => setEditDate(e.target.value)}
+                        className="w-full text-sm text-gray-700 bg-transparent outline-none"
+                      />
+                    </div>
+                    <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Time</p>
+                      <input
+                        type="time"
+                        value={editTime}
+                        onChange={e => setEditTime(e.target.value)}
+                        className="w-full text-sm text-gray-700 bg-transparent outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDelete}
+                    className="flex-1 py-3.5 rounded-2xl text-red-400 text-sm font-semibold bg-red-50 active:opacity-80"
+                  >
+                    Delete
+                  </button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={saveEdit}
+                    disabled={!editTitle.trim()}
+                    className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+                    style={{ background: primary }}
+                  >
+                    Save
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   )
 }
