@@ -8,9 +8,9 @@ import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/together',  label: 'Together', icon: Heart },
-  { href: '/plans',     label: 'Plans',    icon: Sparkles },
-  { href: '/memories',  label: 'Memories', icon: BookOpen },
+  { href: '/together', label: 'Together', icon: Heart },
+  { href: '/plans',    label: 'Plans',    icon: Sparkles },
+  { href: '/journey',  label: 'Journey',  icon: BookOpen },
 ]
 
 export function BottomNav() {
