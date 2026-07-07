@@ -191,6 +191,30 @@ export default function TogetherPage() {
         </div>
       </div>
 
+      {/* ── Category hub (under calendar) ── */}
+      <div className="px-4 pt-3 pb-1">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Overview</p>
+        <div className="grid grid-cols-4 gap-2">
+          {CATEGORY_DEFS.map(cat => (
+            <motion.button
+              key={cat.id}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setOpenCategory(cat.id)}
+              className="bg-white rounded-2xl shadow-card p-3 flex flex-col items-center gap-1.5"
+            >
+              <span className="text-2xl">{cat.emoji}</span>
+              <span className="text-[10px] font-semibold text-gray-500">{cat.label}</span>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{ background: `${primary}18`, color: primary }}
+              >
+                {categoryCounts[cat.id]}
+              </span>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
       <div className="px-4 py-4 space-y-4">
         {/* ── Mood chips strip ── */}
         <div className="flex gap-2 flex-wrap">
@@ -324,30 +348,7 @@ export default function TogetherPage() {
           </AnimatePresence>
         </div>
 
-        {/* ── Category hub ── */}
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Overview</p>
-          <div className="grid grid-cols-4 gap-2">
-            {CATEGORY_DEFS.map(cat => (
-              <motion.button
-                key={cat.id}
-                whileTap={{ scale: 0.93 }}
-                onClick={() => setOpenCategory(cat.id)}
-                className="bg-white rounded-2xl shadow-card p-3 flex flex-col items-center gap-1.5"
-              >
-                <span className="text-2xl">{cat.emoji}</span>
-                <span className="text-[10px] font-semibold text-gray-500">{cat.label}</span>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: `${primary}18`, color: primary }}
-                >
-                  {categoryCounts[cat.id]}
-                </span>
-              </motion.button>
-            ))}
-          </div>
         </div>
-      </div>
 
       {/* ── EventModal ── */}
       <EventModal
