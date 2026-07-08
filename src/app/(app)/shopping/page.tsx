@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Check, Trash2, ShoppingBag, ChevronDown } from 'lucide-react'
+import { Plus, X, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import type { ShoppingCategory } from '@/types'
 import { cn } from '@/lib/utils'
+import { useSyncStatus, triggerPull } from '@/hooks/useSupabaseSync'
 
 const CATEGORY_CONFIG: Record<ShoppingCategory, { emoji: string; label: string }> = {
   produce:   { emoji: '🥬', label: 'Produce' },
@@ -28,6 +29,7 @@ export default function ShoppingPage() {
 
   const isSeval  = currentUser === 'seval'
   const primary  = isSeval ? '#8b5cf6' : '#14b8a6'
+  const { status: syncStatus } = useSyncStatus()
 
   const [openListId, setOpenListId]   = useState<string | null>(null)
   const [newListName, setNewListName] = useState('')
@@ -60,16 +62,35 @@ export default function ShoppingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Shopping</h1>
-            <p className="text-sm text-gray-400">what you need to get</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className={cn('w-2 h-2 rounded-full', {
+                'bg-emerald-400': syncStatus === 'ok',
+                'bg-yellow-400 animate-pulse': syncStatus === 'syncing',
+                'bg-red-400': syncStatus === 'error',
+                'bg-gray-300': syncStatus === 'idle',
+              })} />
+              <p className="text-xs text-gray-400">
+                {syncStatus === 'ok' ? 'synced' : syncStatus === 'syncing' ? 'syncing…' : syncStatus === 'error' ? 'sync error' : 'connecting'}
+              </p>
+            </div>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-white text-sm font-semibold"
-            style={{ background: primary }}
-          >
-            <Plus size={15} strokeWidth={2.5} /> New list
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => triggerPull()}
+              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center"
+            >
+              <RefreshCw size={16} className={cn('text-gray-400', syncStatus === 'syncing' && 'animate-spin')} />
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-white text-sm font-semibold"
+              style={{ background: primary }}
+            >
+              <Plus size={15} strokeWidth={2.5} /> New list
+            </motion.button>
+          </div>
         </div>
       </div>
 
