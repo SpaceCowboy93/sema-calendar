@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Palette, Camera } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Palette, Camera, ChevronDown } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
@@ -160,80 +160,69 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 </button>
               </div>
 
-              {/* Title + color row */}
-              <div className="flex items-end gap-3 mb-5">
+              {/* Title */}
+              <div className="mb-4">
                 <input
                   type="text"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Event title..."
-                  className="flex-1 text-xl font-semibold text-gray-800 placeholder:text-gray-300
+                  className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                              border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
                              transition-colors bg-transparent"
                   autoFocus={!isEdit}
                 />
+              </div>
 
-                {/* Color picker button */}
-                <div className="relative pb-1">
-                  <button
-                    ref={colorBtnRef}
-                    onClick={() => setColorPopup(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gray-50
-                               hover:bg-gray-100 transition-colors active:scale-95 shrink-0"
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full shrink-0"
-                      style={{ background: activeColor?.hex }}
-                    />
-                    <span className="text-xs font-medium text-gray-500">{activeColor?.label}</span>
-                    <Palette size={13} className="text-gray-400" />
-                  </button>
+              {/* Color dropdown */}
+              <div className="relative mb-5">
+                <button
+                  ref={colorBtnRef}
+                  onClick={() => setColorPopup(v => !v)}
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl bg-gray-50
+                             active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-5 h-5 rounded-full shrink-0" style={{ background: activeColor?.hex }} />
+                  <span className="text-sm font-medium text-gray-700 flex-1 text-left">{activeColor?.label}</span>
+                  <Palette size={14} className="text-gray-400" />
+                  <ChevronDown
+                    size={14}
+                    className={cn('text-gray-400 transition-transform', colorPopup && 'rotate-180')}
+                  />
+                </button>
 
-                  {/* Color popup */}
-                  <AnimatePresence>
-                    {colorPopup && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-[55]"
-                          onClick={() => setColorPopup(false)}
-                        />
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.9, y: 4 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, y: 4 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 bottom-full mb-2 z-[56] bg-white rounded-2xl
-                                     shadow-modal p-3 min-w-[160px]"
-                        >
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
-                            Category color
-                          </p>
+                <AnimatePresence>
+                  {colorPopup && (
+                    <>
+                      <div className="fixed inset-0 z-[55]" onClick={() => setColorPopup(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute left-0 right-0 top-full mt-1.5 z-[56] bg-white
+                                   rounded-2xl shadow-modal border border-gray-100 p-2.5"
+                      >
+                        <div className="grid grid-cols-2 gap-1.5">
                           {COLOR_OPTIONS.map(opt => (
                             <button
                               key={opt.value}
                               onClick={() => { setColor(opt.value as CalendarEvent['color']); setColorPopup(false) }}
                               className={cn(
-                                'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
-                                color === opt.value ? 'bg-gray-50' : 'hover:bg-gray-50'
+                                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all',
+                                color === opt.value ? 'bg-gray-100' : 'hover:bg-gray-50'
                               )}
                             >
-                              <div
-                                className="w-5 h-5 rounded-full shrink-0"
-                                style={{ background: opt.hex }}
-                              />
-                              <span className="text-sm text-gray-700 flex-1 text-left">
-                                {opt.label}
-                              </span>
-                              {color === opt.value && (
-                                <Check size={13} className="text-gray-400 shrink-0" />
-                              )}
+                              <div className="w-6 h-6 rounded-full shrink-0" style={{ background: opt.hex }} />
+                              <span className="text-sm font-medium text-gray-700 flex-1 text-left">{opt.label}</span>
+                              {color === opt.value && <Check size={13} className="text-gray-400 shrink-0" strokeWidth={2.5} />}
                             </button>
                           ))}
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Date & Time */}
