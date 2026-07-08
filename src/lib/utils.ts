@@ -79,13 +79,13 @@ export function getTheme(user: UserName) {
 
 // Event color to tailwind bg class
 export const EVENT_COLOR_CLASS: Record<string, string> = {
-  seval:  'bg-seval-400',
-  blue:   'bg-blue-400',
-  yellow: 'bg-yellow-400',
-  green:  'bg-emerald-400',
-  // legacy values kept for backward compatibility
-  mateo:  'bg-blue-400',
-  pink:   'bg-violet-300',
+  seval:  'bg-seval-400',   // Purple
+  blue:   'bg-blue-400',    // Blue
+  yellow: 'bg-yellow-400',  // Yellow
+  green:  'bg-emerald-400', // Green
+  // Legacy keys — old saved data maps to nearest new color
+  mateo:  'bg-blue-400',    // was Teal → Blue
+  pink:   'bg-seval-400',   // was Pink → Purple
 }
 
 // Calendar grid helper

@@ -5,6 +5,7 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/lib/**/*.{js,ts}',
   ],
   theme: {
     extend: {
@@ -75,6 +76,10 @@ const config: Config = {
     // Gradients
     'from-seval-400', 'to-seval-500', 'from-mateo-400', 'to-mateo-500',
     'from-seval-50', 'to-mateo-50',
+    // Event colors (used dynamically via EVENT_COLOR_CLASS)
+    'bg-blue-400', 'bg-yellow-400', 'bg-emerald-400',
+    // Legacy event colors (backward compat for old saved data)
+    'bg-violet-300',
   ],
 }
 

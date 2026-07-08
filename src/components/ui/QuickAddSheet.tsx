@@ -31,17 +31,21 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
   const addEvent        = useAppStore(s => s.addEvent)
   const sendNote        = useAppStore(s => s.sendPartnerNote)
 
+  const TYPE_COLOR: Record<QuickType, EventColor> = {
+    plan: 'green', dream: 'blue', wish: 'seval', moment: 'yellow', note: 'seval',
+  }
+
   const [type, setType]   = useState<QuickType>('plan')
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   const [date, setDate]   = useState('')
   const [time, setTime]   = useState('')
-  const [color, setColor] = useState<EventColor>(currentUser === 'mateo' ? 'blue' : 'seval')
+  const [color, setColor] = useState<EventColor>('green')
   const [sent, setSent]   = useState(false)
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime(''); setSent(false)
-    setColor(currentUser === 'mateo' ? 'blue' : 'seval')
+    setColor(TYPE_COLOR[type])
   }
 
   function close() { reset(); onClose() }
@@ -110,7 +114,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                   <motion.button
                     key={t.id}
                     whileTap={{ scale: 0.93 }}
-                    onClick={() => { setType(t.id); setTitle(''); setNotes('') }}
+                    onClick={() => { setType(t.id); setColor(TYPE_COLOR[t.id]); setTitle(''); setNotes('') }}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
                     style={type === t.id
                       ? { background: primary, color: 'white' }
