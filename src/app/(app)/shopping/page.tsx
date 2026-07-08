@@ -21,7 +21,6 @@ const CATEGORY_CONFIG: Record<ShoppingCategory, { emoji: string; label: string }
 export default function ShoppingPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
   const lists           = useAppStore(s => s.shoppingLists)
-  const events          = useAppStore(s => s.events)
   const createList      = useAppStore(s => s.createShoppingList)
   const deleteList      = useAppStore(s => s.deleteShoppingList)
   const addItem         = useAppStore(s => s.addShoppingItem)
@@ -56,13 +55,7 @@ export default function ShoppingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-14 pb-32">
-      {/* DEBUG OVERLAY — remove once sync is confirmed working */}
-      <div className="fixed bottom-32 left-3 z-50 bg-black/80 text-white text-[10px] px-2.5 py-1.5 rounded-xl space-y-0.5 pointer-events-none">
-        <p>Sync: <span className={syncStatus === 'ok' ? 'text-emerald-400' : syncStatus === 'error' ? 'text-red-400' : 'text-yellow-400'}>{syncStatus}</span></p>
-        <p>Events: {events?.length ?? 0}</p>
-        <p>Lists: {lists?.length ?? 0}</p>
-      </div>
-      <div
+<div
         className="px-5 pb-4"
         style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
       >
