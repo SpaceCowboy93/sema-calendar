@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Calendar, Clock, X, Trash2, ChevronDown, Plus, ShoppingBag } from 'lucide-react'
+import { Check, Calendar, Clock, X, Trash2, ChevronDown, Plus, ShoppingBag, Camera, Image as ImageIcon } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { WISHLIST_CATEGORY_CONFIG, COLOR_HEX, cn, formatDate, formatTime } from '@/lib/utils'
-import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
+import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
+import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory, EventColor, PageBackgrounds } from '@/types'
+import { PhotoBackgroundSheet, type PhotoUseChoice } from '@/components/ui/PhotoBackgroundSheet'
 
 const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string }> = {
   travel:     { emoji: '✈️', label: 'Travel' },
@@ -30,17 +32,53 @@ const TABS: { id: PlanTab; label: string; emoji: string; hex: string }[] = [
 ]
 
 export default function PlansPage() {
-  const currentUser = useAppStore(s => s.currentUser)!
-  const isSeval     = currentUser === 'seval'
-  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+  const currentUser    = useAppStore(s => s.currentUser)!
+  const isSeval        = currentUser === 'seval'
+  const primary        = isSeval ? '#8b5cf6' : '#14b8a6'
+  const pageBg         = useAppStore(s => s.pageBackgrounds.plans)
+  const uploadPageBg   = useAppStore(s => s.uploadPageBackground)
+  const setPageBg      = useAppStore(s => s.setPageBackground)
+  const bgInputRef     = useRef<HTMLInputElement>(null)
 
   const [activeTab, setActiveTab] = useState<PlanTab>('plans')
 
+  async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) await uploadPageBg('plans', file)
+    e.target.value = ''
+  }
+
   return (
-    <div className="min-h-screen pt-14 pb-32">
-      <div className="px-5 mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">Plans</h1>
-        <p className="text-sm text-gray-400">what's ahead for you two</p>
+    <div
+      className="min-h-screen pt-14 pb-32 relative"
+      style={pageBg ? { backgroundImage: `url(${pageBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+    >
+      {pageBg && <div className="fixed inset-0 bg-white/85 backdrop-blur-sm z-0 pointer-events-none" />}
+      <div className="relative z-10">
+      <div className="px-5 mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Plans</h1>
+          <p className="text-sm text-gray-400">what's ahead for you two</p>
+        </div>
+        <div className="flex items-center gap-1 mt-1">
+          <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgPick} />
+          <button
+            onClick={() => bgInputRef.current?.click()}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/80 shadow-card text-gray-400 active:bg-gray-100"
+            title="Set page background"
+          >
+            <Camera size={14} />
+          </button>
+          {pageBg && (
+            <button
+              onClick={() => setPageBg('plans', null)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/80 shadow-card text-gray-400 active:bg-gray-100"
+              title="Remove background"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 px-5 mb-6">
@@ -74,6 +112,7 @@ export default function PlansPage() {
           {activeTab === 'shopping' && <ShoppingSection primary={primary} />}
         </motion.div>
       </AnimatePresence>
+      </div>{/* /relative z-10 */}
     </div>
   )
 }
@@ -389,52 +428,155 @@ function WishesSection({ primary }: { primary: string }) {
 
 /* ── Todo Edit Sheet ─────────────────────────────────────────────────────────── */
 function TodoEditSheet({ todo, primary, onClose }: { todo: SharedTodo; primary: string; onClose: () => void }) {
-  const updateTodo = useAppStore(s => s.updateTodo)
-  const deleteTodo = useAppStore(s => s.deleteTodo)
-  const toggleTodo = useAppStore(s => s.toggleTodo)
+  const updateTodo     = useAppStore(s => s.updateTodo)
+  const deleteTodo     = useAppStore(s => s.deleteTodo)
+  const toggleTodo     = useAppStore(s => s.toggleTodo)
+  const uploadPhoto    = useAppStore(s => s.uploadPhoto)
+  const uploadPageBg   = useAppStore(s => s.uploadPageBackground)
+  const photoInputRef  = useRef<HTMLInputElement>(null)
 
-  const [title, setTitle] = useState(todo.title)
-  const [notes, setNotes] = useState(todo.notes ?? '')
-  const [date, setDate]   = useState(todo.date ?? '')
-  const [time, setTime]   = useState(todo.startTime ?? '')
+  const [title, setTitle]   = useState(todo.title)
+  const [notes, setNotes]   = useState(todo.notes ?? '')
+  const [date, setDate]     = useState(todo.date ?? '')
+  const [time, setTime]     = useState(todo.startTime ?? '')
+  const [color, setColor]   = useState<EventColor>(todo.color ?? 'green')
+  const [items, setItems]   = useState<string[]>(todo.items ?? [])
+  const [newItem, setNewItem]     = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [pendingFile, setPendingFile]     = useState<File | null>(null)
+  const [bgSheetOpen, setBgSheetOpen]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  function save() {
+  function addItem() {
+    if (!newItem.trim()) return
+    setItems(prev => [...prev, newItem.trim()])
+    setNewItem('')
+  }
+
+  function removeItem(i: number) {
+    setItems(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPendingFile(file)
+    setBgSheetOpen(true)
+    e.target.value = ''
+  }
+
+  async function handleBgChoice(choice: PhotoUseChoice) {
+    setBgSheetOpen(false)
+    if (!pendingFile) return
+    if (choice === 'together' || choice === 'plans' || choice === 'us') {
+      await uploadPageBg(choice, pendingFile)
+    }
+    // for attach or card (n/a here): do nothing extra
+    setPendingFile(null)
+  }
+
+  async function save() {
     if (!title.trim()) return
+    setUploading(true)
     updateTodo(todo.id, {
       title: title.trim(),
       notes: notes.trim() || undefined,
       date: date || undefined,
       startTime: time || undefined,
+      color,
+      items: items.length ? items : undefined,
     })
+    setUploading(false)
     onClose()
   }
 
   return (
-    <EditSheet title={todo.isCompleted ? 'Completed plan' : 'Edit plan'} onClose={onClose}>
-      <TitleInput value={title} onChange={setTitle} placeholder="What's the plan?" />
-      <NotesInput value={notes} onChange={setNotes} />
-      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} />
+    <>
+      <EditSheet title={todo.isCompleted ? 'Completed plan' : 'Edit plan'} onClose={onClose}>
+        <TitleInput value={title} onChange={setTitle} placeholder="What's the plan?" />
+        <NotesInput value={notes} onChange={setNotes} />
+        <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} />
 
-      <button
-        onClick={() => { toggleTodo(todo.id); onClose() }}
-        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
-      >
-        {todo.isCompleted ? 'Mark as pending' : 'Mark as done ✓'}
-      </button>
+        {/* Color picker */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Color</p>
+          <div className="flex gap-2">
+            {COLOR_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setColor(opt.value as EventColor)}
+                className={cn(
+                  'w-8 h-8 rounded-full border-2 transition-all',
+                  color === opt.value ? 'border-gray-800 scale-110' : 'border-transparent'
+                )}
+                style={{ background: opt.hex }}
+              />
+            ))}
+          </div>
+        </div>
 
-      <button
-        onClick={save}
-        disabled={!title.trim()}
-        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
-        style={{ background: primary }}
-      >
-        Save changes
-      </button>
+        {/* Checklist */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Checklist</p>
+          <div className="space-y-1.5 mb-2">
+            {items.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                <span className="flex-1 text-sm text-gray-700">{item}</span>
+                <button onClick={() => removeItem(i)} className="text-gray-300 hover:text-gray-500">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newItem}
+              onChange={e => setNewItem(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addItem()}
+              placeholder="Add an item..."
+              className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2 outline-none placeholder:text-gray-300"
+            />
+            <button onClick={addItem} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
 
-      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => { deleteTodo(todo.id); onClose() }} />
-    </EditSheet>
+        {/* Photo upload */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Photo</p>
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium border border-dashed border-gray-200 active:bg-gray-100"
+          >
+            <Camera size={16} /> Add photo or set as background
+          </button>
+        </div>
+
+        <button
+          onClick={() => { toggleTodo(todo.id); onClose() }}
+          className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+        >
+          {todo.isCompleted ? 'Mark as pending' : 'Mark as done ✓'}
+        </button>
+
+        <button
+          onClick={save}
+          disabled={!title.trim() || uploading}
+          className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+          style={{ background: primary }}
+        >
+          {uploading ? 'Saving...' : 'Save changes'}
+        </button>
+
+        <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { deleteTodo(todo.id); onClose() }} />
+      </EditSheet>
+
+      <PhotoBackgroundSheet open={bgSheetOpen} onChoose={handleBgChoice} />
+    </>
   )
 }
 
@@ -443,13 +585,40 @@ function GoalEditSheet({ goal, primary, onClose }: { goal: Goal; primary: string
   const updateGoal        = useAppStore(s => s.updateGoal)
   const deleteGoal        = useAppStore(s => s.deleteGoal)
   const incrementProgress = useAppStore(s => s.incrementGoalProgress)
+  const uploadGoalPhoto   = useAppStore(s => s.uploadGoalPhoto)
+  const uploadPageBg      = useAppStore(s => s.uploadPageBackground)
+  const photoInputRef     = useRef<HTMLInputElement>(null)
 
   const [title, setTitle]       = useState(goal.title)
   const [notes, setNotes]       = useState(goal.notes ?? '')
   const [date, setDate]         = useState(goal.targetDate ?? '')
   const [time, setTime]         = useState(goal.startTime ?? '')
   const [category, setCategory] = useState<GoalCategory>(goal.categoryId)
+  const [uploading, setUploading]     = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [bgSheetOpen, setBgSheetOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPendingFile(file)
+    setBgSheetOpen(true)
+    e.target.value = ''
+  }
+
+  async function handleBgChoice(choice: PhotoUseChoice) {
+    setBgSheetOpen(false)
+    if (!pendingFile) return
+    setUploading(true)
+    if (choice === 'together' || choice === 'plans' || choice === 'us') {
+      await uploadPageBg(choice, pendingFile)
+    } else {
+      await uploadGoalPhoto(goal.id, pendingFile)
+    }
+    setUploading(false)
+    setPendingFile(null)
+  }
 
   const hasBar = goal.progressTarget > 0
   const pct    = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
@@ -467,85 +636,136 @@ function GoalEditSheet({ goal, primary, onClose }: { goal: Goal; primary: string
   }
 
   return (
-    <EditSheet title="Edit dream" onClose={onClose}>
-      {/* Category picker */}
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
-        <div className="flex flex-wrap gap-2">
-          {GOAL_CATEGORIES.map(([id, cfg]) => (
-            <button
-              key={id}
-              onClick={() => setCategory(id)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
-              )}
-              style={category === id ? { background: primary } : {}}
-            >
-              {cfg.emoji} {cfg.label}
-            </button>
-          ))}
+    <>
+      <EditSheet title="Edit dream" onClose={onClose}>
+        {/* Category picker */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+          <div className="flex flex-wrap gap-2">
+            {GOAL_CATEGORIES.map(([id, cfg]) => (
+              <button
+                key={id}
+                onClick={() => setCategory(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                  category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+                )}
+                style={category === id ? { background: primary } : {}}
+              >
+                {cfg.emoji} {cfg.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <TitleInput value={title} onChange={setTitle} placeholder="What do you dream of?" />
-      <NotesInput value={notes} onChange={setNotes} />
-      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} label="Target date" />
+        <TitleInput value={title} onChange={setTitle} placeholder="What do you dream of?" />
+        <NotesInput value={notes} onChange={setNotes} />
+        <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} label="Target date" />
 
-      {hasBar && (
-        <div className="mb-4 bg-gray-50 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-gray-500">Progress</p>
-            <span className="text-xs font-bold" style={{ color: primary }}>
-              {goal.progressCurrent}/{goal.progressTarget}
-            </span>
+        {hasBar && (
+          <div className="mb-4 bg-gray-50 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-500">Progress</p>
+              <span className="text-xs font-bold" style={{ color: primary }}>
+                {goal.progressCurrent}/{goal.progressTarget}
+              </span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: primary }} />
+            </div>
+            <button
+              onClick={() => { incrementProgress(goal.id); onClose() }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
+              style={{ background: primary }}
+            >
+              +1 Progress
+            </button>
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
-            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: primary }} />
+        )}
+
+        {/* Photos */}
+        {goal.photos && goal.photos.length > 0 && (
+          <div className="flex gap-2 mb-4 overflow-x-auto">
+            {goal.photos.map((url, i) => (
+              <img key={i} src={url} alt="" className="w-20 h-20 rounded-2xl object-cover shrink-0" />
+            ))}
           </div>
+        )}
+        <div className="mb-4">
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
           <button
-            onClick={() => { incrementProgress(goal.id); onClose() }}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
-            style={{ background: primary }}
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium border border-dashed border-gray-200 active:bg-gray-100 disabled:opacity-50"
           >
-            +1 Progress
+            <Camera size={16} /> {uploading ? 'Uploading...' : 'Add photo or set as background'}
           </button>
         </div>
-      )}
 
-      <button
-        onClick={() => { updateGoal(goal.id, { isCompleted: !goal.isCompleted }); onClose() }}
-        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
-      >
-        {goal.isCompleted ? 'Reopen dream' : 'Mark as achieved 🎉'}
-      </button>
+        <button
+          onClick={() => { updateGoal(goal.id, { isCompleted: !goal.isCompleted }); onClose() }}
+          className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+        >
+          {goal.isCompleted ? 'Reopen dream' : 'Mark as achieved 🎉'}
+        </button>
 
-      <button
-        onClick={save}
-        disabled={!title.trim()}
-        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
-        style={{ background: primary }}
-      >
-        Save changes
-      </button>
+        <button
+          onClick={save}
+          disabled={!title.trim()}
+          className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+          style={{ background: primary }}
+        >
+          Save changes
+        </button>
 
-      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => { deleteGoal(goal.id); onClose() }} />
-    </EditSheet>
+        <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { deleteGoal(goal.id); onClose() }} />
+      </EditSheet>
+
+      <PhotoBackgroundSheet open={bgSheetOpen} onChoose={handleBgChoice} />
+    </>
   )
 }
 
 /* ── Wish Edit Sheet ─────────────────────────────────────────────────────────── */
 function WishEditSheet({ item, primary, onClose }: { item: WishlistItem; primary: string; onClose: () => void }) {
-  const updateWishlistItem = useAppStore(s => s.updateWishlistItem)
-  const deleteWishlistItem = useAppStore(s => s.deleteWishlistItem)
-  const toggleWishlistItem = useAppStore(s => s.toggleWishlistItem)
+  const updateWishlistItem  = useAppStore(s => s.updateWishlistItem)
+  const deleteWishlistItem  = useAppStore(s => s.deleteWishlistItem)
+  const toggleWishlistItem  = useAppStore(s => s.toggleWishlistItem)
+  const uploadWishlistPhoto = useAppStore(s => s.uploadWishlistPhoto)
+  const uploadPageBg        = useAppStore(s => s.uploadPageBackground)
+  const photoInputRef       = useRef<HTMLInputElement>(null)
 
   const [title, setTitle]       = useState(item.title)
   const [notes, setNotes]       = useState(item.notes ?? '')
   const [category, setCategory] = useState<WishlistCategory>(item.category)
   const [date, setDate]         = useState(item.date ?? '')
+  const [time, setTime]         = useState(item.startTime ?? '')
+  const [uploading, setUploading]     = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [bgSheetOpen, setBgSheetOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPendingFile(file)
+    setBgSheetOpen(true)
+    e.target.value = ''
+  }
+
+  async function handleBgChoice(choice: PhotoUseChoice) {
+    setBgSheetOpen(false)
+    if (!pendingFile) return
+    setUploading(true)
+    if (choice === 'together' || choice === 'plans' || choice === 'us') {
+      await uploadPageBg(choice, pendingFile)
+    } else {
+      await uploadWishlistPhoto(item.id, pendingFile)
+    }
+    setUploading(false)
+    setPendingFile(null)
+  }
 
   function save() {
     if (!title.trim()) return
@@ -554,65 +774,79 @@ function WishEditSheet({ item, primary, onClose }: { item: WishlistItem; primary
       notes: notes.trim() || undefined,
       category,
       date: date || undefined,
+      startTime: time || undefined,
     })
     onClose()
   }
 
   return (
-    <EditSheet title="Edit wish" onClose={onClose}>
-      {/* Category picker */}
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
-        <div className="flex flex-wrap gap-2">
-          {WISH_CATEGORIES.map(([id, cfg]) => (
-            <button
-              key={id}
-              onClick={() => setCategory(id)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
-              )}
-              style={category === id ? { background: primary } : {}}
-            >
-              {cfg.emoji} {cfg.label}
-            </button>
-          ))}
+    <>
+      <EditSheet title="Edit wish" onClose={onClose}>
+        {/* Category picker */}
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+          <div className="flex flex-wrap gap-2">
+            {WISH_CATEGORIES.map(([id, cfg]) => (
+              <button
+                key={id}
+                onClick={() => setCategory(id)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                  category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+                )}
+                style={category === id ? { background: primary } : {}}
+              >
+                {cfg.emoji} {cfg.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <TitleInput value={title} onChange={setTitle} placeholder="What do you wish for?" />
-      <NotesInput value={notes} onChange={setNotes} />
+        <TitleInput value={title} onChange={setTitle} placeholder="What do you wish for?" />
+        <NotesInput value={notes} onChange={setNotes} />
+        <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} label="Date & time (optional)" />
 
-      {/* Optional date */}
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Date (optional)</p>
-        <input
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          className="w-full text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-        />
-      </div>
+        {/* Photos */}
+        {item.photos && item.photos.length > 0 && (
+          <div className="flex gap-2 mb-4 overflow-x-auto">
+            {item.photos.map((url, i) => (
+              <img key={i} src={url} alt="" className="w-20 h-20 rounded-2xl object-cover shrink-0" />
+            ))}
+          </div>
+        )}
+        <div className="mb-4">
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium border border-dashed border-gray-200 active:bg-gray-100 disabled:opacity-50"
+          >
+            <Camera size={16} /> {uploading ? 'Uploading...' : 'Add photo or set as background'}
+          </button>
+        </div>
 
-      <button
-        onClick={() => { toggleWishlistItem(item.id); onClose() }}
-        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
-      >
-        {item.isCompleted ? 'Mark as pending' : 'Mark as made real ✨'}
-      </button>
+        <button
+          onClick={() => { toggleWishlistItem(item.id); onClose() }}
+          className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+        >
+          {item.isCompleted ? 'Mark as pending' : 'Mark as made real 🌠'}
+        </button>
 
-      <button
-        onClick={save}
-        disabled={!title.trim()}
-        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
-        style={{ background: primary }}
-      >
-        Save changes
-      </button>
+        <button
+          onClick={save}
+          disabled={!title.trim()}
+          className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+          style={{ background: primary }}
+        >
+          Save changes
+        </button>
 
-      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => { deleteWishlistItem(item.id); onClose() }} />
-    </EditSheet>
+        <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { deleteWishlistItem(item.id); onClose() }} />
+      </EditSheet>
+
+      <PhotoBackgroundSheet open={bgSheetOpen} onChoose={handleBgChoice} />
+    </>
   )
 }
 

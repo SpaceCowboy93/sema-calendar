@@ -7,7 +7,7 @@ import {
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
-  type ShoppingList, type ShoppingItem,
+  type ShoppingList, type ShoppingItem, type PageBackgrounds,
   OTHER_USER,
 } from '@/types'
 import { generateId, getTodayString } from '@/lib/utils'
@@ -80,6 +80,16 @@ interface AppState {
   addShoppingItem: (listId: string, name: string, quantity?: number) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
+
+  // Page backgrounds
+  pageBackgrounds: PageBackgrounds
+  setPageBackground: (page: keyof PageBackgrounds, url: string | null) => void
+  uploadPageBackground: (page: keyof PageBackgrounds, file: File) => Promise<void>
+
+  // Generic photo upload (returns public URL or null)
+  uploadPhoto: (folder: string, file: File) => Promise<string | null>
+  uploadGoalPhoto: (goalId: string, file: File) => Promise<void>
+  uploadWishlistPhoto: (itemId: string, file: File) => Promise<void>
 }
 
 export const useAppStore = create<AppState>()(
@@ -178,17 +188,8 @@ export const useAppStore = create<AppState>()(
 
       uploadEventPhoto: async (eventId, file) => {
         if (!file) return
-        const form = new FormData()
-        form.append('file', file)
-        form.append('eventId', eventId)
-        const res = await fetch('/api/upload-photo', { method: 'POST', body: form })
-        if (!res.ok) {
-          const { error } = await res.json().catch(() => ({ error: 'Upload failed' }))
-          console.error('[Photo] Upload error:', error)
-          alert(error ?? 'Upload failed')
-          return
-        }
-        const { url } = await res.json()
+        const url = await get().uploadPhoto(`events/${eventId}`, file)
+        if (!url) { alert('Upload failed'); return }
         set(s => ({
           events: s.events.map(e =>
             e.id === eventId
@@ -647,6 +648,54 @@ export const useAppStore = create<AppState>()(
               : l
           ),
         })),
+
+      // ── Page backgrounds ─────────────────────────────────────────────────────
+      pageBackgrounds: {},
+
+      setPageBackground: (page, url) =>
+        set(s => ({
+          pageBackgrounds: { ...s.pageBackgrounds, [page]: url ?? undefined },
+        })),
+
+      uploadPageBackground: async (page, file) => {
+        const url = await get().uploadPhoto('page-backgrounds', file)
+        if (url) get().setPageBackground(page, url)
+      },
+
+      // ── Generic upload helper ─────────────────────────────────────────────────
+      uploadPhoto: async (folder, file) => {
+        const form = new FormData()
+        form.append('file', file)
+        form.append('folder', folder)
+        const res = await fetch('/api/upload-photo', { method: 'POST', body: form })
+        if (!res.ok) {
+          const { error } = await res.json().catch(() => ({ error: 'Upload failed' }))
+          console.error('[Photo] Upload error:', error)
+          return null
+        }
+        const { url } = await res.json()
+        return url as string
+      },
+
+      uploadGoalPhoto: async (goalId, file) => {
+        const url = await get().uploadPhoto(`goals/${goalId}`, file)
+        if (!url) return
+        set(s => ({
+          goals: s.goals.map(g =>
+            g.id === goalId ? { ...g, photos: [...(g.photos ?? []), url] } : g
+          ),
+        }))
+      },
+
+      uploadWishlistPhoto: async (itemId, file) => {
+        const url = await get().uploadPhoto(`wishes/${itemId}`, file)
+        if (!url) return
+        set(s => ({
+          wishlistItems: s.wishlistItems.map(w =>
+            w.id === itemId ? { ...w, photos: [...(w.photos ?? []), url] } : w
+          ),
+        }))
+      },
     }),
     { name: 'semacalendar-v1', partialize: (s) => { const { currentUser, ...rest } = s; return rest } }
   )

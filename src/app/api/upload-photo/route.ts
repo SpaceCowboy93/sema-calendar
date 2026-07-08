@@ -11,11 +11,11 @@ function getAdminClient() {
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData()
-    const file    = form.get('file') as File | null
-    const eventId = form.get('eventId') as string | null
+    const file   = form.get('file') as File | null
+    const folder = (form.get('folder') ?? form.get('eventId')) as string | null
 
-    if (!file || !eventId) {
-      return NextResponse.json({ error: 'Missing file or eventId' }, { status: 400 })
+    if (!file || !folder) {
+      return NextResponse.json({ error: 'Missing file or folder' }, { status: 400 })
     }
 
     if (file.size > 5 * 1024 * 1024) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const bytes  = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const path   = `${eventId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+    const path   = `${folder}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
 
     const supabase = getAdminClient()
     const { data, error } = await supabase.storage

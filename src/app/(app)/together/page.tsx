@@ -46,10 +46,21 @@ export default function TogetherPage() {
   const markRead     = useAppStore(s => s.markPartnerNoteRead)
   const sendNote     = useAppStore(s => s.sendPartnerNote)
 
+  const pageBg         = useAppStore(s => s.pageBackgrounds.together)
+  const uploadPageBg   = useAppStore(s => s.uploadPageBackground)
+  const setPageBg      = useAppStore(s => s.setPageBackground)
+  const bgInputRef     = useRef<HTMLInputElement>(null)
+
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
   const lightBg     = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
+
+  async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) await uploadPageBg('together', file)
+    e.target.value = ''
+  }
 
   // Calendar state
   const [viewDate, setViewDate]         = useState(new Date())
@@ -141,14 +152,20 @@ export default function TogetherPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen bg-gray-50 relative"
+      style={pageBg ? { backgroundImage: `url(${pageBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+    >
+      {pageBg && <div className="fixed inset-0 bg-white/85 backdrop-blur-sm z-0 pointer-events-none" />}
+      <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgPick} />
+
       {/* ── Calendar header ── */}
       <div
-        className="px-5 pt-14 pb-3"
+        className="px-5 pt-14 pb-3 relative z-10"
         style={{
-          background: isSeval
+          background: pageBg ? 'transparent' : (isSeval
             ? 'linear-gradient(135deg, #f5f3ff, #fafafa)'
-            : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
+            : 'linear-gradient(135deg, #f0fdfa, #fafafa)'),
         }}
       >
         {/* Month navigation */}
@@ -158,6 +175,22 @@ export default function TogetherPage() {
             <p className="text-xs text-gray-400">{format(viewDate, 'yyyy')}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => bgInputRef.current?.click()}
+              className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
+              title="Set page background"
+            >
+              <Camera size={13} />
+            </button>
+            {pageBg && (
+              <button
+                onClick={() => setPageBg('together', null)}
+                className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
+                title="Remove background"
+              >
+                <X size={13} />
+              </button>
+            )}
             <button
               onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
               className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"

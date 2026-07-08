@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, LogOut, X, Send } from 'lucide-react'
+import { Plus, Trash2, LogOut, X, Send, Camera } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type MoodType } from '@/types'
@@ -23,6 +23,17 @@ export default function UsPage() {
   const addCountdown     = useAppStore(s => s.addCountdown)
   const deleteCountdown  = useAppStore(s => s.deleteCountdown)
   const sendPartnerNote  = useAppStore(s => s.sendPartnerNote)
+
+  const pageBg       = useAppStore(s => s.pageBackgrounds.us)
+  const uploadPageBg = useAppStore(s => s.uploadPageBackground)
+  const setPageBg    = useAppStore(s => s.setPageBackground)
+  const bgInputRef   = useRef<HTMLInputElement>(null)
+
+  async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) await uploadPageBg('us', file)
+    e.target.value = ''
+  }
 
   const partnerUser = OTHER_USER[currentUser]
   const myMood      = getMood(currentUser)
@@ -88,22 +99,49 @@ export default function UsPage() {
   })
 
   return (
-    <div className="min-h-screen px-4 pt-14">
+    <div
+      className="min-h-screen px-4 pt-14 relative"
+      style={pageBg ? { backgroundImage: `url(${pageBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+    >
+      {pageBg && <div className="fixed inset-0 bg-white/85 backdrop-blur-sm z-0 pointer-events-none" />}
+      <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgPick} />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 relative z-10">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Our Space</h1>
           <p className="text-sm text-gray-400 mt-0.5">just the two of you 💕</p>
         </div>
-        <button
-          onClick={() => { setCurrentUser(null); router.replace('/') }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
-                     text-gray-400 bg-gray-100 active:bg-gray-200 transition-colors"
-        >
-          <LogOut size={14} />
-          Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => bgInputRef.current?.click()}
+            className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
+            title="Set page background"
+          >
+            <Camera size={13} />
+          </button>
+          {pageBg && (
+            <button
+              onClick={() => setPageBg('us', null)}
+              className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
+              title="Remove background"
+            >
+              <X size={13} />
+            </button>
+          )}
+          <button
+            onClick={() => { setCurrentUser(null); router.replace('/') }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
+                       text-gray-400 bg-gray-100 active:bg-gray-200 transition-colors"
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
+        </div>
       </div>
+
+      {/* Remaining content above overlay */}
+      <div className="relative z-10">
 
       {/* Leave a Note button */}
       <motion.button
@@ -549,6 +587,7 @@ export default function UsPage() {
           </>
         )}
       </AnimatePresence>
+      </div>{/* end z-10 wrapper */}
     </div>
   )
 }

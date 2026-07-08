@@ -88,6 +88,13 @@ export interface WishlistItem {
   isCompleted: boolean
   createdBy: UserName
   createdAt: string
+  photos?: string[]      // Supabase Storage public URLs
+}
+
+export interface PageBackgrounds {
+  together?: string  // Supabase Storage public URL
+  plans?: string
+  us?: string
 }
 
 export interface Countdown {
@@ -120,6 +127,7 @@ export interface Goal {
   createdBy: UserName
   createdAt: string
   linkedEventId?: string     // ID of the linked CalendarEvent (if targetDate is set)
+  photos?: string[]          // Supabase Storage public URLs
 }
 
 export interface PartnerNote {
