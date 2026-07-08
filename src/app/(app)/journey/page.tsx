@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
 import { Plus, X, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS } from '@/types'
+import { USERS, type CalendarEvent } from '@/types'
 import { getTodayString, cn } from '@/lib/utils'
+import { EventModal } from '@/components/calendar/EventModal'
 
 const EMOJI_OPTIONS = ['🎉', '✈️', '💕', '🎂', '🌟', '🎊', '🌸', '🌊', '💍', '🏖️', '🎄', '🎭']
 
@@ -28,11 +29,13 @@ export default function JourneyPage() {
   const today    = new Date()
   const todayStr = getTodayString()
 
-  const [addOpen, setAddOpen]   = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newDate, setNewDate]   = useState('')
-  const [newEmoji, setNewEmoji] = useState('🎉')
-  const [editId, setEditId]     = useState<string | null>(null)
+  const [addOpen, setAddOpen]         = useState(false)
+  const [newTitle, setNewTitle]       = useState('')
+  const [newDate, setNewDate]         = useState('')
+  const [newEmoji, setNewEmoji]       = useState('🎉')
+  const [editId, setEditId]           = useState<string | null>(null)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [modalOpen, setModalOpen]     = useState(false)
 
   const futureCountdowns = countdowns
     .filter(c => c.date >= todayStr)
@@ -190,9 +193,11 @@ export default function JourneyPage() {
               {upcomingEvents.map(ev => {
                 const days = differenceInCalendarDays(parseISO(ev.date), today)
                 return (
-                  <div
+                  <motion.button
                     key={ev.id}
-                    className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
+                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left active:opacity-90 transition-opacity"
                   >
                     <div className="shrink-0 text-center w-10">
                       {days === 0
@@ -208,7 +213,8 @@ export default function JourneyPage() {
                       <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
                       <p className="text-xs text-gray-400">{format(parseISO(ev.date), 'EEE, MMM d')}</p>
                     </div>
-                  </div>
+                    <span className="text-gray-300 shrink-0">›</span>
+                  </motion.button>
                 )
               })}
             </div>
@@ -245,6 +251,14 @@ export default function JourneyPage() {
           </div>
         )}
       </div>
+
+      {/* ── Event modal (Coming up) ── */}
+      <EventModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingEvent(null) }}
+        date={editingEvent?.date ?? todayStr}
+        event={editingEvent}
+      />
 
       {/* ── Add / Edit countdown sheet ── */}
       <AnimatePresence>
