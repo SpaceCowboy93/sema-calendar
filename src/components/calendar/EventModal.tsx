@@ -42,6 +42,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [colorPopup, setColorPopup] = useState(false)
   const [photos, setPhotos]         = useState<string[]>([])
   const [uploading, setUploading]   = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const colorBtnRef  = useRef<HTMLButtonElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -71,6 +72,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setColorPopup(false)
     setNewTodo('')
     setUploading(false)
+    setUploadError(null)
   }, [event, date, currentUser, isOpen, initialColor])
 
   function handleSave() {
@@ -94,11 +96,17 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     const file = e.target.files?.[0]
     if (!file || !event) return
     setUploading(true)
-    await uploadEventPhoto(event.id, file)
-    const updated = useAppStore.getState().events.find(ev => ev.id === event.id)
-    if (updated?.photos) setPhotos(updated.photos)
-    setUploading(false)
-    if (e.target) e.target.value = ''
+    setUploadError(null)
+    try {
+      await uploadEventPhoto(event.id, file)
+      const updated = useAppStore.getState().events.find(ev => ev.id === event.id)
+      if (updated?.photos) setPhotos(updated.photos)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (e.target) e.target.value = ''
+    }
   }
 
   function handleDelete() {
@@ -328,12 +336,25 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   {photos.length > 0 && (
                     <div className="flex gap-2 flex-wrap mb-3">
                       {photos.map((url, i) => (
-                        <img
-                          key={i}
-                          src={url}
-                          alt=""
-                          className="w-20 h-20 rounded-2xl object-cover"
-                        />
+                        <div key={i} className="relative group">
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-20 h-20 rounded-2xl object-cover"
+                          />
+                          <button
+                            onClick={() => {
+                              const next = photos.filter((_, idx) => idx !== i)
+                              setPhotos(next)
+                              if (event) updateEvent(event.id, { photos: next.length ? next : undefined })
+                            }}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500
+                                       text-white flex items-center justify-center
+                                       opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X size={11} strokeWidth={3} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -350,9 +371,13 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                     className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50
                                text-sm text-gray-500 font-medium active:bg-gray-100 disabled:opacity-50"
                   >
-                    <Camera size={15} className="text-gray-400" />
-                    {uploading ? 'Uploading...' : 'Add photo'}
+                    <Camera size={15} className={uploading ? 'animate-pulse text-gray-400' : 'text-gray-400'} />
+                    {uploading ? 'Uploading…' : photos.length > 0 ? 'Add another photo' : 'Add photo'}
                   </button>
+                  {uploadError && (
+                    <p className="text-xs text-red-400 mt-2">{uploadError}</p>
+                  )}
+                  <p className="text-[10px] text-gray-300 mt-1.5">Max 10 MB · JPG, PNG, HEIC</p>
                 </div>
               )}
 

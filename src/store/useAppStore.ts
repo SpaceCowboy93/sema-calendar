@@ -176,13 +176,28 @@ export const useAppStore = create<AppState>()(
         }),
 
       uploadEventPhoto: async (eventId, file) => {
-        const path = `${eventId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+        const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+        if (!file.type.startsWith('image/')) {
+          console.error('[uploadEventPhoto] Not an image:', file.type)
+          throw new Error('Only image files are supported')
+        }
+        if (file.size > MAX_SIZE) {
+          console.error('[uploadEventPhoto] File too large:', file.size)
+          throw new Error('Image must be under 10 MB')
+        }
+        const ext  = file.name.split('.').pop() ?? 'jpg'
+        const path = `${eventId}/${Date.now()}.${ext}`
+        console.log('[uploadEventPhoto] Uploading', path)
         const { data, error } = await supabase.storage
           .from('event-photos')
           .upload(path, file, { upsert: false })
-        if (error || !data) return
+        if (error || !data) {
+          console.error('[uploadEventPhoto] Upload error:', error)
+          throw new Error(error?.message ?? 'Upload failed')
+        }
         const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(data.path)
         const url = urlData.publicUrl
+        console.log('[uploadEventPhoto] Done:', url)
         set(s => ({
           events: s.events.map(e =>
             e.id === eventId
