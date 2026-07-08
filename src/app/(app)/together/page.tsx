@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, Clock, Plus, X, Send } from 'lucide-react'
@@ -45,6 +45,25 @@ export default function TogetherPage() {
   const [selectedDate, setSelectedDate] = useState(getTodayString())
   const [modalOpen, setModalOpen]       = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+
+  // Double-tap to add event
+  const lastTapRef     = useRef(0)
+  const lastTapDateRef = useRef('')
+
+  function handleDayTap(dateStr: string) {
+    const now  = Date.now()
+    const diff = now - lastTapRef.current
+    if (diff < 300 && diff > 0 && lastTapDateRef.current === dateStr) {
+      lastTapRef.current = 0
+      setSelectedDate(dateStr)
+      setEditingEvent(null)
+      setModalOpen(true)
+    } else {
+      lastTapRef.current     = now
+      lastTapDateRef.current = dateStr
+      setSelectedDate(dateStr)
+    }
+  }
 
   // Category hub
   const [openCategory, setOpenCategory] = useState<CategoryType | null>(null)
@@ -150,7 +169,7 @@ export default function TogetherPage() {
               <motion.button
                 key={i}
                 whileTap={{ scale: 0.88 }}
-                onClick={() => setSelectedDate(dateStr)}
+                onClick={() => handleDayTap(dateStr)}
                 className="calendar-day flex-col relative"
               >
                 <div
