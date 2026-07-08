@@ -77,6 +77,17 @@ export function getTheme(user: UserName) {
   return THEME[user]
 }
 
+// Event color hex values (for inline styles)
+export const COLOR_HEX: Record<string, string> = {
+  seval:  '#a78bfa', // Purple
+  blue:   '#60a5fa', // Blue
+  yellow: '#fbbf24', // Yellow
+  green:  '#34d399', // Green
+  // Legacy
+  mateo:  '#60a5fa',
+  pink:   '#a78bfa',
+}
+
 // Event color to tailwind bg class
 export const EVENT_COLOR_CLASS: Record<string, string> = {
   seval:  'bg-seval-400',   // Purple

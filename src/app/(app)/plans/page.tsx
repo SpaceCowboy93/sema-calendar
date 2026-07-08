@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Calendar, Clock, X, Trash2, ChevronDown, Plus, ShoppingBag } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
+import { WISHLIST_CATEGORY_CONFIG, COLOR_HEX, cn, formatDate, formatTime } from '@/lib/utils'
 import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
 
 const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string }> = {
@@ -22,11 +22,11 @@ const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCat
 
 type PlanTab = 'plans' | 'dreams' | 'wishes' | 'shopping'
 
-const TABS: { id: PlanTab; label: string; emoji: string }[] = [
-  { id: 'plans',    label: 'Plans',    emoji: '🗓️' },
-  { id: 'dreams',   label: 'Dreams',   emoji: '🌙' },
-  { id: 'wishes',   label: 'Wishes',   emoji: '🌠' },
-  { id: 'shopping', label: 'Shopping', emoji: '🛒' },
+const TABS: { id: PlanTab; label: string; emoji: string; hex: string }[] = [
+  { id: 'plans',    label: 'Plans',    emoji: '🗓️', hex: COLOR_HEX.green  },
+  { id: 'dreams',   label: 'Dreams',   emoji: '🌙', hex: COLOR_HEX.blue   },
+  { id: 'wishes',   label: 'Wishes',   emoji: '🌠', hex: COLOR_HEX.seval  },
+  { id: 'shopping', label: 'Shopping', emoji: '🛒', hex: '#6b7280'        },
 ]
 
 export default function PlansPage() {
@@ -51,7 +51,7 @@ export default function PlansPage() {
             onClick={() => setActiveTab(tab.id)}
             className="flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all"
             style={activeTab === tab.id
-              ? { background: primary, color: 'white' }
+              ? { background: tab.hex, color: 'white' }
               : { background: 'white', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
             }
           >
@@ -199,7 +199,7 @@ function DreamsSection({ primary }: { primary: string }) {
   const completed = goals.filter(g => g.isCompleted)
 
   if (goals.length === 0) {
-    return <EmptyState emoji="✨" text="No dreams yet" sub="tap + to add something to dream about" />
+    return <EmptyState emoji="🌙" text="No dreams yet" sub="tap + to add something to dream about" />
   }
 
   return (
@@ -302,7 +302,7 @@ function WishesSection({ primary }: { primary: string }) {
   const completed = items.filter(i => i.isCompleted)
 
   if (items.length === 0) {
-    return <EmptyState emoji="💫" text="No wishes yet" sub="tap + to add something to dream about" />
+    return <EmptyState emoji="🌠" text="No wishes yet" sub="tap + to add something to wish for" />
   }
 
   return (

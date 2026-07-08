@@ -10,7 +10,7 @@ import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent, ty
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import {
   MOOD_CONFIG, WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
-  getTodayString, cn, EVENT_COLOR_CLASS, generateId,
+  getTodayString, cn, EVENT_COLOR_CLASS, COLOR_HEX, generateId,
 } from '@/lib/utils'
 
 const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
@@ -247,23 +247,31 @@ export default function TogetherPage() {
           </button>
         </div>
         <div className="grid grid-cols-4 gap-2">
-          {CATEGORY_DEFS.map(cat => (
-            <motion.button
-              key={cat.id}
-              whileTap={{ scale: 0.93 }}
-              onClick={() => setOpenCategory(cat.id)}
-              className="bg-white rounded-xl shadow-card p-2.5 flex flex-col items-center gap-1"
-            >
-              <span className="text-xl">{cat.emoji}</span>
-              <span className="text-[9px] font-semibold text-gray-500">{cat.label}</span>
-              <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: `${primary}18`, color: primary }}
+          {CATEGORY_DEFS.map(cat => {
+            const catHex = COLOR_HEX[cat.color]
+            return (
+              <motion.button
+                key={cat.id}
+                whileTap={{ scale: 0.93 }}
+                onClick={() => setOpenCategory(cat.id)}
+                className="bg-white rounded-xl shadow-card p-2.5 flex flex-col items-center gap-1"
               >
-                {categoryCounts[cat.id]}
-              </span>
-            </motion.button>
-          ))}
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                  style={{ background: `${catHex}20` }}
+                >
+                  {cat.emoji}
+                </div>
+                <span className="text-[9px] font-semibold text-gray-500">{cat.label}</span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: `${catHex}20`, color: catHex }}
+                >
+                  {categoryCounts[cat.id]}
+                </span>
+              </motion.button>
+            )
+          })}
         </div>
       </div>
 
@@ -648,6 +656,7 @@ function CategoryHubSheet({
   const updateEventDo  = useAppStore(s => s.updateEvent)
 
   const def = CATEGORY_DEFS.find(d => d.id === type)!
+  const catHex = COLOR_HEX[def.color]
 
   // ── Add-form state ──────────────────────────────────────────────────────────
   const [addOpen, setAddOpen]             = useState(false)
@@ -838,7 +847,7 @@ function CategoryHubSheet({
           <button
             onClick={() => setAddOpen(true)}
             className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-semibold"
-            style={{ background: `${primary}15`, color: primary }}
+            style={{ background: `${catHex}20`, color: catHex }}
           >
             <Plus size={15} strokeWidth={2.5} /> Add New {addLabel}
           </button>
@@ -859,7 +868,7 @@ function CategoryHubSheet({
                       whileTap={{ scale: 0.85 }}
                       onClick={() => handleToggle(item.id, item.title, item.done)}
                       className="w-6 h-6 rounded-full border-2 shrink-0 transition-all"
-                      style={{ borderColor: primary }}
+                      style={{ borderColor: catHex }}
                     />
                   )}
                   <button onClick={() => openEdit(item.id)} className="flex-1 text-left min-w-0">
@@ -880,7 +889,7 @@ function CategoryHubSheet({
                         whileTap={{ scale: 0.85 }}
                         onClick={() => handleToggle(item.id, item.title, item.done)}
                         className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold"
-                        style={{ background: primary }}
+                        style={{ background: catHex }}
                       >
                         ✓
                       </motion.button>
@@ -947,7 +956,7 @@ function CategoryHubSheet({
                       {(Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCategory, { emoji: string; label: string }][]).map(([id, cfg]) => (
                         <button key={id} onClick={() => setAddWishCat(id)}
                           className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all', addWishCat === id ? 'text-white' : 'bg-gray-100 text-gray-500')}
-                          style={addWishCat === id ? { background: primary } : {}}>
+                          style={addWishCat === id ? { background: catHex } : {}}>
                           {cfg.emoji} {cfg.label}
                         </button>
                       ))}
@@ -963,7 +972,7 @@ function CategoryHubSheet({
                       {GOAL_CATEGORIES.map(([id, cfg]) => (
                         <button key={id} onClick={() => setAddGoalCat(id)}
                           className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all', addGoalCat === id ? 'text-white' : 'bg-gray-100 text-gray-500')}
-                          style={addGoalCat === id ? { background: primary } : {}}>
+                          style={addGoalCat === id ? { background: catHex } : {}}>
                           {cfg.emoji} {cfg.label}
                         </button>
                       ))}
@@ -1134,7 +1143,7 @@ function CategoryHubSheet({
                   onClick={handleAddSave}
                   disabled={!addTitle.trim() || addUploading}
                   className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-                  style={{ background: primary }}
+                  style={{ background: catHex }}
                 >
                   {addUploading ? 'Uploading...' : `Add ${addLabel}`}
                 </motion.button>
@@ -1220,7 +1229,7 @@ function CategoryHubSheet({
                     onClick={saveEdit}
                     disabled={!editTitle.trim()}
                     className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-                    style={{ background: primary }}
+                    style={{ background: catHex }}
                   >
                     Save
                   </motion.button>

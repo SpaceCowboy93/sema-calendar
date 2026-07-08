@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
+import { COLOR_HEX } from '@/lib/utils'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
@@ -117,7 +118,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                     onClick={() => { setType(t.id); setColor(TYPE_COLOR[t.id]); setTitle(''); setNotes('') }}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
                     style={type === t.id
-                      ? { background: primary, color: 'white' }
+                      ? { background: COLOR_HEX[TYPE_COLOR[t.id]], color: 'white' }
                       : { background: '#f3f4f6', color: '#6b7280' }
                     }
                   >
