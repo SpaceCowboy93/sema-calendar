@@ -20,7 +20,7 @@ interface AppState {
 
   // Events
   events: CalendarEvent[]
-  addEvent: (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt' | 'linkedTodoId'>) => void
+  addEvent: (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt' | 'linkedTodoId'>) => string
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
   deleteEvent: (id: string) => void
   uploadEventPhoto: (eventId: string, file: File) => Promise<void>
@@ -121,6 +121,7 @@ export const useAppStore = create<AppState>()(
           events: [...s.events, newEvent],
           todos:  [...s.todos,  newTodo],
         }))
+        return eventId
       },
 
       updateEvent: (id, updates) =>
@@ -176,35 +177,48 @@ export const useAppStore = create<AppState>()(
         }),
 
       uploadEventPhoto: async (eventId, file) => {
-        const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
-        if (!file.type.startsWith('image/')) {
-          console.error('[uploadEventPhoto] Not an image:', file.type)
-          throw new Error('Only image files are supported')
+        if (!file) {
+          console.error('[Photo] No file provided')
+          return
         }
-        if (file.size > MAX_SIZE) {
-          console.error('[uploadEventPhoto] File too large:', file.size)
-          throw new Error('Image must be under 10 MB')
+        if (file.size > 5 * 1024 * 1024) {
+          console.error('[Photo] File too large (max 5MB)')
+          alert('File too large. Max 5MB.')
+          return
         }
-        const ext  = file.name.split('.').pop() ?? 'jpg'
-        const path = `${eventId}/${Date.now()}.${ext}`
-        console.log('[uploadEventPhoto] Uploading', path)
-        const { data, error } = await supabase.storage
-          .from('event-photos')
-          .upload(path, file, { upsert: false })
-        if (error || !data) {
-          console.error('[uploadEventPhoto] Upload error:', error)
-          throw new Error(error?.message ?? 'Upload failed')
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+        if (!validTypes.includes(file.type)) {
+          console.error('[Photo] Invalid file type:', file.type)
+          alert('Invalid file type. Use JPG, PNG, or WebP.')
+          return
         }
-        const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(data.path)
-        const url = urlData.publicUrl
-        console.log('[uploadEventPhoto] Done:', url)
-        set(s => ({
-          events: s.events.map(e =>
-            e.id === eventId
-              ? { ...e, photos: [...(e.photos ?? []), url], updatedAt: new Date().toISOString() }
-              : e
-          ),
-        }))
+        const path = `${eventId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+        try {
+          const { data, error } = await supabase.storage
+            .from('event-photos')
+            .upload(path, file, { upsert: false, cacheControl: '3600' })
+          if (error) {
+            console.error('[Photo] Upload error:', error)
+            alert(`Upload failed: ${error.message}`)
+            return
+          }
+          if (!data) {
+            console.error('[Photo] No data returned')
+            return
+          }
+          const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(data.path)
+          const url = urlData.publicUrl
+          set(s => ({
+            events: s.events.map(e =>
+              e.id === eventId
+                ? { ...e, photos: [...(e.photos ?? []), url], updatedAt: new Date().toISOString() }
+                : e
+            ),
+          }))
+        } catch (err) {
+          console.error('[Photo] Unexpected error:', err)
+          alert('Something went wrong uploading the photo')
+        }
       },
 
       // ── Todos ───────────────────────────────────────────────────────────────

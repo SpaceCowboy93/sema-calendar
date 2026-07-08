@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Calendar, Clock, X, Trash2, ChevronDown } from 'lucide-react'
+import { Check, Calendar, Clock, X, Trash2, ChevronDown, Plus, ShoppingBag } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
 import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
@@ -20,12 +20,13 @@ const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string 
 const GOAL_CATEGORIES = Object.entries(GOAL_CATEGORY_CONFIG) as [GoalCategory, { emoji: string; label: string }][]
 const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCategory, { emoji: string; label: string }][]
 
-type PlanTab = 'plans' | 'dreams' | 'wishes'
+type PlanTab = 'plans' | 'dreams' | 'wishes' | 'shopping'
 
 const TABS: { id: PlanTab; label: string; emoji: string }[] = [
-  { id: 'plans',  label: 'Plans',  emoji: '✅' },
-  { id: 'dreams', label: 'Dreams', emoji: '✨' },
-  { id: 'wishes', label: 'Wishes', emoji: '💫' },
+  { id: 'plans',    label: 'Plans',    emoji: '✅' },
+  { id: 'dreams',   label: 'Dreams',   emoji: '✨' },
+  { id: 'wishes',   label: 'Wishes',   emoji: '💫' },
+  { id: 'shopping', label: 'Shopping', emoji: '🛒' },
 ]
 
 export default function PlansPage() {
@@ -67,9 +68,10 @@ export default function PlansPage() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.18 }}
         >
-          {activeTab === 'plans'  && <TodosSection  primary={primary} />}
-          {activeTab === 'dreams' && <DreamsSection primary={primary} />}
-          {activeTab === 'wishes' && <WishesSection primary={primary} />}
+          {activeTab === 'plans'    && <TodosSection    primary={primary} />}
+          {activeTab === 'dreams'   && <DreamsSection   primary={primary} />}
+          {activeTab === 'wishes'   && <WishesSection   primary={primary} />}
+          {activeTab === 'shopping' && <ShoppingSection primary={primary} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -737,6 +739,244 @@ function DeleteRow({
       >
         Delete
       </button>
+    </div>
+  )
+}
+
+/* ── Shopping Section ────────────────────────────────────────────────────────── */
+function ShoppingSection({ primary }: { primary: string }) {
+  const lists      = useAppStore(s => s.shoppingLists)
+  const createList = useAppStore(s => s.createShoppingList)
+  const deleteList = useAppStore(s => s.deleteShoppingList)
+  const addItem    = useAppStore(s => s.addShoppingItem)
+  const toggleItem = useAppStore(s => s.toggleShoppingItem)
+  const deleteItem = useAppStore(s => s.deleteShoppingItem)
+
+  const [newListName, setNewListName]       = useState('')
+  const [editingListId, setEditingListId]   = useState<string | null>(null)
+  const [newItemName, setNewItemName]       = useState('')
+  const [newItemQuantity, setNewItemQuantity] = useState('1')
+  const [showCreateList, setShowCreateList] = useState(false)
+
+  function handleCreateList() {
+    if (!newListName.trim()) return
+    createList(newListName.trim())
+    setNewListName('')
+    setShowCreateList(false)
+  }
+
+  function handleAddItem(listId: string) {
+    if (!newItemName.trim()) return
+    addItem(listId, newItemName.trim(), parseInt(newItemQuantity) || 1)
+    setNewItemName('')
+    setNewItemQuantity('1')
+  }
+
+  const createModal = (
+    <AnimatePresence>
+      {showCreateList && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" onClick={() => setShowCreateList(false)} />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          >
+            <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
+              <h3 className="font-bold text-gray-800 mb-4">New Shopping List 🛒</h3>
+              <input
+                type="text"
+                value={newListName}
+                onChange={e => setNewListName(e.target.value)}
+                placeholder="e.g., Weekly Groceries"
+                className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none mb-4"
+                autoFocus
+                onKeyDown={e => e.key === 'Enter' && handleCreateList()}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCreateList(false)}
+                  className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateList}
+                  disabled={!newListName.trim()}
+                  className="flex-1 py-3 rounded-2xl text-white font-medium text-sm disabled:opacity-40"
+                  style={{ background: primary }}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+
+  if (lists.length === 0) {
+    return (
+      <div className="px-5">
+        <div className="flex flex-col items-center justify-center pt-16 text-center">
+          <div className="text-5xl mb-4">🛒</div>
+          <p className="font-semibold text-gray-600 mb-1">No shopping lists yet</p>
+          <p className="text-sm text-gray-400 mb-4">Create one to track what you need</p>
+          <button
+            onClick={() => setShowCreateList(true)}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white text-sm font-semibold"
+            style={{ background: primary }}
+          >
+            <Plus size={16} /> Create Shopping List
+          </button>
+        </div>
+        {createModal}
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-5 space-y-3">
+      <button
+        onClick={() => setShowCreateList(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 text-sm font-medium"
+      >
+        <Plus size={16} /> New Shopping List
+      </button>
+
+      {lists.map(list => {
+        const completed = list.items.filter(i => i.isChecked).length
+        const total     = list.items.length
+        const allDone   = total > 0 && completed === total
+
+        return (
+          <motion.div
+            key={list.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-card overflow-hidden"
+          >
+            <div
+              className="px-4 py-3 flex items-center justify-between cursor-pointer"
+              onClick={() => setEditingListId(editingListId === list.id ? null : list.id)}
+            >
+              <div className="flex items-center gap-3">
+                <ShoppingBag size={18} className="text-gray-400" />
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">{list.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {completed}/{total} items{allDone && total > 0 && ' 🎉'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={e => { e.stopPropagation(); deleteList(list.id) }}
+                  className="text-gray-300 active:text-red-400 p-1"
+                >
+                  <Trash2 size={14} />
+                </button>
+                <motion.div animate={{ rotate: editingListId === list.id ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                  <ChevronDown size={16} className="text-gray-400" />
+                </motion.div>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {editingListId === list.id && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-4 pb-4 space-y-2">
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-2">
+                      <input
+                        type="text"
+                        value={newItemName}
+                        onChange={e => setNewItemName(e.target.value)}
+                        placeholder="Add item..."
+                        className="flex-1 text-sm text-gray-700 bg-transparent outline-none px-2"
+                        onKeyDown={e => e.key === 'Enter' && handleAddItem(list.id)}
+                      />
+                      <input
+                        type="number"
+                        value={newItemQuantity}
+                        onChange={e => setNewItemQuantity(e.target.value)}
+                        className="w-12 text-sm text-gray-700 bg-white rounded-xl px-2 py-1 outline-none border border-gray-200 text-center"
+                        min="1"
+                      />
+                      <button
+                        onClick={() => handleAddItem(list.id)}
+                        disabled={!newItemName.trim()}
+                        className="p-2 rounded-xl text-white disabled:opacity-40 shrink-0"
+                        style={{ background: primary }}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+
+                    {list.items.length === 0 ? (
+                      <p className="text-center text-xs text-gray-400 py-4">No items yet</p>
+                    ) : (
+                      list.items.map(item => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          className={cn(
+                            'flex items-center gap-3 p-3 rounded-xl border transition-all',
+                            item.isChecked ? 'opacity-50 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
+                          )}
+                        >
+                          <button
+                            onClick={() => toggleItem(list.id, item.id)}
+                            className={cn(
+                              'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                              item.isChecked ? 'border-emerald-400 bg-emerald-400' : 'border-gray-300'
+                            )}
+                          >
+                            {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
+                              {item.name}
+                            </p>
+                            {item.quantity > 1 && (
+                              <span className="text-[10px] font-semibold text-gray-400">×{item.quantity}</span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => deleteItem(list.id, item.id)}
+                            className="text-gray-300 active:text-red-400 p-1"
+                          >
+                            <X size={14} />
+                          </button>
+                        </motion.div>
+                      ))
+                    )}
+
+                    {allDone && total > 0 && (
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-center py-3 bg-emerald-50 rounded-xl border border-emerald-200"
+                      >
+                        <p className="text-sm font-bold text-emerald-600">🎉 Good job! You got everything!</p>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )
+      })}
+
+      {createModal}
     </div>
   )
 }

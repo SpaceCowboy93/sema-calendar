@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Sparkles, BookOpen, ShoppingCart } from 'lucide-react'
+import { Heart, Sparkles, BookOpen } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
@@ -10,8 +10,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { href: '/together', label: 'Together', icon: Heart },
   { href: '/plans',    label: 'Plans',    icon: Sparkles },
-  { href: '/journey',  label: 'Journey',  icon: BookOpen },
-  { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
+  { href: '/memories', label: 'Us',       icon: BookOpen },
 ]
 
 export function BottomNav() {
