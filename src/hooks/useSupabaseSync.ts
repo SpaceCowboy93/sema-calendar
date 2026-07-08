@@ -56,8 +56,24 @@ export function useSupabaseSync() {
     console.log('[Sync] applying remote state from', updatedAt)
     lastRemoteAt.current = updatedAt
     isMerging.current    = true
+
+    // For array keys, take whichever side has more items to avoid overwriting
+    // local data with an empty array from an older remote snapshot.
+    const local = useAppStore.getState() as unknown as Record<string, unknown>
+    const merged: Record<string, unknown> = { ...state }
+    const ARRAY_KEYS = [
+      'events','todos','moods','loveNotes','wishlistItems','countdowns',
+      'memories','goals','partnerNotes','shoppingLists',
+    ]
+    for (const key of ARRAY_KEYS) {
+      const remoteArr = Array.isArray(state[key]) ? (state[key] as unknown[]) : []
+      const localArr  = Array.isArray(local[key])  ? (local[key]  as unknown[]) : []
+      // Use whichever array has more items (most up-to-date wins)
+      merged[key] = remoteArr.length >= localArr.length ? remoteArr : localArr
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    useAppStore.setState(state as any)
+    useAppStore.setState(merged as any)
     isMerging.current = false
   }
 
