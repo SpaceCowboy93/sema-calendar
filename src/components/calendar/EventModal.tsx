@@ -44,6 +44,8 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [uploading, setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [bgPhotoIdx, setBgPhotoIdx]   = useState<number | null>(null)
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
 
   const colorBtnRef  = useRef<HTMLButtonElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -58,7 +60,10 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setNotes(event.notes ?? '')
       setColor(event.color)
       setTodos(event.todos ?? [])
-      setPhotos(event.photos ?? [])
+      const p = event.photos ?? []
+      setPhotos(p)
+      const bpIdx = event.backgroundPhoto ? p.indexOf(event.backgroundPhoto) : -1
+      setBgPhotoIdx(bpIdx >= 0 ? bpIdx : null)
     } else {
       setTitle('')
       setDate(date)
@@ -69,7 +74,9 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setTodos([])
       setPhotos([])
       setPendingFiles([])
+      setBgPhotoIdx(null)
     }
+    setLightboxIdx(null)
     setShowDelete(false)
     setColorPopup(false)
     setNewTodo('')
@@ -87,15 +94,25 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       color,
       todos: todos.length ? todos : undefined,
       photos: photos.length ? photos : undefined,
+      // For edit: photos[] are real URLs; for new: resolved after upload below
+      backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
       createdBy: currentUser,
     }
     if (isEdit && event) {
       updateEvent(event.id, data)
     } else {
+      const nPending = pendingFiles.length
       const newId = addEvent(data)
-      if (pendingFiles.length > 0) {
+      if (nPending > 0) {
         for (const file of pendingFiles) {
           await uploadEventPhoto(newId, file)
+        }
+        // Resolve real URL: blob previews occupy indices 0..nPending-1,
+        // real uploads are appended at nPending, nPending+1, ...
+        if (bgPhotoIdx !== null) {
+          const stored = useAppStore.getState().events.find(e => e.id === newId)
+          const bpUrl  = stored?.photos?.[nPending + bgPhotoIdx]
+          if (bpUrl) updateEvent(newId, { backgroundPhoto: bpUrl })
         }
       }
     }
@@ -341,7 +358,6 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </div>
 
               {/* Photos */}
-              {/* Photos */}
               <div className="mb-6">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Photos
@@ -350,22 +366,34 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   <div className="flex gap-2 flex-wrap mb-3">
                     {photos.map((url, i) => (
                       <div key={i} className="relative w-20 h-20">
-                        <img
-                          src={url}
-                          alt=""
-                          className="w-full h-full rounded-2xl object-cover"
-                        />
+                        {/* Tap to open lightbox */}
+                        <button className="w-full h-full" onClick={() => setLightboxIdx(i)}>
+                          <img src={url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                        </button>
+                        {/* Remove */}
                         <button
                           onClick={() => {
                             const next = photos.filter((_, idx) => idx !== i)
                             setPhotos(next)
                             if (event) updateEvent(event.id, { photos: next.length ? next : undefined })
                             else setPendingFiles(prev => prev.filter((_, idx) => idx !== i))
+                            if (bgPhotoIdx === i) setBgPhotoIdx(null)
+                            else if (bgPhotoIdx !== null && bgPhotoIdx > i) setBgPhotoIdx(bgPhotoIdx - 1)
                           }}
                           className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white
                                      flex items-center justify-center text-xs"
+                        >×</button>
+                        {/* Set as card background */}
+                        <button
+                          onClick={() => setBgPhotoIdx(bgPhotoIdx === i ? null : i)}
+                          className={cn(
+                            'absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-lg font-bold transition-all',
+                            bgPhotoIdx === i
+                              ? 'bg-yellow-400 text-white'
+                              : 'bg-black/40 text-white/80'
+                          )}
                         >
-                          ×
+                          {bgPhotoIdx === i ? '★ BG' : '☆'}
                         </button>
                       </div>
                     ))}
@@ -397,7 +425,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   )}
                 </button>
                 <p className="text-[10px] text-gray-300 mt-1">
-                  Max 5MB · JPG, PNG, WebP
+                  Max 5MB · JPG, PNG, WebP · ☆ = set as card background
                 </p>
               </div>
 
@@ -460,6 +488,63 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </motion.div>
             )}
           </AnimatePresence>
+        {/* Lightbox */}
+        <AnimatePresence>
+          {lightboxIdx !== null && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setLightboxIdx(null)}
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur-md"
+            >
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+                onClick={e => e.stopPropagation()}
+                className="relative max-w-[90vw] max-h-[85vh]"
+              >
+                <img
+                  src={photos[lightboxIdx]}
+                  alt=""
+                  className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
+                />
+                {/* Close */}
+                <button
+                  onClick={() => setLightboxIdx(null)}
+                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm
+                             text-white flex items-center justify-center"
+                >
+                  <X size={16} />
+                </button>
+                {/* Prev / Next */}
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={e => { e.stopPropagation(); setLightboxIdx(l => l !== null ? Math.max(0, l - 1) : 0) }}
+                      disabled={lightboxIdx === 0}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50
+                                 backdrop-blur-sm text-white flex items-center justify-center text-xl
+                                 font-light disabled:opacity-30"
+                    >‹</button>
+                    <button
+                      onClick={e => { e.stopPropagation(); setLightboxIdx(l => l !== null ? Math.min(photos.length - 1, l + 1) : 0) }}
+                      disabled={lightboxIdx === photos.length - 1}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50
+                                 backdrop-blur-sm text-white flex items-center justify-center text-xl
+                                 font-light disabled:opacity-30"
+                    >›</button>
+                  </>
+                )}
+                <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-white/50">
+                  {lightboxIdx + 1} / {photos.length}
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         </>
       )}
     </AnimatePresence>

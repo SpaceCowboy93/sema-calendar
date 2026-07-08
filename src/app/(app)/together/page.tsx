@@ -3,14 +3,25 @@
 import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Plus, X, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown } from 'lucide-react'
+import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent } from '@/types'
-import { EventModal } from '@/components/calendar/EventModal'
+import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor } from '@/types'
+import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import {
   MOOD_CONFIG, WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
-  getTodayString, cn, EVENT_COLOR_CLASS,
+  getTodayString, cn, EVENT_COLOR_CLASS, generateId,
 } from '@/lib/utils'
+
+const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
+  ['travel',     { emoji: '✈️', label: 'Travel'     }],
+  ['money',      { emoji: '💰', label: 'Money'      }],
+  ['fitness',    { emoji: '💪', label: 'Fitness'    }],
+  ['life',       { emoji: '🌱', label: 'Life'       }],
+  ['learning',   { emoji: '📚', label: 'Learning'   }],
+  ['hobbies',    { emoji: '🎨', label: 'Hobbies'    }],
+  ['challenges', { emoji: '🏆', label: 'Challenges' }],
+]
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; label: string }][]
@@ -51,22 +62,35 @@ export default function TogetherPage() {
   const lastTapDateRef = useRef('')
 
   function handleDayTap(dateStr: string) {
-    const now  = Date.now()
-    const diff = now - lastTapRef.current
+    const now      = Date.now()
+    const diff     = now - lastTapRef.current
+    const dayEvts  = eventsByDate[dateStr] ?? []
+
     if (diff < 300 && diff > 0 && lastTapDateRef.current === dateStr) {
-      lastTapRef.current = 0
+      // Double-tap → create new event on any day
+      lastTapRef.current     = 0
+      lastTapDateRef.current = ''
       setSelectedDate(dateStr)
       setEditingEvent(null)
       setModalOpen(true)
-    } else {
-      lastTapRef.current     = now
-      lastTapDateRef.current = dateStr
-      setSelectedDate(dateStr)
+      return
+    }
+
+    lastTapRef.current     = now
+    lastTapDateRef.current = dateStr
+    setSelectedDate(dateStr)
+
+    if (dayEvts.length === 1) {
+      // Single event → open it immediately
+      setEditingEvent(dayEvts[0])
+      setModalOpen(true)
+      lastTapRef.current = 0 // prevent accidental double-tap
     }
   }
 
   // Category hub
-  const [openCategory, setOpenCategory] = useState<CategoryType | null>(null)
+  const [openCategory, setOpenCategory]   = useState<CategoryType | null>(null)
+  const [quickAddOpen, setQuickAddOpen]   = useState(false)
 
   // Mood / note sheets
   const [moodOpen, setMoodOpen]       = useState(false)
@@ -212,19 +236,28 @@ export default function TogetherPage() {
 
       {/* ── Category hub (under calendar) ── */}
       <div className="px-4 pt-3 pb-1">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Overview</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Overview</p>
+          <button
+            onClick={() => setOpenCategory('plans')}
+            className="flex items-center gap-1 text-[10px] font-semibold"
+            style={{ color: primary }}
+          >
+            <Plus size={11} /> Add New
+          </button>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {CATEGORY_DEFS.map(cat => (
             <motion.button
               key={cat.id}
               whileTap={{ scale: 0.93 }}
               onClick={() => setOpenCategory(cat.id)}
-              className="bg-white rounded-2xl shadow-card p-3 flex flex-col items-center gap-1.5"
+              className="bg-white rounded-xl shadow-card p-2.5 flex flex-col items-center gap-1"
             >
-              <span className="text-2xl">{cat.emoji}</span>
-              <span className="text-[10px] font-semibold text-gray-500">{cat.label}</span>
+              <span className="text-xl">{cat.emoji}</span>
+              <span className="text-[9px] font-semibold text-gray-500">{cat.label}</span>
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                 style={{ background: `${primary}18`, color: primary }}
               >
                 {categoryCounts[cat.id]}
@@ -333,32 +366,50 @@ export default function TogetherPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
-                  className="w-full text-left bg-white rounded-2xl p-4 mb-2 shadow-card flex gap-3
+                  className="w-full text-left rounded-2xl mb-2 shadow-card overflow-hidden relative
                              active:scale-[0.98] transition-transform"
+                  style={ev.backgroundPhoto ? {
+                    backgroundImage: `url(${ev.backgroundPhoto})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  } : {}}
                 >
-                  <div className={cn('w-1 rounded-full shrink-0 self-stretch', EVENT_COLOR_CLASS[ev.color])} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm">{ev.title}</p>
-                    {ev.startTime && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock size={11} className="text-gray-400" />
-                        <p className="text-xs text-gray-400">{formatTime(ev.startTime)}</p>
+                  {ev.backgroundPhoto && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+                  )}
+                  <div className={cn('relative flex gap-3 p-4', !ev.backgroundPhoto && 'bg-white')}>
+                    {!ev.backgroundPhoto && (
+                      <div className={cn('w-1 rounded-full shrink-0 self-stretch', EVENT_COLOR_CLASS[ev.color])} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('font-semibold text-sm', ev.backgroundPhoto ? 'text-white drop-shadow-sm' : 'text-gray-800')}>
+                        {ev.title}
+                      </p>
+                      {ev.startTime && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock size={11} className={ev.backgroundPhoto ? 'text-white/70' : 'text-gray-400'} />
+                          <p className={cn('text-xs', ev.backgroundPhoto ? 'text-white/80' : 'text-gray-400')}>{formatTime(ev.startTime)}</p>
+                        </div>
+                      )}
+                      {ev.notes && (
+                        <p className={cn('text-xs mt-1 truncate', ev.backgroundPhoto ? 'text-white/70' : 'text-gray-400')}>{ev.notes}</p>
+                      )}
+                      {ev.photos && ev.photos.length > 0 && (
+                        <p className={cn('text-xs mt-1', ev.backgroundPhoto ? 'text-white/60' : 'text-gray-300')}>
+                          📸 {ev.photos.length} photo{ev.photos.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 self-center">
+                      <div
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={ev.backgroundPhoto
+                          ? { background: 'rgba(255,255,255,0.2)', color: 'white' }
+                          : { background: ev.createdBy === 'seval' ? '#ede9fe' : '#ccfbf1', color: ev.createdBy === 'seval' ? '#7c3aed' : '#0d9488' }
+                        }
+                      >
+                        {USERS[ev.createdBy].displayName}
                       </div>
-                    )}
-                    {ev.notes && <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>}
-                    {ev.photos && ev.photos.length > 0 && (
-                      <p className="text-xs text-gray-300 mt-1">📸 {ev.photos.length} photo{ev.photos.length !== 1 ? 's' : ''}</p>
-                    )}
-                  </div>
-                  <div className="shrink-0 self-center">
-                    <div
-                      className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{
-                        background: ev.createdBy === 'seval' ? '#ede9fe' : '#ccfbf1',
-                        color: ev.createdBy === 'seval' ? '#7c3aed' : '#0d9488',
-                      }}
-                    >
-                      {USERS[ev.createdBy].displayName}
                     </div>
                   </div>
                 </motion.button>
@@ -375,6 +426,12 @@ export default function TogetherPage() {
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
         date={selectedDate}
         event={editingEvent}
+      />
+
+      <QuickAddSheet
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        primary={primary}
       />
 
       {/* ── Category hub sheet ── */}
@@ -582,8 +639,85 @@ function CategoryHubSheet({
   const deleteGoal     = useAppStore(s => s.deleteGoal)
   const deleteWishlist = useAppStore(s => s.deleteWishlistItem)
   const sendNote       = useAppStore(s => s.sendPartnerNote)
+  // Add-form store actions
+  const addTodoDo      = useAppStore(s => s.addTodo)
+  const addGoalDo      = useAppStore(s => s.addGoal)
+  const addWishDo      = useAppStore(s => s.addWishlistItem)
+  const addEventDo     = useAppStore(s => s.addEvent)
+  const uploadPhoto    = useAppStore(s => s.uploadEventPhoto)
+  const updateEventDo  = useAppStore(s => s.updateEvent)
 
   const def = CATEGORY_DEFS.find(d => d.id === type)!
+
+  // ── Add-form state ──────────────────────────────────────────────────────────
+  const [addOpen, setAddOpen]             = useState(false)
+  const [addTitle, setAddTitle]           = useState('')
+  const [addNotes, setAddNotes]           = useState('')
+  const [addDate, setAddDate]             = useState('')
+  const [addTime, setAddTime]             = useState('')
+  const [addColor, setAddColor]           = useState<EventColor>(currentUser === 'mateo' ? 'mateo' : 'seval')
+  const [addTodoItems, setAddTodoItems]   = useState<EventTodo[]>([])
+  const [addNewTodo, setAddNewTodo]       = useState('')
+  const [addPhotos, setAddPhotos]         = useState<string[]>([])
+  const [addFiles, setAddFiles]           = useState<File[]>([])
+  const [addBgIdx, setAddBgIdx]           = useState<number | null>(null)
+  const [addUploading, setAddUploading]   = useState(false)
+  const [addColorPopup, setAddColorPopup] = useState(false)
+  const [addWishCat, setAddWishCat]       = useState<WishlistCategory>('plan')
+  const [addGoalCat, setAddGoalCat]       = useState<GoalCategory>('life')
+  const addPhotoRef = useRef<HTMLInputElement>(null)
+
+  function resetAdd() {
+    setAddTitle(''); setAddNotes(''); setAddDate(''); setAddTime('')
+    setAddColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+    setAddTodoItems([]); setAddNewTodo('')
+    setAddPhotos([]); setAddFiles([]); setAddBgIdx(null)
+    setAddWishCat('plan'); setAddGoalCat('life'); setAddColorPopup(false)
+  }
+
+  async function handleAddSave() {
+    if (!addTitle.trim()) return
+    if (type === 'plans') {
+      addTodoDo(
+        addTitle.trim(),
+        addTodoItems.length ? addTodoItems.map(t => t.title) : undefined,
+        addDate || undefined,
+        addColor,
+        addNotes.trim() || undefined,
+        addTime || undefined,
+      )
+    } else if (type === 'dreams') {
+      addGoalDo(addGoalCat, addTitle.trim(), addNotes.trim() || undefined, addDate || undefined, 0, addTime || undefined)
+    } else if (type === 'wishes') {
+      addWishDo(addTitle.trim(), addWishCat, addNotes.trim() || undefined)
+    } else {
+      // moments
+      const newId = addEventDo({
+        title: addTitle.trim(),
+        date: addDate || getTodayString(),
+        startTime: addTime || undefined,
+        notes: addNotes.trim() || undefined,
+        color: addColor,
+        todos: addTodoItems.length ? addTodoItems : undefined,
+        createdBy: currentUser,
+      })
+      if (addFiles.length > 0) {
+        setAddUploading(true)
+        for (const f of addFiles) await uploadPhoto(newId, f)
+        if (addBgIdx !== null) {
+          const stored = useAppStore.getState().events.find(e => e.id === newId)
+          const bpUrl  = stored?.photos?.[addBgIdx]
+          if (bpUrl) updateEventDo(newId, { backgroundPhoto: bpUrl })
+        }
+        setAddUploading(false)
+      }
+    }
+    resetAdd()
+    setAddOpen(false)
+  }
+
+  const addLabel = type === 'plans' ? 'Plan' : type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : 'Moment'
+  const addActiveColor = COLOR_OPTIONS.find(c => c.value === addColor)
 
   type ListItem = { id: string; title: string; sub?: string; done: boolean }
 
@@ -699,6 +833,17 @@ function CategoryHubSheet({
         </div>
         <div className="h-px bg-gray-100 mx-5 shrink-0" />
 
+        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+        <div className="px-4 py-2.5 shrink-0">
+          <button
+            onClick={() => setAddOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-semibold"
+            style={{ background: `${primary}15`, color: primary }}
+          >
+            <Plus size={15} strokeWidth={2.5} /> Add New {addLabel}
+          </button>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -750,6 +895,254 @@ function CategoryHubSheet({
           )}
         </div>
       </motion.div>
+
+      {/* ── Add sub-sheet ── */}
+      <AnimatePresence>
+        {addOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { if (!addUploading) { resetAdd(); setAddOpen(false) } }}
+              className="fixed inset-0 z-[60] bg-black/20"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+                         max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+            >
+              <div className="px-5 pt-4 pb-10">
+                <div className="drag-handle mb-4" />
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-base font-bold text-gray-800">Add {addLabel}</h3>
+                  <button onClick={() => { resetAdd(); setAddOpen(false) }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Title */}
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={addTitle}
+                    onChange={e => setAddTitle(e.target.value)}
+                    placeholder={
+                      type === 'plans' ? "What's the plan?" :
+                      type === 'dreams' ? "What do you dream of?" :
+                      type === 'wishes' ? "What do you wish for?" :
+                      "Name this moment..."
+                    }
+                    autoFocus
+                    className="w-full text-lg font-semibold text-gray-800 placeholder:text-gray-300
+                               border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none bg-transparent"
+                  />
+                </div>
+
+                {/* Wish category */}
+                {type === 'wishes' && (
+                  <div className="mb-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCategory, { emoji: string; label: string }][]).map(([id, cfg]) => (
+                        <button key={id} onClick={() => setAddWishCat(id)}
+                          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all', addWishCat === id ? 'text-white' : 'bg-gray-100 text-gray-500')}
+                          style={addWishCat === id ? { background: primary } : {}}>
+                          {cfg.emoji} {cfg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dream / goal category */}
+                {type === 'dreams' && (
+                  <div className="mb-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+                    <div className="flex flex-wrap gap-2">
+                      {GOAL_CATEGORIES.map(([id, cfg]) => (
+                        <button key={id} onClick={() => setAddGoalCat(id)}
+                          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all', addGoalCat === id ? 'text-white' : 'bg-gray-100 text-gray-500')}
+                          style={addGoalCat === id ? { background: primary } : {}}>
+                          {cfg.emoji} {cfg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Color picker (Plans + Moments) */}
+                {(type === 'plans' || type === 'moments') && (
+                  <div className="relative mb-4">
+                    <button
+                      onClick={() => setAddColorPopup(v => !v)}
+                      className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-5 h-5 rounded-full shrink-0" style={{ background: addActiveColor?.hex }} />
+                      <span className="text-sm font-medium text-gray-700 flex-1 text-left">{addActiveColor?.label}</span>
+                      <Palette size={14} className="text-gray-400" />
+                      <ChevronDown size={14} className={cn('text-gray-400 transition-transform', addColorPopup && 'rotate-180')} />
+                    </button>
+                    <AnimatePresence>
+                      {addColorPopup && (
+                        <>
+                          <div className="fixed inset-0 z-[65]" onClick={() => setAddColorPopup(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                            transition={{ duration: 0.12 }}
+                            className="absolute left-0 right-0 top-full mt-1.5 z-[66] bg-white rounded-2xl shadow-modal border border-gray-100 p-2.5"
+                          >
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {COLOR_OPTIONS.map(opt => (
+                                <button key={opt.value}
+                                  onClick={() => { setAddColor(opt.value as EventColor); setAddColorPopup(false) }}
+                                  className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all', addColor === opt.value ? 'bg-gray-100' : 'hover:bg-gray-50')}
+                                >
+                                  <div className="w-6 h-6 rounded-full shrink-0" style={{ background: opt.hex }} />
+                                  <span className="text-sm font-medium text-gray-700 flex-1 text-left">{opt.label}</span>
+                                  {addColor === opt.value && <Check size={13} className="text-gray-400 shrink-0" strokeWidth={2.5} />}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Date + Time */}
+                <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
+                      <Clock size={14} className="text-gray-400" />
+                    </div>
+                    <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
+                      className="flex-1 text-sm text-gray-700 bg-transparent outline-none" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8" />
+                    <input type="time" value={addTime} onChange={e => setAddTime(e.target.value)}
+                      className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5 outline-none shadow-card" />
+                    <span className="text-xs text-gray-400">time (optional)</span>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
+                    <FileText size={14} className="text-gray-400" />
+                  </div>
+                  <textarea value={addNotes} onChange={e => setAddNotes(e.target.value)}
+                    placeholder="Add notes..." rows={3}
+                    className="flex-1 text-sm text-gray-700 bg-transparent outline-none resize-none placeholder:text-gray-300" />
+                </div>
+
+                {/* Checklist (Plans + Moments) */}
+                {(type === 'plans' || type === 'moments') && (
+                  <div className="mb-5">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist</p>
+                    <div className="space-y-2">
+                      {addTodoItems.map(todo => (
+                        <div key={todo.id} className="flex items-center gap-3 group">
+                          <button
+                            onClick={() => setAddTodoItems(prev => prev.map(t => t.id === todo.id ? { ...t, isCompleted: !t.isCompleted } : t))}
+                            className={cn('w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all', todo.isCompleted ? 'border-emerald-400 bg-emerald-400' : 'border-gray-300')}
+                          >
+                            {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
+                          </button>
+                          <span className={cn('flex-1 text-sm', todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700')}>{todo.title}</span>
+                          <button onClick={() => setAddTodoItems(prev => prev.filter(t => t.id !== todo.id))}
+                            className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400 transition-all">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-3 mt-2">
+                        <div className="w-5 h-5 rounded-full border-2 border-dashed border-gray-200 shrink-0" />
+                        <input
+                          type="text" value={addNewTodo} onChange={e => setAddNewTodo(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && addNewTodo.trim()) {
+                              setAddTodoItems(prev => [...prev, { id: generateId(), title: addNewTodo.trim(), isCompleted: false }])
+                              setAddNewTodo('')
+                            }
+                          }}
+                          placeholder="Add item..."
+                          className="flex-1 text-sm text-gray-600 placeholder:text-gray-300 outline-none bg-transparent"
+                        />
+                        {addNewTodo && (
+                          <button onClick={() => {
+                            setAddTodoItems(prev => [...prev, { id: generateId(), title: addNewTodo.trim(), isCompleted: false }])
+                            setAddNewTodo('')
+                          }} className="text-gray-400 active:text-gray-600"><Plus size={16} /></button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Photos (Moments only) */}
+                {type === 'moments' && (
+                  <div className="mb-6">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Photos</p>
+                    {addPhotos.length > 0 && (
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        {addPhotos.map((url, i) => (
+                          <div key={i} className="relative w-20 h-20">
+                            <img src={url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                            <button
+                              onClick={() => {
+                                setAddPhotos(p => p.filter((_, idx) => idx !== i))
+                                setAddFiles(p => p.filter((_, idx) => idx !== i))
+                                if (addBgIdx === i) setAddBgIdx(null)
+                                else if (addBgIdx !== null && addBgIdx > i) setAddBgIdx(addBgIdx - 1)
+                              }}
+                              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs"
+                            >×</button>
+                            <button
+                              onClick={() => setAddBgIdx(addBgIdx === i ? null : i)}
+                              className={cn('absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-lg font-bold transition-all', addBgIdx === i ? 'bg-yellow-400 text-white' : 'bg-black/40 text-white/80')}
+                            >{addBgIdx === i ? '★ BG' : '☆'}</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <input ref={addPhotoRef} type="file" accept="image/*" className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setAddPhotos(prev => [...prev, URL.createObjectURL(file)])
+                        setAddFiles(prev => [...prev, file])
+                        if (e.target) e.target.value = ''
+                      }}
+                    />
+                    <button onClick={() => addPhotoRef.current?.click()} disabled={addUploading}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50 text-sm text-gray-500 font-medium active:bg-gray-100 disabled:opacity-50">
+                      <Camera size={15} className="text-gray-400" />
+                      {addPhotos.length > 0 ? 'Add another photo' : 'Add photo'}
+                    </button>
+                    <p className="text-[10px] text-gray-300 mt-1">☆ = set as card background · Max 5MB</p>
+                  </div>
+                )}
+
+                {/* Save */}
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddSave}
+                  disabled={!addTitle.trim() || addUploading}
+                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+                  style={{ background: primary }}
+                >
+                  {addUploading ? 'Uploading...' : `Add ${addLabel}`}
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Edit sub-sheet ── */}
       <AnimatePresence>

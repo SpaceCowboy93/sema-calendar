@@ -30,6 +30,7 @@ export interface CalendarEvent {
   color: EventColor
   todos?: EventTodo[]
   photos?: string[] // Supabase Storage public URLs
+  backgroundPhoto?: string // URL of the photo used as card background
   createdBy: UserName
   createdAt: string
   updatedAt: string
