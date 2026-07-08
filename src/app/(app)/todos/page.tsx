@@ -20,7 +20,7 @@ export default function TodosPage() {
   const isSeval      = currentUser === 'seval'
   const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
   const lightBg      = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
-  const defaultColor: EventColor = isSeval ? 'seval' : 'mateo'
+  const defaultColor: EventColor = isSeval ? 'seval' : 'blue'
 
   const [showForm, setShowForm]       = useState(false)
   const [taskTitle, setTaskTitle]     = useState('')

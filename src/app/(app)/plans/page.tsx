@@ -23,9 +23,9 @@ const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCat
 type PlanTab = 'plans' | 'dreams' | 'wishes' | 'shopping'
 
 const TABS: { id: PlanTab; label: string; emoji: string }[] = [
-  { id: 'plans',    label: 'Plans',    emoji: '✅' },
-  { id: 'dreams',   label: 'Dreams',   emoji: '✨' },
-  { id: 'wishes',   label: 'Wishes',   emoji: '💫' },
+  { id: 'plans',    label: 'Plans',    emoji: '🗓️' },
+  { id: 'dreams',   label: 'Dreams',   emoji: '🌙' },
+  { id: 'wishes',   label: 'Wishes',   emoji: '🌠' },
   { id: 'shopping', label: 'Shopping', emoji: '🛒' },
 ]
 

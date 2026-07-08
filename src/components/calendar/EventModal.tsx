@@ -9,8 +9,7 @@ import { generateId, formatDate, cn } from '@/lib/utils'
 
 export const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
-  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
-  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
+  { value: 'blue',   hex: '#60a5fa', label: 'Blue'   },
   { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
   { value: 'green',  hex: '#34d399', label: 'Green'  },
 ] as const
@@ -70,7 +69,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setStartTime('')
       setEndTime('')
       setNotes('')
-      setColor(initialColor ?? (currentUser === 'mateo' ? 'mateo' : 'seval'))
+      setColor(initialColor ?? (currentUser === 'mateo' ? 'blue' : 'seval'))
       setTodos([])
       setPhotos([])
       setPendingFiles([])

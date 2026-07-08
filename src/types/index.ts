@@ -17,7 +17,7 @@ export const OTHER_USER: Record<UserName, UserName> = {
   mateo: 'seval',
 }
 
-export type EventColor = 'seval' | 'mateo' | 'pink' | 'yellow' | 'green'
+export type EventColor = 'seval' | 'blue' | 'yellow' | 'green'
 
 export interface CalendarEvent {
   id: string

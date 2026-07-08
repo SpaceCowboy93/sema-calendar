@@ -80,10 +80,12 @@ export function getTheme(user: UserName) {
 // Event color to tailwind bg class
 export const EVENT_COLOR_CLASS: Record<string, string> = {
   seval:  'bg-seval-400',
-  mateo:  'bg-mateo-400',
-  pink:   'bg-pink-400',
+  blue:   'bg-blue-400',
   yellow: 'bg-yellow-400',
   green:  'bg-emerald-400',
+  // legacy values kept for backward compatibility
+  mateo:  'bg-blue-400',
+  pink:   'bg-violet-300',
 }
 
 // Calendar grid helper

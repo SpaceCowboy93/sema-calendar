@@ -28,10 +28,10 @@ const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; la
 
 type CategoryType = 'wishes' | 'plans' | 'dreams' | 'moments'
 const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string }[] = [
-  { id: 'wishes',  emoji: '💫', label: 'Wishes'  },
-  { id: 'plans',   emoji: '✅', label: 'Plans'   },
-  { id: 'dreams',  emoji: '✨', label: 'Dreams'  },
-  { id: 'moments', emoji: '📅', label: 'Moments' },
+  { id: 'wishes',  emoji: '🌠', label: 'Wishes'  },
+  { id: 'plans',   emoji: '🗓️', label: 'Plans'   },
+  { id: 'dreams',  emoji: '🌙', label: 'Dreams'  },
+  { id: 'moments', emoji: '📸', label: 'Moments' },
 ]
 
 export default function TogetherPage() {
@@ -655,7 +655,7 @@ function CategoryHubSheet({
   const [addNotes, setAddNotes]           = useState('')
   const [addDate, setAddDate]             = useState('')
   const [addTime, setAddTime]             = useState('')
-  const [addColor, setAddColor]           = useState<EventColor>(currentUser === 'mateo' ? 'mateo' : 'seval')
+  const [addColor, setAddColor]           = useState<EventColor>(currentUser === 'mateo' ? 'blue' : 'seval')
   const [addTodoItems, setAddTodoItems]   = useState<EventTodo[]>([])
   const [addNewTodo, setAddNewTodo]       = useState('')
   const [addPhotos, setAddPhotos]         = useState<string[]>([])
@@ -669,7 +669,7 @@ function CategoryHubSheet({
 
   function resetAdd() {
     setAddTitle(''); setAddNotes(''); setAddDate(''); setAddTime('')
-    setAddColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+    setAddColor(currentUser === 'mateo' ? 'blue' : 'seval')
     setAddTodoItems([]); setAddNewTodo('')
     setAddPhotos([]); setAddFiles([]); setAddBgIdx(null)
     setAddWishCat('plan'); setAddGoalCat('life'); setAddColorPopup(false)

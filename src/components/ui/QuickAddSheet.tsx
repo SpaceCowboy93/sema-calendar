@@ -9,10 +9,10 @@ import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
 const TYPES: { id: QuickType; emoji: string; label: string }[] = [
-  { id: 'plan',   emoji: '✅', label: 'Plan'   },
-  { id: 'dream',  emoji: '✨', label: 'Dream'  },
-  { id: 'wish',   emoji: '💫', label: 'Wish'   },
-  { id: 'moment', emoji: '📅', label: 'Moment' },
+  { id: 'plan',   emoji: '🗓️', label: 'Plan'   },
+  { id: 'dream',  emoji: '🌙', label: 'Dream'  },
+  { id: 'wish',   emoji: '🌠', label: 'Wish'   },
+  { id: 'moment', emoji: '📸', label: 'Moment' },
   { id: 'note',   emoji: '💌', label: 'Note'   },
 ]
 
@@ -36,12 +36,12 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
   const [notes, setNotes] = useState('')
   const [date, setDate]   = useState('')
   const [time, setTime]   = useState('')
-  const [color, setColor] = useState<EventColor>(currentUser === 'mateo' ? 'mateo' : 'seval')
+  const [color, setColor] = useState<EventColor>(currentUser === 'mateo' ? 'blue' : 'seval')
   const [sent, setSent]   = useState(false)
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime(''); setSent(false)
-    setColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+    setColor(currentUser === 'mateo' ? 'blue' : 'seval')
   }
 
   function close() { reset(); onClose() }
