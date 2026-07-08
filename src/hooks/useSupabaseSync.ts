@@ -50,27 +50,32 @@ function mergeShoppingLists(remote: ShoppingList[], local: ShoppingList[]): Shop
   const localMap  = new Map(local.map(l => [l.id, l]))
   const result    = new Map<string, ShoppingList>()
 
-  for (const [id, list] of remoteMap) result.set(id, list)
+  remoteMap.forEach((list, id) => result.set(id, list))
 
-  for (const [id, localList] of localMap) {
+  localMap.forEach((localList, id) => {
     const remoteList = remoteMap.get(id)
     if (!remoteList) {
       result.set(id, localList)
     } else {
       const itemMap = new Map(remoteList.items.map(i => [i.id, i]))
-      for (const item of localList.items) {
+      localList.items.forEach(item => {
         if (!itemMap.has(item.id)) {
           itemMap.set(item.id, item)
         } else {
           const remoteItem = itemMap.get(item.id)!
           if (item.isChecked && !remoteItem.isChecked) itemMap.set(item.id, item)
         }
-      }
+      })
       const newerAt = remoteList.updatedAt > localList.updatedAt ? remoteList.updatedAt : localList.updatedAt
-      result.set(id, { ...remoteList, items: Array.from(itemMap.values()), updatedAt: newerAt })
+      const mergedItems: ShoppingList['items'] = []
+      itemMap.forEach(item => mergedItems.push(item))
+      result.set(id, { ...remoteList, items: mergedItems, updatedAt: newerAt })
     }
-  }
-  return Array.from(result.values())
+  })
+
+  const lists: ShoppingList[] = []
+  result.forEach(list => lists.push(list))
+  return lists
 }
 
 // Union merge for simple arrays: local first, remote overwrites conflicts
@@ -153,7 +158,7 @@ export function useSupabaseSync() {
 
       if (debounce.current) clearTimeout(debounce.current)
       debounce.current = setTimeout(async () => {
-        const syncable = getSyncable(rawState as Record<string, unknown>)
+        const syncable = getSyncable(rawState as unknown as Record<string, unknown>)
         console.log('🟣 [Sync] Saving...')
         setStatus('syncing')
 
