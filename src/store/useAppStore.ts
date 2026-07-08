@@ -7,7 +7,7 @@ import {
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
-  type ShoppingList, type ShoppingItem, type ShoppingCategory,
+  type ShoppingList, type ShoppingItem,
   OTHER_USER,
 } from '@/types'
 import { generateId, getTodayString } from '@/lib/utils'
@@ -77,7 +77,7 @@ interface AppState {
   shoppingLists: ShoppingList[]
   createShoppingList: (name: string) => void
   deleteShoppingList: (id: string) => void
-  addShoppingItem: (listId: string, name: string, quantity?: number, category?: ShoppingCategory) => void
+  addShoppingItem: (listId: string, name: string, quantity?: number) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
 }
@@ -598,12 +598,12 @@ export const useAppStore = create<AppState>()(
       deleteShoppingList: id =>
         set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
 
-      addShoppingItem: (listId, name, quantity = 1, category = 'other') => {
+      addShoppingItem: (listId, name, quantity = 1) => {
         const { currentUser } = get()
         if (!currentUser) return
         const newItem: ShoppingItem = {
           id: generateId(), name: name.trim(), quantity, isChecked: false,
-          category, createdAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         }
         set(s => ({
           shoppingLists: s.shoppingLists.map(l =>

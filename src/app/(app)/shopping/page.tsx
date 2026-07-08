@@ -5,18 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
-import type { ShoppingCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import { useSyncStatus, triggerPull } from '@/hooks/useSupabaseSync'
-
-const CATEGORY_CONFIG: Record<ShoppingCategory, { emoji: string; label: string }> = {
-  produce:   { emoji: '🥬', label: 'Produce' },
-  dairy:     { emoji: '🧀', label: 'Dairy' },
-  meat:      { emoji: '🥩', label: 'Meat' },
-  bakery:    { emoji: '🥖', label: 'Bakery' },
-  household: { emoji: '🧹', label: 'Household' },
-  other:     { emoji: '📦', label: 'Other' },
-}
 
 export default function ShoppingPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
@@ -36,7 +26,6 @@ export default function ShoppingPage() {
   const [showCreate, setShowCreate]   = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [newItemQty, setNewItemQty]   = useState('1')
-  const [newItemCat, setNewItemCat]   = useState<ShoppingCategory>('other')
 
   function handleCreateList() {
     if (!newListName.trim()) return
@@ -47,10 +36,9 @@ export default function ShoppingPage() {
 
   function handleAddItem(listId: string) {
     if (!newItemName.trim()) return
-    addItem(listId, newItemName.trim(), parseInt(newItemQty) || 1, newItemCat)
+    addItem(listId, newItemName.trim(), parseInt(newItemQty) || 1)
     setNewItemName('')
     setNewItemQty('1')
-    setNewItemCat('other')
   }
 
   return (
@@ -198,7 +186,7 @@ export default function ShoppingPage() {
                     >
                       <div className="px-4 pb-4 space-y-2">
                         {/* Add item row */}
-                        <div className="bg-gray-50 rounded-2xl px-3 py-2.5 flex items-center gap-2">
+                        <div className="bg-gray-50 rounded-2xl px-3 py-2 flex items-center gap-2">
                           <input
                             type="text"
                             value={newItemName}
@@ -212,17 +200,8 @@ export default function ShoppingPage() {
                             value={newItemQty}
                             onChange={e => setNewItemQty(e.target.value)}
                             min="1"
-                            className="w-10 text-sm text-gray-600 bg-white rounded-xl px-2 py-1 outline-none border border-gray-200 text-center shrink-0"
+                            className="w-12 text-sm text-gray-600 bg-white rounded-xl px-2 py-1.5 outline-none border border-gray-200 text-center shrink-0"
                           />
-                          <select
-                            value={newItemCat}
-                            onChange={e => setNewItemCat(e.target.value as ShoppingCategory)}
-                            className="text-xs text-gray-600 bg-white rounded-xl px-2 py-1 outline-none border border-gray-200 shrink-0"
-                          >
-                            {(Object.entries(CATEGORY_CONFIG) as [ShoppingCategory, { emoji: string; label: string }][]).map(([id, cfg]) => (
-                              <option key={id} value={id}>{cfg.emoji} {cfg.label}</option>
-                            ))}
-                          </select>
                           <button
                             onClick={() => handleAddItem(list.id)}
                             disabled={!newItemName.trim()}
@@ -255,7 +234,6 @@ export default function ShoppingPage() {
                               >
                                 {item.isChecked && <Check size={12} color="white" strokeWidth={3} />}
                               </button>
-                              <span className="text-base shrink-0">{CATEGORY_CONFIG[item.category].emoji}</span>
                               <div className="flex-1 min-w-0">
                                 <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
                                   {item.name}

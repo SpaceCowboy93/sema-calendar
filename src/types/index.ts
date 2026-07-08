@@ -130,15 +130,12 @@ export interface PartnerNote {
   isRead: boolean
 }
 
-export type ShoppingCategory = 'produce' | 'dairy' | 'meat' | 'bakery' | 'household' | 'other'
-
 export interface ShoppingItem {
   id: string
   name: string
   quantity: number
   isChecked: boolean
   checkedBy?: UserName
-  category: ShoppingCategory
   createdAt: string
 }
 
