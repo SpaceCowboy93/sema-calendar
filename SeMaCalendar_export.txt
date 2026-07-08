@@ -1,0 +1,4554 @@
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/types/index.ts
+================================================================
+export type UserName = 'seval' | 'mateo'
+
+export interface UserConfig {
+  name: UserName
+  displayName: string
+  emoji: string
+  theme: 'seval' | 'mateo'
+}
+
+export const USERS: Record<UserName, UserConfig> = {
+  seval: { name: 'seval', displayName: 'Seval', emoji: '🌸', theme: 'seval' },
+  mateo: { name: 'mateo', displayName: 'Mateo', emoji: '🌊', theme: 'mateo' },
+}
+
+export const OTHER_USER: Record<UserName, UserName> = {
+  seval: 'mateo',
+  mateo: 'seval',
+}
+
+export type EventColor = 'seval' | 'mateo' | 'pink' | 'yellow' | 'green'
+
+export interface CalendarEvent {
+  id: string
+  title: string
+  date: string // YYYY-MM-DD
+  startTime?: string // HH:MM
+  endTime?: string // HH:MM
+  notes?: string
+  emoji?: string
+  color: EventColor
+  todos?: EventTodo[]
+  photos?: string[] // Supabase Storage public URLs
+  createdBy: UserName
+  createdAt: string
+  updatedAt: string
+  linkedTodoId?: string
+  linkedGoalId?: string
+}
+
+export interface EventTodo {
+  id: string
+  title: string
+  isCompleted: boolean
+}
+
+export interface SharedTodo {
+  id: string
+  title: string
+  items?: string[]       // sub-items / checklist entries
+  notes?: string         // free-form notes (not synced to calendar)
+  isCompleted: boolean
+  completedBy?: UserName
+  createdBy: UserName
+  createdAt: string
+  date?: string          // YYYY-MM-DD (optional, syncs to calendar)
+  startTime?: string     // HH:MM (optional)
+  color?: EventColor
+  linkedEventId?: string // ID of the linked CalendarEvent (if any)
+}
+
+export type MoodType = 'happy' | 'relaxed' | 'tired' | 'sad' | 'stressed'
+
+export interface MoodEntry {
+  userId: UserName
+  date: string // YYYY-MM-DD
+  mood: MoodType
+  note?: string
+}
+
+export interface LoveNote {
+  id: string
+  from: UserName
+  content: string
+  createdAt: string
+  isPinned: boolean
+}
+
+export type WishlistCategory = 'date' | 'restaurant' | 'movie' | 'travel' | 'plan'
+
+export interface WishlistItem {
+  id: string
+  title: string
+  category: WishlistCategory
+  notes?: string
+  date?: string          // YYYY-MM-DD (optional target/desired date)
+  startTime?: string     // HH:MM (optional)
+  isCompleted: boolean
+  createdBy: UserName
+  createdAt: string
+}
+
+export interface Countdown {
+  id: string
+  title: string
+  date: string // YYYY-MM-DD
+  emoji: string
+  createdBy: UserName
+}
+
+export type GoalCategory =
+  | 'travel'
+  | 'money'
+  | 'fitness'
+  | 'life'
+  | 'learning'
+  | 'hobbies'
+  | 'challenges'
+
+export interface Goal {
+  id: string
+  categoryId: GoalCategory
+  title: string
+  notes?: string
+  targetDate?: string        // YYYY-MM-DD
+  startTime?: string         // HH:MM (optional, for day-of reminder)
+  progressCurrent: number    // how many steps done
+  progressTarget: number     // 0 = simple done/not-done; >0 = counter goal
+  isCompleted: boolean
+  createdBy: UserName
+  createdAt: string
+  linkedEventId?: string     // ID of the linked CalendarEvent (if targetDate is set)
+}
+
+export interface PartnerNote {
+  id: string
+  from: UserName
+  to: UserName
+  content: string
+  createdAt: string
+  isRead: boolean
+}
+
+export interface Memory {
+  id: string
+  date: string // YYYY-MM-DD
+  title: string
+  notes?: string
+  photos?: string[] // base64 data URLs
+  createdBy: UserName
+  createdAt: string
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/lib/utils.ts
+================================================================
+import { clsx, type ClassValue } from 'clsx'
+import { format, differenceInDays, parseISO } from 'date-fns'
+import type { UserName, MoodType, WishlistCategory } from '@/types'
+
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs)
+}
+
+export function formatDate(date: string | Date, fmt = 'MMM d, yyyy'): string {
+  const d = typeof date === 'string' ? parseISO(date) : date
+  return format(d, fmt)
+}
+
+export function formatTime(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const displayH = h % 12 || 12
+  return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
+export function getTodayString(): string {
+  return format(new Date(), 'yyyy-MM-dd')
+}
+
+export function getDaysUntil(dateStr: string): number {
+  const target = parseISO(dateStr)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return differenceInDays(target, today)
+}
+
+export function generateId(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+export const MOOD_CONFIG: Record<MoodType, { emoji: string; label: string }> = {
+  happy:   { emoji: '😊', label: 'Happy' },
+  relaxed: { emoji: '😌', label: 'Relaxed' },
+  tired:   { emoji: '😴', label: 'Tired' },
+  sad:     { emoji: '😔', label: 'Sad' },
+  stressed:{ emoji: '😤', label: 'Stressed' },
+}
+
+export const WISHLIST_CATEGORY_CONFIG: Record<WishlistCategory, { emoji: string; label: string }> = {
+  date:       { emoji: '💕', label: 'Date Ideas' },
+  restaurant: { emoji: '🍽️', label: 'Restaurants' },
+  movie:      { emoji: '🎬', label: 'Movies' },
+  travel:     { emoji: '✈️', label: 'Travel' },
+  plan:       { emoji: '🌟', label: 'Future Plans' },
+}
+
+// Tailwind class maps per user theme
+export const THEME = {
+  seval: {
+    bg:        'bg-seval-500',
+    bgLight:   'bg-seval-100',
+    bgLighter: 'bg-seval-50',
+    text:      'text-seval-600',
+    textLight: 'text-seval-500',
+    border:    'border-seval-200',
+    ring:      'ring-seval-400',
+    gradient:  'from-seval-400 to-seval-500',
+  },
+  mateo: {
+    bg:        'bg-mateo-500',
+    bgLight:   'bg-mateo-100',
+    bgLighter: 'bg-mateo-50',
+    text:      'text-mateo-600',
+    textLight: 'text-mateo-500',
+    border:    'border-mateo-200',
+    ring:      'ring-mateo-400',
+    gradient:  'from-mateo-400 to-mateo-500',
+  },
+}
+
+export function getTheme(user: UserName) {
+  return THEME[user]
+}
+
+// Event color to tailwind bg class
+export const EVENT_COLOR_CLASS: Record<string, string> = {
+  seval:  'bg-seval-400',
+  mateo:  'bg-mateo-400',
+  pink:   'bg-pink-400',
+  yellow: 'bg-yellow-400',
+  green:  'bg-emerald-400',
+}
+
+// Calendar grid helper
+export function getCalendarDays(year: number, month: number): Date[] {
+  const firstDay = new Date(year, month, 1)
+  const lastDay  = new Date(year, month + 1, 0)
+  const startDow = firstDay.getDay() // 0=Sun
+
+  const days: Date[] = []
+
+  // Leading days from prev month
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(year, month, 0)
+    d.setDate(d.getDate() - i)
+    days.push(new Date(d))
+  }
+
+  // Current month
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    days.push(new Date(year, month, d))
+  }
+
+  // Trailing days to complete grid
+  const trailing = 7 - (days.length % 7)
+  if (trailing < 7) {
+    for (let d = 1; d <= trailing; d++) {
+      days.push(new Date(year, month + 1, d))
+    }
+  }
+
+  return days
+}
+
+export function toDateString(d: Date): string {
+  return format(d, 'yyyy-MM-dd')
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/lib/supabase.ts
+================================================================
+import { createClient } from '@supabase/supabase-js'
+
+// Fallback to placeholder values so the build succeeds even if env vars aren't
+// set yet — the sync will fail gracefully at runtime and show a red dot.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co'
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
+
+export const supabase = createClient(supabaseUrl, supabaseKey)
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/store/useAppStore.ts
+================================================================
+'use client'
+
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import {
+  type UserName, type CalendarEvent, type SharedTodo, type MoodEntry,
+  type LoveNote, type WishlistItem, type Countdown, type Memory,
+  type MoodType, type WishlistCategory, type EventColor,
+  type Goal, type GoalCategory, type PartnerNote,
+  OTHER_USER,
+} from '@/types'
+import { generateId, getTodayString } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+
+interface AppState {
+  // Session
+  currentUser: UserName | null
+  setCurrentUser: (user: UserName | null) => void
+
+  // Events
+  events: CalendarEvent[]
+  addEvent: (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt' | 'linkedTodoId'>) => void
+  updateEvent: (id: string, updates: Partial<CalendarEvent>) => void
+  deleteEvent: (id: string) => void
+  uploadEventPhoto: (eventId: string, file: File) => Promise<void>
+
+  // Todos
+  todos: SharedTodo[]
+  addTodo: (title: string, items?: string[], date?: string, color?: EventColor, notes?: string, startTime?: string) => void
+  updateTodo: (id: string, updates: Partial<SharedTodo>) => void
+  toggleTodo: (id: string) => void
+  deleteTodo: (id: string) => void
+
+  // Moods
+  moods: MoodEntry[]
+  setMood: (mood: MoodType, note?: string) => void
+  getMoodForUser: (userId: UserName, date?: string) => MoodEntry | undefined
+
+  // Love Notes
+  loveNotes: LoveNote[]
+  addLoveNote: (content: string) => void
+  deleteLoveNote: (id: string) => void
+  togglePinNote: (id: string) => void
+
+  // Wishlist
+  wishlistItems: WishlistItem[]
+  addWishlistItem: (title: string, category: WishlistCategory, notes?: string) => void
+  toggleWishlistItem: (id: string) => void
+  updateWishlistItem: (id: string, updates: Partial<import('@/types').WishlistItem>) => void
+  deleteWishlistItem: (id: string) => void
+
+  // Countdowns
+  countdowns: Countdown[]
+  addCountdown: (title: string, date: string, emoji: string) => void
+  deleteCountdown: (id: string) => void
+
+  // Memories
+  memories: Memory[]
+  addMemory: (title: string, date: string, notes?: string, photos?: string[]) => void
+  updateMemory: (id: string, updates: Partial<Memory>) => void
+  deleteMemory: (id: string) => void
+
+  // Goals
+  goals: Goal[]
+  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string) => void
+  updateGoal: (id: string, updates: Partial<Goal>) => void
+  deleteGoal: (id: string) => void
+  incrementGoalProgress: (id: string) => void
+
+  // Partner Notes
+  partnerNotes: PartnerNote[]
+  sendPartnerNote: (content: string) => void
+  markPartnerNoteRead: (id: string) => void
+}
+
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      // ── Session ─────────────────────────────────────────────────────────────
+      currentUser: null,
+      setCurrentUser: (user) => set({ currentUser: user }),
+
+      // ── Events ──────────────────────────────────────────────────────────────
+      events: [],
+
+      addEvent: data => {
+        const now = new Date().toISOString()
+        const eventId = generateId()
+        const todoId  = generateId()
+        const { currentUser } = get()
+
+        const newEvent: CalendarEvent = {
+          ...data,
+          id: eventId,
+          createdAt: now,
+          updatedAt: now,
+          linkedTodoId: todoId,
+        }
+
+        const newTodo: SharedTodo = {
+          id: todoId,
+          title: data.title,
+          isCompleted: false,
+          createdBy: data.createdBy ?? (currentUser ?? 'seval'),
+          createdAt: now,
+          date: data.date,
+          color: data.color,
+          linkedEventId: eventId,
+        }
+
+        set(s => ({
+          events: [...s.events, newEvent],
+          todos:  [...s.todos,  newTodo],
+        }))
+      },
+
+      updateEvent: (id, updates) =>
+        set(s => {
+          const event = s.events.find(e => e.id === id)
+          return {
+            events: s.events.map(e =>
+              e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e
+            ),
+            todos: event?.linkedTodoId
+              ? s.todos.map(t =>
+                  t.id === event.linkedTodoId
+                    ? {
+                        ...t,
+                        ...(updates.title !== undefined  ? { title: updates.title }  : {}),
+                        ...(updates.date  !== undefined  ? { date:  updates.date  }  : {}),
+                        ...(updates.color !== undefined  ? { color: updates.color }  : {}),
+                      }
+                    : t
+                )
+              : s.todos,
+            goals: event?.linkedGoalId
+              ? s.goals.map(g =>
+                  g.id === event.linkedGoalId
+                    ? {
+                        ...g,
+                        ...(updates.title !== undefined ? { title:      updates.title } : {}),
+                        ...(updates.date  !== undefined ? { targetDate: updates.date  } : {}),
+                      }
+                    : g
+                )
+              : s.goals,
+          }
+        }),
+
+      deleteEvent: id =>
+        set(s => {
+          const event = s.events.find(e => e.id === id)
+          return {
+            events: s.events.filter(e => e.id !== id),
+            todos:  event?.linkedTodoId
+              ? s.todos.filter(t => t.id !== event.linkedTodoId)
+              : s.todos,
+            // Unlink goal but keep it — user may still want the goal without a date
+            goals: event?.linkedGoalId
+              ? s.goals.map(g =>
+                  g.id === event.linkedGoalId
+                    ? { ...g, linkedEventId: undefined }
+                    : g
+                )
+              : s.goals,
+          }
+        }),
+
+      uploadEventPhoto: async (eventId, file) => {
+        const path = `${eventId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+        const { data, error } = await supabase.storage
+          .from('event-photos')
+          .upload(path, file, { upsert: false })
+        if (error || !data) return
+        const { data: urlData } = supabase.storage.from('event-photos').getPublicUrl(data.path)
+        const url = urlData.publicUrl
+        set(s => ({
+          events: s.events.map(e =>
+            e.id === eventId
+              ? { ...e, photos: [...(e.photos ?? []), url], updatedAt: new Date().toISOString() }
+              : e
+          ),
+        }))
+      },
+
+      // ── Todos ───────────────────────────────────────────────────────────────
+      todos: [],
+
+      addTodo: (title, items, date, color, notes, startTime) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const now    = new Date().toISOString()
+        const todoId = generateId()
+        const validItems = items?.filter(i => i.trim())
+
+        const newTodo: SharedTodo = {
+          id: todoId,
+          title,
+          items: validItems?.length ? validItems : undefined,
+          notes: notes?.trim() || undefined,
+          isCompleted: false,
+          createdBy: currentUser,
+          createdAt: now,
+          date,
+          startTime: startTime || undefined,
+          color,
+        }
+
+        if (date) {
+          const eventId = generateId()
+          newTodo.linkedEventId = eventId
+
+          const newEvent: CalendarEvent = {
+            id: eventId,
+            title,
+            date,
+            color: color ?? (currentUser === 'mateo' ? 'mateo' : 'seval'),
+            createdBy: currentUser,
+            createdAt: now,
+            updatedAt: now,
+            linkedTodoId: todoId,
+          }
+
+          set(s => ({
+            todos:  [...s.todos,  newTodo],
+            events: [...s.events, newEvent],
+          }))
+        } else {
+          set(s => ({ todos: [...s.todos, newTodo] }))
+        }
+      },
+
+      updateTodo: (id, updates) =>
+        set(s => {
+          const todo = s.todos.find(t => t.id === id)
+          if (!todo) return {}
+          const updatedTodo = { ...todo, ...updates }
+
+          // If a date is now set but there was no linked event, we can't auto-create here
+          // (no currentUser access in set). We just update the todo fields.
+          // If there's a linked event, sync title/date/color to it.
+          return {
+            todos: s.todos.map(t => t.id === id ? updatedTodo : t),
+            events: todo.linkedEventId
+              ? s.events.map(e =>
+                  e.id === todo.linkedEventId
+                    ? {
+                        ...e,
+                        ...(updates.title !== undefined ? { title: updates.title } : {}),
+                        ...(updates.date  !== undefined ? { date:  updates.date  } : {}),
+                        ...(updates.color !== undefined ? { color: updates.color } : {}),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : e
+                )
+              : s.events,
+          }
+        }),
+
+      toggleTodo: id => {
+        const { currentUser } = get()
+        set(s => ({
+          todos: s.todos.map(t =>
+            t.id === id
+              ? {
+                  ...t,
+                  isCompleted: !t.isCompleted,
+                  completedBy: !t.isCompleted ? currentUser ?? undefined : undefined,
+                }
+              : t
+          ),
+        }))
+      },
+
+      deleteTodo: id =>
+        set(s => {
+          const todo = s.todos.find(t => t.id === id)
+          return {
+            todos:  s.todos.filter(t => t.id !== id),
+            events: todo?.linkedEventId
+              ? s.events.filter(e => e.id !== todo.linkedEventId)
+              : s.events,
+          }
+        }),
+
+      // ── Moods ───────────────────────────────────────────────────────────────
+      moods: [],
+
+      setMood: (mood, note) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const today = getTodayString()
+        const entry: MoodEntry = { userId: currentUser, date: today, mood, note }
+        set(s => ({
+          moods: [
+            ...s.moods.filter(m => !(m.userId === currentUser && m.date === today)),
+            entry,
+          ],
+        }))
+      },
+
+      getMoodForUser: (userId, date) => {
+        const target = date ?? getTodayString()
+        return get().moods.find(m => m.userId === userId && m.date === target)
+      },
+
+      // ── Love Notes ──────────────────────────────────────────────────────────
+      loveNotes: [],
+
+      addLoveNote: content => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          loveNotes: [
+            {
+              id: generateId(),
+              from: currentUser,
+              content,
+              createdAt: new Date().toISOString(),
+              isPinned: false,
+            },
+            ...s.loveNotes,
+          ],
+        }))
+      },
+
+      deleteLoveNote: id =>
+        set(s => ({ loveNotes: s.loveNotes.filter(n => n.id !== id) })),
+
+      togglePinNote: id =>
+        set(s => ({
+          loveNotes: s.loveNotes.map(n => (n.id === id ? { ...n, isPinned: !n.isPinned } : n)),
+        })),
+
+      // ── Wishlist ─────────────────────────────────────────────────────────────
+      wishlistItems: [],
+
+      addWishlistItem: (title, category, notes) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          wishlistItems: [
+            ...s.wishlistItems,
+            {
+              id: generateId(),
+              title,
+              category,
+              notes,
+              isCompleted: false,
+              createdBy: currentUser,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }))
+      },
+
+      toggleWishlistItem: id =>
+        set(s => ({
+          wishlistItems: s.wishlistItems.map(i =>
+            i.id === id ? { ...i, isCompleted: !i.isCompleted } : i
+          ),
+        })),
+
+      updateWishlistItem: (id, updates) =>
+        set(s => ({
+          wishlistItems: s.wishlistItems.map(i => i.id === id ? { ...i, ...updates } : i),
+        })),
+
+      deleteWishlistItem: id =>
+        set(s => ({ wishlistItems: s.wishlistItems.filter(i => i.id !== id) })),
+
+      // ── Countdowns ───────────────────────────────────────────────────────────
+      countdowns: [],
+
+      addCountdown: (title, date, emoji) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          countdowns: [
+            ...s.countdowns,
+            { id: generateId(), title, date, emoji, createdBy: currentUser },
+          ],
+        }))
+      },
+
+      deleteCountdown: id =>
+        set(s => ({ countdowns: s.countdowns.filter(c => c.id !== id) })),
+
+      // ── Memories ─────────────────────────────────────────────────────────────
+      memories: [],
+
+      addMemory: (title, date, notes, photos) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          memories: [
+            ...s.memories,
+            {
+              id: generateId(),
+              title,
+              date,
+              notes,
+              photos,
+              createdBy: currentUser,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }))
+      },
+
+      updateMemory: (id, updates) =>
+        set(s => ({
+          memories: s.memories.map(m => (m.id === id ? { ...m, ...updates } : m)),
+        })),
+
+      deleteMemory: id =>
+        set(s => ({ memories: s.memories.filter(m => m.id !== id) })),
+
+      // ── Goals ─────────────────────────────────────────────────────────────────
+      goals: [],
+
+      addGoal: (categoryId, title, notes, targetDate, progressTarget = 0, startTime) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const now    = new Date().toISOString()
+        const goalId = generateId()
+
+        const newGoal: Goal = {
+          id: goalId,
+          categoryId,
+          title,
+          notes,
+          targetDate,
+          startTime: startTime || undefined,
+          progressCurrent: 0,
+          progressTarget,
+          isCompleted: false,
+          createdBy: currentUser,
+          createdAt: now,
+        }
+
+        if (targetDate) {
+          const eventId = generateId()
+          newGoal.linkedEventId = eventId
+          const newEvent: CalendarEvent = {
+            id: eventId,
+            title,
+            date: targetDate,
+            color: currentUser === 'mateo' ? 'mateo' : 'seval',
+            createdBy: currentUser,
+            createdAt: now,
+            updatedAt: now,
+            linkedGoalId: goalId,
+          }
+          set(s => ({
+            goals:  [...s.goals, newGoal],
+            events: [...s.events, newEvent],
+          }))
+        } else {
+          set(s => ({ goals: [...s.goals, newGoal] }))
+        }
+      },
+
+      updateGoal: (id, updates) => {
+        const { currentUser } = get()
+        set(s => {
+          const goal = s.goals.find(g => g.id === id)
+          if (!goal) return {}
+
+          let events        = s.events
+          let linkedEventId = goal.linkedEventId
+
+          if ('targetDate' in updates) {
+            const newDate = updates.targetDate
+
+            if (goal.linkedEventId) {
+              if (!newDate) {
+                // Date removed → delete the linked event
+                events = events.filter(e => e.id !== goal.linkedEventId)
+                linkedEventId = undefined
+              } else {
+                // Date changed → update the linked event
+                events = events.map(e =>
+                  e.id === goal.linkedEventId
+                    ? {
+                        ...e,
+                        date: newDate,
+                        ...(updates.title !== undefined ? { title: updates.title } : {}),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : e
+                )
+              }
+            } else if (newDate) {
+              // No linked event yet, date added → create one
+              const eventId = generateId()
+              linkedEventId = eventId
+              const newEvent: CalendarEvent = {
+                id: eventId,
+                title: updates.title ?? goal.title,
+                date: newDate,
+                color: (currentUser ?? goal.createdBy) === 'mateo' ? 'mateo' : 'seval',
+                createdBy: currentUser ?? goal.createdBy,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                linkedGoalId: id,
+              }
+              events = [...events, newEvent]
+            }
+          } else if (updates.title !== undefined && goal.linkedEventId) {
+            // Title-only change → keep event title in sync
+            events = events.map(e =>
+              e.id === goal.linkedEventId
+                ? { ...e, title: updates.title!, updatedAt: new Date().toISOString() }
+                : e
+            )
+          }
+
+          return {
+            goals:  s.goals.map(g => g.id === id ? { ...goal, ...updates, linkedEventId } : g),
+            events,
+          }
+        })
+      },
+
+      deleteGoal: id =>
+        set(s => {
+          const goal = s.goals.find(g => g.id === id)
+          return {
+            goals:  s.goals.filter(g => g.id !== id),
+            events: goal?.linkedEventId
+              ? s.events.filter(e => e.id !== goal.linkedEventId)
+              : s.events,
+          }
+        }),
+
+      incrementGoalProgress: id =>
+        set(s => ({
+          goals: s.goals.map(g => {
+            if (g.id !== id) return g
+            const next = g.progressCurrent + 1
+            return {
+              ...g,
+              progressCurrent: next,
+              isCompleted: g.progressTarget > 0 ? next >= g.progressTarget : g.isCompleted,
+            }
+          }),
+        })),
+
+      // ── Partner Notes ─────────────────────────────────────────────────────────
+      partnerNotes: [],
+
+      sendPartnerNote: content => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const note: PartnerNote = {
+          id: generateId(),
+          from: currentUser,
+          to: OTHER_USER[currentUser],
+          content: content.trim(),
+          createdAt: new Date().toISOString(),
+          isRead: false,
+        }
+        set(s => ({ partnerNotes: [...s.partnerNotes, note] }))
+      },
+
+      markPartnerNoteRead: id =>
+        set(s => ({
+          partnerNotes: s.partnerNotes.map(n =>
+            n.id === id ? { ...n, isRead: true } : n
+          ),
+        })),
+    }),
+    { name: 'semacalendar-v1' }
+  )
+)
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/hooks/useSupabaseSync.ts
+================================================================
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useAppStore } from '@/store/useAppStore'
+
+const COUPLE_ID   = 'sema'
+const DEBOUNCE_MS = 1000
+const POLL_MS     = 8_000
+
+const SKIP_KEYS = new Set(['currentUser'])
+
+function getSyncableState(state: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(state).filter(([k, v]) => !SKIP_KEYS.has(k) && typeof v !== 'function')
+  )
+}
+
+async function fetchRemote() {
+  const { data, error } = await supabase
+    .from('couple_state')
+    .select('state, updated_at')
+    .eq('id', COUPLE_ID)
+    .maybeSingle()
+  if (error) {
+    console.error('[Sync] READ ERROR:', error.code, error.message)
+    return null
+  }
+  console.log('[Sync] read ok — updated_at:', data?.updated_at ?? 'empty')
+  return data as { state: Record<string, unknown>; updated_at: string } | null
+}
+
+async function writeRemote(syncable: Record<string, unknown>): Promise<string | null> {
+  const updated_at = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('couple_state')
+    .upsert({ id: COUPLE_ID, state: syncable, updated_at })
+    .select('updated_at')
+    .single()
+  if (error) {
+    console.error('[Sync] WRITE ERROR:', error.code, error.message)
+    return null
+  }
+  console.log('[Sync] write ok — saved at:', data?.updated_at)
+  return data?.updated_at ?? null
+}
+
+export function useSupabaseSync() {
+  const isMerging      = useRef(false)
+  const lastWriteMs    = useRef(0)          // epoch ms of last successful write
+  const lastRemoteAt   = useRef<string | null>(null)
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Merge remote state (skip currentUser) ─────────────────────────────────
+  function applyRemote(state: Record<string, unknown>, updatedAt: string) {
+    console.log('[Sync] applying remote state from', updatedAt)
+    lastRemoteAt.current = updatedAt
+    isMerging.current    = true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useAppStore.setState(state as any)
+    isMerging.current = false
+  }
+
+  // ── Fetch + conditionally apply ────────────────────────────────────────────
+  async function pull() {
+    // Don't pull immediately after we wrote (2s grace period to avoid echo)
+    if (Date.now() - lastWriteMs.current < 2000) return
+
+    const data = await fetchRemote()
+    if (!data?.state || Object.keys(data.state).length === 0) return
+    if (data.updated_at === lastRemoteAt.current) return   // no change
+
+    applyRemote(data.state, data.updated_at)
+  }
+
+  // ── 1. Initial hydration from Supabase ────────────────────────────────────
+  useEffect(() => {
+    console.log('[Sync] starting — URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'MISSING')
+    fetchRemote().then(data => {
+      if (!data) return
+      if (data.state && Object.keys(data.state).length > 0) {
+        applyRemote(data.state, data.updated_at)
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 2. Write to Supabase on any local state change (debounced) ────────────
+  useEffect(() => {
+    const unsub = useAppStore.subscribe((state) => {
+      if (isMerging.current) return
+
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(async () => {
+        const syncable = getSyncableState(state as unknown as Record<string, unknown>)
+        const savedAt  = await writeRemote(syncable)
+        if (savedAt) {
+          lastWriteMs.current  = Date.now()
+          lastRemoteAt.current = savedAt
+        }
+      }, DEBOUNCE_MS)
+    })
+
+    return () => {
+      unsub()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 3. Polling every 8s ───────────────────────────────────────────────────
+  useEffect(() => {
+    const timer = setInterval(pull, POLL_MS)
+    return () => clearInterval(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 4. Pull when app comes back to foreground (tab/app switch) ────────────
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        console.log('[Sync] app foregrounded — pulling')
+        pull()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 5. Real-time subscription (instant when configured) ───────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('couple_state_rt')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: `id=eq.${COUPLE_ID}` },
+        (payload) => {
+          if (Date.now() - lastWriteMs.current < 2000) {
+            console.log('[Sync] realtime: skipping own echo')
+            return
+          }
+          const remote = payload.new as { state: Record<string, unknown>; updated_at: string }
+          if (!remote?.state || remote.updated_at === lastRemoteAt.current) return
+          console.log('[Sync] realtime: applying remote update')
+          applyRemote(remote.state, remote.updated_at)
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Sync] realtime status:', status)
+      })
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/hooks/useNotifications.ts
+================================================================
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { useAppStore } from '@/store/useAppStore'
+
+// Reminder offsets in milliseconds → label used in message
+const REMINDERS = [
+  {
+    ms: 24 * 60 * 60 * 1000,
+    message: (title: string) => `Tomorrow: ${title} 💞`,
+  },
+  {
+    ms: 3 * 60 * 60 * 1000,
+    message: (title: string) => `In 3 hours: ${title} 🌸`,
+  },
+  {
+    ms: 60 * 60 * 1000,
+    message: (title: string) => `1 hour until your moment — ${title} 🌊`,
+  },
+  {
+    ms: 10 * 60 * 1000,
+    message: (title: string) => `Starting in 10 minutes… ${title} 💫`,
+  },
+  {
+    ms: 0,
+    message: (title: string) => `It's starting now — ${title} 💞`,
+  },
+]
+
+// Max scheduling window — only schedule notifications within 25 hours
+const MAX_MS = 25 * 60 * 60 * 1000
+
+interface TimedItem { title: string; datetime: Date }
+
+function collectTimedItems(): TimedItem[] {
+  const { events, todos, goals, wishlistItems } = useAppStore.getState()
+  const items: TimedItem[] = []
+
+  events.forEach(e => {
+    if (e.date && e.startTime) {
+      items.push({ title: e.title, datetime: new Date(`${e.date}T${e.startTime}:00`) })
+    }
+  })
+
+  todos.forEach(t => {
+    if (!t.isCompleted && t.date && t.startTime) {
+      items.push({ title: t.title, datetime: new Date(`${t.date}T${t.startTime}:00`) })
+    }
+  })
+
+  goals.forEach(g => {
+    if (!g.isCompleted && g.targetDate && g.startTime) {
+      items.push({ title: g.title, datetime: new Date(`${g.targetDate}T${g.startTime}:00`) })
+    }
+  })
+
+  wishlistItems.forEach(w => {
+    if (!w.isCompleted && w.date && w.startTime) {
+      items.push({ title: w.title, datetime: new Date(`${w.date}T${w.startTime}:00`) })
+    }
+  })
+
+  return items
+}
+
+function fireNotification(body: string) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  try {
+    new Notification('SeMa 💕', { body, icon: '/favicon.ico', badge: '/favicon.ico' })
+  } catch {
+    // Notifications not supported in this context
+  }
+}
+
+export function useNotifications() {
+  const timerIds = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  function clearAll() {
+    timerIds.current.forEach(clearTimeout)
+    timerIds.current = []
+  }
+
+  function scheduleAll() {
+    clearAll()
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+
+    const now   = Date.now()
+    const items = collectTimedItems()
+
+    items.forEach(item => {
+      const eventMs = item.datetime.getTime()
+
+      REMINDERS.forEach(reminder => {
+        const fireAt = eventMs - reminder.ms
+        const delay  = fireAt - now
+
+        // Only schedule if in the future and within 25h window
+        if (delay <= 0 || delay > MAX_MS) return
+
+        const id = setTimeout(
+          () => fireNotification(reminder.message(item.title)),
+          delay
+        )
+        timerIds.current.push(id)
+      })
+    })
+  }
+
+  useEffect(() => {
+    // Request permission on first mount (only prompts if 'default')
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().then(() => scheduleAll())
+    } else {
+      scheduleAll()
+    }
+
+    // Re-schedule whenever state changes
+    const unsub = useAppStore.subscribe(scheduleAll)
+
+    // Re-schedule when app comes back to foreground
+    function onVisibility() {
+      if (document.visibilityState === 'visible') scheduleAll()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      clearAll()
+      unsub()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/page.tsx
+================================================================
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { useAppStore } from '@/store/useAppStore'
+import { USERS, type UserName } from '@/types'
+
+export default function LandingPage() {
+  const router = useRouter()
+  const currentUser = useAppStore(s => s.currentUser)
+  const setCurrentUser = useAppStore(s => s.setCurrentUser)
+
+  useEffect(() => {
+    if (currentUser) {
+      router.replace('/together')
+    }
+  }, [currentUser, router])
+
+  function handleSelect(user: UserName) {
+    setCurrentUser(user)
+    router.replace('/together')
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      {/* Gradient background */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            'radial-gradient(ellipse at 20% 50%, rgba(167,139,250,0.18) 0%, transparent 60%), ' +
+            'radial-gradient(ellipse at 80% 50%, rgba(45,212,191,0.18) 0%, transparent 60%), ' +
+            'linear-gradient(135deg, #f5f3ff 0%, #fefce8 50%, #f0fdfa 100%)',
+        }}
+      />
+
+      {/* Decorative blobs */}
+      <motion.div
+        className="absolute top-16 left-8 w-32 h-32 rounded-full opacity-20"
+        style={{ background: 'radial-gradient(circle, #a78bfa, transparent)' }}
+        animate={{ scale: [1, 1.1, 1], x: [0, 6, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute bottom-24 right-8 w-40 h-40 rounded-full opacity-20"
+        style={{ background: 'radial-gradient(circle, #2dd4bf, transparent)' }}
+        animate={{ scale: [1, 1.08, 1], x: [0, -6, 0] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+      />
+
+      {/* Content */}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="text-center w-full max-w-sm"
+      >
+        {/* Logo */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="mb-2 text-5xl"
+        >
+          💕
+        </motion.div>
+        <h1 className="text-4xl font-bold tracking-tight text-gray-800 mb-1">SeMa</h1>
+        <p className="text-gray-400 text-sm mb-12 font-medium">our little world, together</p>
+
+        {/* Profile cards */}
+        <div className="flex gap-4 justify-center mb-12">
+          {(['seval', 'mateo'] as UserName[]).map((name, i) => {
+            const user = USERS[name]
+            const isSeval = name === 'seval'
+            return (
+              <motion.button
+                key={name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleSelect(name)}
+                className="flex-1 flex flex-col items-center gap-3 py-7 px-4 rounded-3xl shadow-soft
+                           bg-white border-2 transition-all active:shadow-md"
+                style={{
+                  borderColor: isSeval ? '#c4b5fd' : '#5eead4',
+                }}
+              >
+                {/* Avatar */}
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-card"
+                  style={{
+                    background: isSeval
+                      ? 'linear-gradient(135deg, #ede9fe, #ddd6fe)'
+                      : 'linear-gradient(135deg, #ccfbf1, #99f6e4)',
+                  }}
+                >
+                  {user.emoji}
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-800 text-base">{user.displayName}</p>
+                  <p
+                    className="text-xs font-medium mt-0.5"
+                    style={{ color: isSeval ? '#8b5cf6' : '#14b8a6' }}
+                  >
+                    tap to enter
+                  </p>
+                </div>
+              </motion.button>
+            )
+          })}
+        </div>
+
+        <p className="text-xs text-gray-300 font-medium">made with love, just for you two</p>
+      </motion.div>
+    </div>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/layout.tsx
+================================================================
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+export const metadata: Metadata = {
+  title: 'SeMa',
+  description: 'our little world, together',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SeMa',
+  },
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💕</text></svg>",
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#ffffff',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans min-h-screen antialiased">
+        {children}
+      </body>
+    </html>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/(app)/layout.tsx
+================================================================
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { Plus } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import { BottomNav } from '@/components/layout/BottomNav'
+import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
+import { useSupabaseSync } from '@/hooks/useSupabaseSync'
+import { useNotifications } from '@/hooks/useNotifications'
+import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const router      = useRouter()
+  const currentUser = useAppStore(s => s.currentUser)
+  const isSeval     = currentUser === 'seval'
+  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+
+  useSupabaseSync()
+  useNotifications()
+
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+
+  useEffect(() => {
+    if (currentUser === null) router.replace('/')
+  }, [currentUser, router])
+
+  if (currentUser === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-dvh overflow-hidden">
+      <main className="h-full overflow-y-auto overscroll-none pb-24">
+        {children}
+      </main>
+
+      <BottomNav />
+
+      {/* Floating action button */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setQuickAddOpen(true)}
+        className="fixed bottom-20 right-5 z-30 w-14 h-14 rounded-full shadow-lg
+                   flex items-center justify-center text-white"
+        style={{ background: primary, boxShadow: `0 4px 20px ${primary}60` }}
+      >
+        <Plus size={26} strokeWidth={2.5} />
+      </motion.button>
+
+      <PartnerNoteNotification />
+
+      <QuickAddSheet
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        primary={primary}
+      />
+    </div>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/(app)/together/page.tsx
+================================================================
+'use client'
+
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { format, isSameMonth, isToday, parseISO } from 'date-fns'
+import { ChevronLeft, ChevronRight, Clock, Plus, X, Send } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent } from '@/types'
+import { EventModal } from '@/components/calendar/EventModal'
+import {
+  MOOD_CONFIG, WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
+  getTodayString, cn, EVENT_COLOR_CLASS,
+} from '@/lib/utils'
+
+const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; label: string }][]
+
+type CategoryType = 'wishes' | 'plans' | 'dreams' | 'moments'
+const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string }[] = [
+  { id: 'wishes',  emoji: '💫', label: 'Wishes'  },
+  { id: 'plans',   emoji: '✅', label: 'Plans'   },
+  { id: 'dreams',  emoji: '✨', label: 'Dreams'  },
+  { id: 'moments', emoji: '📅', label: 'Moments' },
+]
+
+export default function TogetherPage() {
+  const currentUser  = useAppStore(s => s.currentUser)!
+  const events       = useAppStore(s => s.events)
+  const todos        = useAppStore(s => s.todos)
+  const goals        = useAppStore(s => s.goals)
+  const wishlist     = useAppStore(s => s.wishlistItems)
+  const getMood      = useAppStore(s => s.getMoodForUser)
+  const setMood      = useAppStore(s => s.setMood)
+  const partnerNotes = useAppStore(s => s.partnerNotes)
+  const markRead     = useAppStore(s => s.markPartnerNoteRead)
+  const sendNote     = useAppStore(s => s.sendPartnerNote)
+
+  const partnerUser = OTHER_USER[currentUser]
+  const isSeval     = currentUser === 'seval'
+  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+  const lightBg     = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
+
+  // Calendar state
+  const [viewDate, setViewDate]         = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(getTodayString())
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+
+  // Category hub
+  const [openCategory, setOpenCategory] = useState<CategoryType | null>(null)
+
+  // Mood / note sheets
+  const [moodOpen, setMoodOpen]       = useState(false)
+  const [pendingMood, setPending]     = useState<MoodType | null>(null)
+  const [moodMsg, setMoodMsg]         = useState('')
+  const [noteOpen, setNoteOpen]       = useState(false)
+  const [noteText, setNoteText]       = useState('')
+  const [noteSent, setNoteSent]       = useState(false)
+  const [readingNote, setReadingNote] = useState(false)
+
+  const unreadNote = partnerNotes.find(n => n.to === currentUser && !n.isRead) ?? null
+
+  const calendarDays = useMemo(
+    () => getCalendarDays(viewDate.getFullYear(), viewDate.getMonth()),
+    [viewDate]
+  )
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {}
+    events.forEach(e => {
+      if (!map[e.date]) map[e.date] = []
+      map[e.date].push(e)
+    })
+    return map
+  }, [events])
+
+  const selectedEvents = eventsByDate[selectedDate] ?? []
+
+  // Category counts
+  const categoryCounts: Record<CategoryType, number> = {
+    wishes:  wishlist.filter(i => !i.isCompleted).length,
+    plans:   todos.filter(t => !t.isCompleted).length,
+    dreams:  goals.filter(g => !g.isCompleted).length,
+    moments: events.length,
+  }
+
+  function saveMood() {
+    if (!pendingMood) return
+    setMood(pendingMood, moodMsg.trim() || undefined)
+    setMoodOpen(false); setPending(null); setMoodMsg('')
+  }
+
+  function handleSendNote() {
+    if (!noteText.trim()) return
+    sendNote(noteText.trim())
+    setNoteText(''); setNoteSent(true)
+    setTimeout(() => { setNoteSent(false); setNoteOpen(false) }, 1800)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* ── Calendar header ── */}
+      <div
+        className="px-5 pt-14 pb-3"
+        style={{
+          background: isSeval
+            ? 'linear-gradient(135deg, #f5f3ff, #fafafa)'
+            : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
+        }}
+      >
+        {/* Month navigation */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">{format(viewDate, 'MMMM')}</h1>
+            <p className="text-xs text-gray-400">{format(viewDate, 'yyyy')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <ChevronLeft size={18} className="text-gray-500" />
+            </button>
+            <button
+              onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <ChevronRight size={18} className="text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Day-of-week headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {DOW_LABELS.map((d, i) => (
+            <div key={i} className="text-center text-[11px] font-semibold text-gray-400 py-1">{d}</div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-y-1 mb-1">
+          {calendarDays.map((day, i) => {
+            const dateStr        = toDateString(day)
+            const isCurrentMonth = isSameMonth(day, viewDate)
+            const isSelected     = dateStr === selectedDate
+            const isTodayDate    = isToday(day)
+            const dayEvents      = eventsByDate[dateStr] ?? []
+
+            return (
+              <motion.button
+                key={i}
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setSelectedDate(dateStr)}
+                className="calendar-day flex-col relative"
+              >
+                <div
+                  className={cn(
+                    'absolute inset-1 rounded-full transition-all',
+                    isSelected && !isTodayDate && 'opacity-15',
+                    isSelected ? (isSeval ? 'bg-seval-400' : 'bg-mateo-400') : '',
+                  )}
+                />
+                {isTodayDate && (
+                  <div
+                    className={cn('absolute inset-1 rounded-full', isSelected ? 'opacity-100' : 'opacity-20')}
+                    style={{ background: primary }}
+                  />
+                )}
+                <span
+                  className={cn(
+                    'relative z-10 text-sm font-medium transition-colors',
+                    !isCurrentMonth && 'text-gray-300',
+                    isCurrentMonth && !isSelected && !isTodayDate && 'text-gray-700',
+                    isTodayDate && !isSelected && (isSeval ? 'text-seval-600' : 'text-mateo-600'),
+                    isSelected && isTodayDate && 'text-white font-bold',
+                    isSelected && !isTodayDate && (isSeval ? 'text-seval-700' : 'text-mateo-700'),
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+                {dayEvents.length > 0 && (
+                  <div className="relative z-10 flex gap-0.5 mt-0.5">
+                    {dayEvents.slice(0, 3).map(ev => (
+                      <div key={ev.id} className={cn('w-1.5 h-1.5 rounded-full', EVENT_COLOR_CLASS[ev.color])} />
+                    ))}
+                  </div>
+                )}
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 py-4 space-y-4">
+        {/* ── Mood chips strip ── */}
+        <div className="flex gap-2 flex-wrap">
+          {([currentUser, partnerUser] as UserName[]).map(uid => {
+            const mood  = getMood(uid)
+            const color = uid === 'seval' ? '#8b5cf6' : '#14b8a6'
+            const isMe  = uid === currentUser
+            return (
+              <motion.button
+                key={uid}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => isMe && setMoodOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: `${color}15`, color }}
+              >
+                <span>{USERS[uid].emoji}</span>
+                {mood
+                  ? <>{MOOD_CONFIG[mood.mood].emoji} {MOOD_CONFIG[mood.mood].label}</>
+                  : <>{isMe ? 'Set mood' : 'No mood'}</>
+                }
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* ── Unread partner note banner ── */}
+        <AnimatePresence>
+          {unreadNote && !readingNote && (
+            <motion.button
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              onClick={() => setReadingNote(true)}
+              className="w-full rounded-2xl px-4 py-3 text-left"
+              style={{ background: `${primary}12`, border: `1.5px solid ${primary}30` }}
+            >
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-base">💌</span>
+                <p className="text-xs font-bold" style={{ color: primary }}>
+                  Note from {USERS[partnerUser].displayName}
+                </p>
+              </div>
+              <p className="text-xs text-gray-600 line-clamp-1">{unreadNote.content}</p>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* ── Leave a note button ── */}
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setNoteOpen(true)}
+          className="w-full flex items-center gap-3 rounded-2xl px-4 py-3"
+          style={{ background: `${primary}10`, border: `1.5px solid ${primary}20` }}
+        >
+          <span className="text-xl">💌</span>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-gray-800">Leave a note</p>
+            <p className="text-xs text-gray-400">Send {USERS[partnerUser].displayName} a little love message</p>
+          </div>
+          <span className="text-gray-300 text-sm">›</span>
+        </motion.button>
+
+        {/* ── Selected date events ── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-gray-700">
+              {selectedDate === getTodayString()
+                ? 'Today'
+                : format(parseISO(selectedDate), 'EEEE, MMM d')}
+            </h2>
+            <button
+              onClick={() => { setEditingEvent(null); setModalOpen(true) }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white
+                         active:scale-95 transition-transform shadow-sm"
+              style={{ background: primary }}
+            >
+              <Plus size={14} strokeWidth={2.5} /> Add
+            </button>
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {selectedEvents.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={cn('rounded-2xl py-5 px-4 text-center', lightBg)}
+              >
+                <p className="text-xs text-gray-400">A quiet day 🌙</p>
+              </motion.div>
+            ) : (
+              selectedEvents.map(ev => (
+                <motion.button
+                  key={ev.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
+                  className="w-full text-left bg-white rounded-2xl p-4 mb-2 shadow-card flex gap-3
+                             active:scale-[0.98] transition-transform"
+                >
+                  <div className={cn('w-1 rounded-full shrink-0 self-stretch', EVENT_COLOR_CLASS[ev.color])} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{ev.title}</p>
+                    {ev.startTime && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Clock size={11} className="text-gray-400" />
+                        <p className="text-xs text-gray-400">{formatTime(ev.startTime)}</p>
+                      </div>
+                    )}
+                    {ev.notes && <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>}
+                    {ev.photos && ev.photos.length > 0 && (
+                      <p className="text-xs text-gray-300 mt-1">📸 {ev.photos.length} photo{ev.photos.length !== 1 ? 's' : ''}</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 self-center">
+                    <div
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        background: ev.createdBy === 'seval' ? '#ede9fe' : '#ccfbf1',
+                        color: ev.createdBy === 'seval' ? '#7c3aed' : '#0d9488',
+                      }}
+                    >
+                      {USERS[ev.createdBy].displayName}
+                    </div>
+                  </div>
+                </motion.button>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ── Category hub ── */}
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Overview</p>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORY_DEFS.map(cat => (
+              <motion.button
+                key={cat.id}
+                whileTap={{ scale: 0.93 }}
+                onClick={() => setOpenCategory(cat.id)}
+                className="bg-white rounded-2xl shadow-card p-3 flex flex-col items-center gap-1.5"
+              >
+                <span className="text-2xl">{cat.emoji}</span>
+                <span className="text-[10px] font-semibold text-gray-500">{cat.label}</span>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: `${primary}18`, color: primary }}
+                >
+                  {categoryCounts[cat.id]}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── EventModal ── */}
+      <EventModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingEvent(null) }}
+        date={selectedDate}
+        event={editingEvent}
+      />
+
+      {/* ── Category hub sheet ── */}
+      <AnimatePresence>
+        {openCategory && (
+          <CategoryHubSheet
+            type={openCategory}
+            todos={todos}
+            goals={goals}
+            wishlist={wishlist}
+            events={events}
+            primary={primary}
+            onClose={() => setOpenCategory(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Mood picker sheet ── */}
+      <AnimatePresence>
+        {moodOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setMoodOpen(false)}
+              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+            >
+              <div className="px-5 pt-4 pb-10">
+                <div className="drag-handle" />
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-base font-bold text-gray-800">How are you feeling?</h3>
+                  <button onClick={() => setMoodOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="flex justify-around mb-6">
+                  {MOOD_TYPES.map(([type, cfg]) => (
+                    <motion.button
+                      key={type}
+                      whileTap={{ scale: 0.88 }}
+                      onClick={() => setPending(type)}
+                      className="flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all"
+                      style={pendingMood === type ? { background: `${primary}18` } : {}}
+                    >
+                      <span className="text-3xl">{cfg.emoji}</span>
+                      <span className="text-[10px] font-semibold"
+                        style={{ color: pendingMood === type ? primary : '#9ca3af' }}>
+                        {cfg.label}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+                <div className={cn('rounded-2xl p-4 mb-5', lightBg)}>
+                  <textarea
+                    value={moodMsg}
+                    onChange={e => setMoodMsg(e.target.value)}
+                    placeholder={`Tell ${USERS[partnerUser].displayName} how you're feeling...`}
+                    rows={3}
+                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none"
+                  />
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={saveMood}
+                  disabled={!pendingMood}
+                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+                  style={{ background: primary }}
+                >
+                  {pendingMood ? `${MOOD_CONFIG[pendingMood].emoji} Share this feeling` : 'Pick a mood first'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Note compose sheet ── */}
+      <AnimatePresence>
+        {noteOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { if (!noteSent) { setNoteOpen(false); setNoteText('') } }}
+              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+            >
+              <div className="px-5 pt-4 pb-10">
+                <div className="drag-handle" />
+                <AnimatePresence mode="wait">
+                  {noteSent ? (
+                    <motion.div key="sent" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center py-10 text-center">
+                      <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: 2, duration: 0.4 }}
+                        className="text-5xl mb-4">💌</motion.div>
+                      <p className="font-bold text-gray-800 mb-1">Sent with love 💕</p>
+                      <p className="text-sm text-gray-400">{USERS[partnerUser].displayName} will see it when they open the app</p>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="compose" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <div className="flex items-center justify-between mb-5">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-800">Leave a note 💌</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
+                        </div>
+                        <button onClick={() => { setNoteOpen(false); setNoteText('') }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="rounded-2xl p-4 mb-4" style={{ background: `${primary}0d` }}>
+                        <textarea
+                          value={noteText}
+                          onChange={e => setNoteText(e.target.value)}
+                          placeholder="Write something from the heart..."
+                          rows={5}
+                          autoFocus
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none leading-relaxed"
+                        />
+                      </div>
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleSendNote}
+                        disabled={!noteText.trim()}
+                        className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                        style={{ background: primary }}
+                      >
+                        <Send size={15} /> Send with love 💌
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Read note modal ── */}
+      <AnimatePresence>
+        {readingNote && unreadNote && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => { markRead(unreadNote.id); setReadingNote(false) }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-8"
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-modal"
+            >
+              <div className="text-center mb-5">
+                <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: 2, duration: 0.5 }}
+                  className="text-4xl mb-2">💌</motion.div>
+                <p className="text-xs font-bold text-gray-400">From {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed text-center mb-6">{unreadNote.content}</p>
+              <button
+                onClick={() => { markRead(unreadNote.id); setReadingNote(false) }}
+                className="w-full py-3 rounded-2xl text-white text-sm font-semibold"
+                style={{ background: primary }}
+              >
+                💕 Close with love
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ── Category Hub Sheet ───────────────────────────────────────────────────────── */
+function CategoryHubSheet({
+  type, todos, goals, wishlist, events, primary, onClose,
+}: {
+  type: CategoryType
+  todos: ReturnType<typeof useAppStore.getState>['todos']
+  goals: ReturnType<typeof useAppStore.getState>['goals']
+  wishlist: ReturnType<typeof useAppStore.getState>['wishlistItems']
+  events: ReturnType<typeof useAppStore.getState>['events']
+  primary: string
+  onClose: () => void
+}) {
+  const def = CATEGORY_DEFS.find(d => d.id === type)!
+
+  type ListItem = { id: string; title: string; sub?: string; done: boolean }
+
+  const items: ListItem[] = useMemo(() => {
+    switch (type) {
+      case 'wishes':
+        return wishlist.map(i => ({
+          id: i.id,
+          title: i.title,
+          sub: i.notes || WISHLIST_CATEGORY_CONFIG[i.category].label,
+          done: i.isCompleted,
+        }))
+      case 'plans':
+        return todos.map(t => ({
+          id: t.id,
+          title: t.title,
+          sub: t.notes || (t.date ? t.date : undefined),
+          done: t.isCompleted,
+        }))
+      case 'dreams':
+        return goals.map(g => ({
+          id: g.id,
+          title: g.title,
+          sub: g.notes || g.targetDate,
+          done: g.isCompleted,
+        }))
+      case 'moments':
+        return [...events]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(e => ({
+            id: e.id,
+            title: e.title,
+            sub: e.date + (e.startTime ? ` · ${e.startTime}` : ''),
+            done: false,
+          }))
+    }
+  }, [type, todos, goals, wishlist, events])
+
+  const pending   = items.filter(i => !i.done)
+  const completed = items.filter(i => i.done)
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[80vh] flex flex-col"
+      >
+        <div className="px-5 pt-4 pb-3 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{def.emoji}</span>
+              <div>
+                <h2 className="text-base font-bold text-gray-800">{def.label}</h2>
+                <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-5xl mb-3 opacity-30">{def.emoji}</span>
+              <p className="text-sm text-gray-400">Nothing here yet</p>
+            </div>
+          ) : (
+            <>
+              {pending.map(item => (
+                <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5">
+                  <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                  {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
+                </div>
+              ))}
+              {completed.length > 0 && (
+                <>
+                  <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider pt-2 px-1">
+                    Completed ({completed.length})
+                  </p>
+                  {completed.map(item => (
+                    <div key={item.id} className="bg-gray-50 rounded-2xl p-3.5 opacity-50">
+                      <p className="text-sm text-gray-400 line-through">{item.title}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/(app)/plans/page.tsx
+================================================================
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Check, Calendar, Clock, X, Trash2 } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
+import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
+
+const GOAL_CATEGORY_CONFIG: Record<GoalCategory, { emoji: string; label: string }> = {
+  travel:     { emoji: '✈️', label: 'Travel' },
+  money:      { emoji: '💰', label: 'Money' },
+  fitness:    { emoji: '💪', label: 'Fitness' },
+  life:       { emoji: '🌱', label: 'Life' },
+  learning:   { emoji: '📚', label: 'Learning' },
+  hobbies:    { emoji: '🎨', label: 'Hobbies' },
+  challenges: { emoji: '🏆', label: 'Challenges' },
+}
+
+const GOAL_CATEGORIES = Object.entries(GOAL_CATEGORY_CONFIG) as [GoalCategory, { emoji: string; label: string }][]
+const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCategory, { emoji: string; label: string }][]
+
+type PlanTab = 'plans' | 'dreams' | 'wishes'
+
+const TABS: { id: PlanTab; label: string; emoji: string }[] = [
+  { id: 'plans',  label: 'Plans',  emoji: '✅' },
+  { id: 'dreams', label: 'Dreams', emoji: '✨' },
+  { id: 'wishes', label: 'Wishes', emoji: '💫' },
+]
+
+export default function PlansPage() {
+  const currentUser = useAppStore(s => s.currentUser)!
+  const isSeval     = currentUser === 'seval'
+  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+
+  const [activeTab, setActiveTab] = useState<PlanTab>('plans')
+
+  return (
+    <div className="min-h-screen pt-14 pb-32">
+      <div className="px-5 mb-5">
+        <h1 className="text-2xl font-bold text-gray-800">Plans</h1>
+        <p className="text-sm text-gray-400">what's ahead for you two</p>
+      </div>
+
+      <div className="flex gap-2 px-5 mb-6">
+        {TABS.map(tab => (
+          <motion.button
+            key={tab.id}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setActiveTab(tab.id)}
+            className="flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all"
+            style={activeTab === tab.id
+              ? { background: primary, color: 'white' }
+              : { background: 'white', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+            }
+          >
+            {tab.emoji} {tab.label}
+          </motion.button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.18 }}
+        >
+          {activeTab === 'plans'  && <TodosSection  primary={primary} />}
+          {activeTab === 'dreams' && <DreamsSection primary={primary} />}
+          {activeTab === 'wishes' && <WishesSection primary={primary} />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ── Todos ──────────────────────────────────────────────────────────────────── */
+function TodosSection({ primary }: { primary: string }) {
+  const todos      = useAppStore(s => s.todos)
+  const toggleTodo = useAppStore(s => s.toggleTodo)
+  const [editing, setEditing] = useState<SharedTodo | null>(null)
+
+  const pending   = todos.filter(t => !t.isCompleted)
+  const completed = todos.filter(t => t.isCompleted)
+
+  if (todos.length === 0) {
+    return <EmptyState emoji="📋" text="No plans yet" sub="tap + to add something together" />
+  }
+
+  return (
+    <div className="px-5 space-y-2">
+      {pending.map(todo => (
+        <motion.div
+          key={todo.id}
+          layout
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-card overflow-hidden"
+        >
+          <div
+            className="flex items-center gap-3 p-4 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(todo)}
+          >
+            <button
+              onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
+              className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
+              style={{ borderColor: '#d1d5db' }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700 truncate">{todo.title}</p>
+              {(todo.date || todo.notes) && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  {todo.date && (
+                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                      <Calendar size={10} />
+                      {formatDate(todo.date, 'MMM d')}
+                      {todo.startTime && <><Clock size={10} className="ml-1" />{formatTime(todo.startTime)}</>}
+                    </span>
+                  )}
+                  {todo.notes && (
+                    <span className="text-[11px] text-gray-300 truncate">· {todo.notes}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-gray-300 shrink-0">›</span>
+          </div>
+        </motion.div>
+      ))}
+
+      {completed.length > 0 && (
+        <div className="pt-4">
+          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
+            Shared 💞 ({completed.length})
+          </p>
+          {completed.map(todo => (
+            <motion.div
+              key={todo.id}
+              layout
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(todo)}
+            >
+              <button
+                onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
+                className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center"
+                style={{ borderColor: primary, background: primary }}
+              >
+                <Check size={12} color="white" strokeWidth={3} />
+              </button>
+              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{todo.title}</p>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {editing && (
+        <TodoEditSheet
+          todo={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Goals / Dreams ─────────────────────────────────────────────────────────── */
+function DreamsSection({ primary }: { primary: string }) {
+  const goals  = useAppStore(s => s.goals)
+  const [editing, setEditing] = useState<Goal | null>(null)
+
+  const active    = goals.filter(g => !g.isCompleted)
+  const completed = goals.filter(g => g.isCompleted)
+
+  if (goals.length === 0) {
+    return <EmptyState emoji="✨" text="No dreams yet" sub="tap + to add something to dream about" />
+  }
+
+  return (
+    <div className="px-5 space-y-2">
+      {active.map(goal => {
+        const cat    = GOAL_CATEGORY_CONFIG[goal.categoryId]
+        const hasBar = goal.progressTarget > 0
+        const pct    = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
+
+        return (
+          <motion.div
+            key={goal.id}
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-card p-4 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(goal)}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl shrink-0">{cat.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{goal.title}</p>
+                {goal.notes && (
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5">{goal.notes}</p>
+                )}
+                {hasBar && (
+                  <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: primary }} />
+                  </div>
+                )}
+              </div>
+              {hasBar && (
+                <span className="text-[10px] font-bold shrink-0" style={{ color: primary }}>
+                  {goal.progressCurrent}/{goal.progressTarget}
+                </span>
+              )}
+              <span className="text-xs text-gray-300 shrink-0">›</span>
+            </div>
+          </motion.div>
+        )
+      })}
+
+      {completed.length > 0 && (
+        <div className="pt-4">
+          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
+            Dreams achieved 🎉 ({completed.length})
+          </p>
+          {completed.map(goal => (
+            <div
+              key={goal.id}
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(goal)}
+            >
+              <span className="text-lg">{GOAL_CATEGORY_CONFIG[goal.categoryId].emoji}</span>
+              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{goal.title}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing && (
+        <GoalEditSheet
+          goal={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Wishlist ────────────────────────────────────────────────────────────────── */
+function WishesSection({ primary }: { primary: string }) {
+  const items  = useAppStore(s => s.wishlistItems)
+  const toggle = useAppStore(s => s.toggleWishlistItem)
+  const [editing, setEditing] = useState<WishlistItem | null>(null)
+
+  const pending   = items.filter(i => !i.isCompleted)
+  const completed = items.filter(i => i.isCompleted)
+
+  if (items.length === 0) {
+    return <EmptyState emoji="💫" text="No wishes yet" sub="tap + to add something to dream about" />
+  }
+
+  return (
+    <div className="px-5 space-y-2">
+      {pending.map(item => {
+        const cat = WISHLIST_CATEGORY_CONFIG[item.category]
+        return (
+          <motion.div
+            key={item.id}
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-card p-4 flex items-center gap-3 cursor-pointer active:bg-gray-50"
+            onClick={() => setEditing(item)}
+          >
+            <button
+              onClick={e => { e.stopPropagation(); toggle(item.id) }}
+              className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
+              style={{ borderColor: '#d1d5db' }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-xs">{cat.emoji}</span>
+                <span className="text-[10px] text-gray-400 font-medium">{cat.label}</span>
+              </div>
+              <p className="text-sm font-medium text-gray-700 truncate">{item.title}</p>
+              {item.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.notes}</p>}
+            </div>
+            <span className="text-xs text-gray-300 shrink-0">›</span>
+          </motion.div>
+        )
+      })}
+
+      {completed.length > 0 && (
+        <div className="pt-4">
+          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
+            Made real ✨ ({completed.length})
+          </p>
+          {completed.map(item => (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
+              onClick={() => setEditing(item)}
+            >
+              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: primary }}>
+                <Check size={12} color="white" strokeWidth={3} />
+              </div>
+              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{item.title}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing && (
+        <WishEditSheet
+          item={editing}
+          primary={primary}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Todo Edit Sheet ─────────────────────────────────────────────────────────── */
+function TodoEditSheet({ todo, primary, onClose }: { todo: SharedTodo; primary: string; onClose: () => void }) {
+  const updateTodo = useAppStore(s => s.updateTodo)
+  const deleteTodo = useAppStore(s => s.deleteTodo)
+  const toggleTodo = useAppStore(s => s.toggleTodo)
+
+  const [title, setTitle] = useState(todo.title)
+  const [notes, setNotes] = useState(todo.notes ?? '')
+  const [date, setDate]   = useState(todo.date ?? '')
+  const [time, setTime]   = useState(todo.startTime ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function save() {
+    if (!title.trim()) return
+    updateTodo(todo.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      date: date || undefined,
+      startTime: time || undefined,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title={todo.isCompleted ? 'Completed plan' : 'Edit plan'} onClose={onClose}>
+      <TitleInput value={title} onChange={setTitle} placeholder="What's the plan?" />
+      <NotesInput value={notes} onChange={setNotes} />
+      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} />
+
+      <button
+        onClick={() => { toggleTodo(todo.id); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {todo.isCompleted ? 'Mark as pending' : 'Mark as done ✓'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteTodo(todo.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Goal Edit Sheet ─────────────────────────────────────────────────────────── */
+function GoalEditSheet({ goal, primary, onClose }: { goal: Goal; primary: string; onClose: () => void }) {
+  const updateGoal        = useAppStore(s => s.updateGoal)
+  const deleteGoal        = useAppStore(s => s.deleteGoal)
+  const incrementProgress = useAppStore(s => s.incrementGoalProgress)
+
+  const [title, setTitle]       = useState(goal.title)
+  const [notes, setNotes]       = useState(goal.notes ?? '')
+  const [date, setDate]         = useState(goal.targetDate ?? '')
+  const [time, setTime]         = useState(goal.startTime ?? '')
+  const [category, setCategory] = useState<GoalCategory>(goal.categoryId)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const hasBar = goal.progressTarget > 0
+  const pct    = hasBar ? Math.min((goal.progressCurrent / goal.progressTarget) * 100, 100) : 0
+
+  function save() {
+    if (!title.trim()) return
+    updateGoal(goal.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      targetDate: date || undefined,
+      startTime: time || undefined,
+      categoryId: category,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title="Edit dream" onClose={onClose}>
+      {/* Category picker */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+        <div className="flex flex-wrap gap-2">
+          {GOAL_CATEGORIES.map(([id, cfg]) => (
+            <button
+              key={id}
+              onClick={() => setCategory(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+              )}
+              style={category === id ? { background: primary } : {}}
+            >
+              {cfg.emoji} {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <TitleInput value={title} onChange={setTitle} placeholder="What do you dream of?" />
+      <NotesInput value={notes} onChange={setNotes} />
+      <DateTimeRow date={date} time={time} onDate={setDate} onTime={setTime} label="Target date" />
+
+      {hasBar && (
+        <div className="mb-4 bg-gray-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500">Progress</p>
+            <span className="text-xs font-bold" style={{ color: primary }}>
+              {goal.progressCurrent}/{goal.progressTarget}
+            </span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: primary }} />
+          </div>
+          <button
+            onClick={() => { incrementProgress(goal.id); onClose() }}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
+            style={{ background: primary }}
+          >
+            +1 Progress
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={() => { updateGoal(goal.id, { isCompleted: !goal.isCompleted }); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {goal.isCompleted ? 'Reopen dream' : 'Mark as achieved 🎉'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteGoal(goal.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Wish Edit Sheet ─────────────────────────────────────────────────────────── */
+function WishEditSheet({ item, primary, onClose }: { item: WishlistItem; primary: string; onClose: () => void }) {
+  const updateWishlistItem = useAppStore(s => s.updateWishlistItem)
+  const deleteWishlistItem = useAppStore(s => s.deleteWishlistItem)
+  const toggleWishlistItem = useAppStore(s => s.toggleWishlistItem)
+
+  const [title, setTitle]       = useState(item.title)
+  const [notes, setNotes]       = useState(item.notes ?? '')
+  const [category, setCategory] = useState<WishlistCategory>(item.category)
+  const [date, setDate]         = useState(item.date ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function save() {
+    if (!title.trim()) return
+    updateWishlistItem(item.id, {
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      category,
+      date: date || undefined,
+    })
+    onClose()
+  }
+
+  return (
+    <EditSheet title="Edit wish" onClose={onClose}>
+      {/* Category picker */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+        <div className="flex flex-wrap gap-2">
+          {WISH_CATEGORIES.map(([id, cfg]) => (
+            <button
+              key={id}
+              onClick={() => setCategory(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                category === id ? 'text-white' : 'bg-gray-100 text-gray-500'
+              )}
+              style={category === id ? { background: primary } : {}}
+            >
+              {cfg.emoji} {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <TitleInput value={title} onChange={setTitle} placeholder="What do you wish for?" />
+      <NotesInput value={notes} onChange={setNotes} />
+
+      {/* Optional date */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Date (optional)</p>
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="w-full text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+        />
+      </div>
+
+      <button
+        onClick={() => { toggleWishlistItem(item.id); onClose() }}
+        className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
+      >
+        {item.isCompleted ? 'Mark as pending' : 'Mark as made real ✨'}
+      </button>
+
+      <button
+        onClick={save}
+        disabled={!title.trim()}
+        className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
+        style={{ background: primary }}
+      >
+        Save changes
+      </button>
+
+      <DeleteRow show={confirmDelete} onAsk={() => setConfirmDelete(true)} onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => { deleteWishlistItem(item.id); onClose() }} />
+    </EditSheet>
+  )
+}
+
+/* ── Shared edit sheet primitives ────────────────────────────────────────────── */
+function EditSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <AnimatePresence>
+      <>
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        />
+        <motion.div
+          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                     max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
+        >
+          <div className="px-5 pt-4 pb-10">
+            <div className="drag-handle" />
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-gray-800">{title}</h3>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {children}
+          </div>
+        </motion.div>
+      </>
+    </AnimatePresence>
+  )
+}
+
+function TitleInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="mb-4">
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full text-base font-semibold text-gray-800 placeholder:text-gray-300
+                   border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none bg-transparent"
+      />
+    </div>
+  )
+}
+
+function NotesInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Notes 📝</p>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Add context, ideas, or extra details..."
+        rows={3}
+        className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50
+                   rounded-2xl px-4 py-3 outline-none resize-none leading-relaxed"
+      />
+    </div>
+  )
+}
+
+function DateTimeRow({
+  date, time, onDate, onTime, label = 'Date & time',
+}: {
+  date: string; time: string
+  onDate: (v: string) => void; onTime: (v: string) => void
+  label?: string
+}) {
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex gap-2">
+        <input
+          type="date"
+          value={date}
+          onChange={e => onDate(e.target.value)}
+          className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+        />
+        <input
+          type="time"
+          value={time}
+          onChange={e => onTime(e.target.value)}
+          className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
+        />
+      </div>
+    </div>
+  )
+}
+
+function DeleteRow({
+  show, onAsk, onCancel, onConfirm,
+}: {
+  show: boolean; onAsk: () => void; onCancel: () => void; onConfirm: () => void
+}) {
+  if (!show) {
+    return (
+      <button
+        onClick={onAsk}
+        className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm"
+      >
+        <Trash2 size={13} /> Delete
+      </button>
+    )
+  }
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={onCancel}
+        className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={onConfirm}
+        className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium"
+      >
+        Delete
+      </button>
+    </div>
+  )
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────────── */
+function EmptyState({ emoji, text, sub }: { emoji: string; text: string; sub: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center pt-16 text-center px-8">
+      <div className="text-5xl mb-4">{emoji}</div>
+      <p className="font-semibold text-gray-600 mb-1">{text}</p>
+      <p className="text-sm text-gray-400">{sub}</p>
+    </div>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/(app)/memories/page.tsx
+================================================================
+'use client'
+
+import { useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { format, parseISO } from 'date-fns'
+import { useAppStore } from '@/store/useAppStore'
+import { USERS } from '@/types'
+
+type FeedItem =
+  | { kind: 'memory';   id: string; title: string; date: string; notes?: string; createdBy: string; photos?: string[] }
+  | { kind: 'lovenote'; id: string; content: string; createdAt: string; from: string; isPinned: boolean }
+
+export default function MemoriesPage() {
+  const currentUser = useAppStore(s => s.currentUser)!
+  const memories    = useAppStore(s => s.memories)
+  const loveNotes   = useAppStore(s => s.loveNotes)
+
+  const isSeval = currentUser === 'seval'
+  const primary = isSeval ? '#8b5cf6' : '#14b8a6'
+
+  const feed = useMemo<FeedItem[]>(() => {
+    const items: FeedItem[] = [
+      ...memories.map(m => ({
+        kind: 'memory' as const,
+        id: m.id, title: m.title, date: m.date,
+        notes: m.notes, createdBy: m.createdBy, photos: m.photos,
+      })),
+      ...loveNotes.map(n => ({
+        kind: 'lovenote' as const,
+        id: n.id, content: n.content, createdAt: n.createdAt,
+        from: n.from, isPinned: n.isPinned,
+      })),
+    ]
+    return items.sort((a, b) => {
+      const da = a.kind === 'memory' ? a.date : a.createdAt.slice(0, 10)
+      const db = b.kind === 'memory' ? b.date : b.createdAt.slice(0, 10)
+      return db.localeCompare(da)
+    })
+  }, [memories, loveNotes])
+
+  return (
+    <div className="min-h-screen pt-14 pb-32">
+      <div className="px-5 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Memories</h1>
+        <p className="text-sm text-gray-400">your story, together</p>
+      </div>
+
+      {feed.length === 0 ? (
+        <div className="flex flex-col items-center justify-center pt-20 text-center px-8">
+          <div className="text-5xl mb-4">📸</div>
+          <p className="font-semibold text-gray-600 mb-1">Nothing here yet</p>
+          <p className="text-sm text-gray-400">your memories and notes will live here</p>
+        </div>
+      ) : (
+        <div className="px-5 space-y-4">
+          {feed.map((item, i) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.3 }}
+            >
+              {item.kind === 'memory'
+                ? <MemoryCard item={item} />
+                : <LoveNoteCard item={item} />
+              }
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MemoryCard({ item }: { item: Extract<FeedItem, { kind: 'memory' }> }) {
+  const user = USERS[item.createdBy as keyof typeof USERS]
+  return (
+    <div className="bg-white rounded-3xl shadow-card overflow-hidden">
+      {item.photos && item.photos.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto p-3 pb-0 scrollbar-hide">
+          {item.photos.map((src, i) => (
+            <img key={i} src={src} alt="" className="w-28 h-28 object-cover rounded-2xl shrink-0" />
+          ))}
+        </div>
+      )}
+      <div className="p-4">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="text-[10px] font-bold text-gray-400">
+            {format(parseISO(item.date + 'T12:00:00'), 'MMM d, yyyy')}
+          </span>
+          <span className="text-gray-200">·</span>
+          <span className="text-[10px] text-gray-400">{user?.emoji} {user?.displayName}</span>
+        </div>
+        <p className="font-semibold text-gray-800 text-sm mb-1">{item.title}</p>
+        {item.notes && (
+          <p className="text-xs text-gray-500 leading-relaxed line-clamp-4">{item.notes}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LoveNoteCard({ item }: { item: Extract<FeedItem, { kind: 'lovenote' }> }) {
+  const fromUser  = USERS[item.from as keyof typeof USERS]
+  const fromColor = item.from === 'seval' ? '#8b5cf6' : '#14b8a6'
+  return (
+    <div
+      className="rounded-3xl p-5"
+      style={{ background: `${fromColor}0d`, border: `1.5px solid ${fromColor}20` }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">💌</span>
+        <div className="flex-1">
+          <p className="text-xs font-bold" style={{ color: fromColor }}>
+            {fromUser?.emoji} {fromUser?.displayName}
+          </p>
+          <p className="text-[10px] text-gray-400">
+            {format(parseISO(item.createdAt), 'MMM d, yyyy')}
+          </p>
+        </div>
+        {item.isPinned && <span className="text-xs">📌</span>}
+      </div>
+      <p className="text-sm text-gray-700 leading-relaxed">{item.content}</p>
+    </div>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/(app)/calendar/page.tsx
+================================================================
+'use client'
+
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from 'lucide-react'
+import { format, isSameMonth, isToday, parseISO } from 'date-fns'
+import { useAppStore } from '@/store/useAppStore'
+import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
+import { type CalendarEvent, type SharedTodo, USERS, OTHER_USER } from '@/types'
+import { getCalendarDays, toDateString, formatTime, getTodayString, cn, EVENT_COLOR_CLASS, MOOD_CONFIG } from '@/lib/utils'
+
+const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+export default function CalendarPage() {
+  const currentUser = useAppStore(s => s.currentUser)!
+  const events      = useAppStore(s => s.events)
+  const todos       = useAppStore(s => s.todos)
+  const getMood     = useAppStore(s => s.getMoodForUser)
+
+  const [viewDate, setViewDate]         = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(getTodayString())
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [categoryColor, setCategoryColor] = useState<CalendarEvent['color'] | null>(null)
+
+  const isSeval     = currentUser === 'seval'
+  const partnerUser = OTHER_USER[currentUser]
+  const partnerMood = getMood(partnerUser)
+  const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
+  const lightBg      = isSeval ? 'bg-seval-100' : 'bg-mateo-100'
+  const lighterBg    = isSeval ? 'bg-seval-50'  : 'bg-mateo-50'
+  const textColor    = isSeval ? 'text-seval-600' : 'text-mateo-600'
+
+  const calendarDays = useMemo(
+    () => getCalendarDays(viewDate.getFullYear(), viewDate.getMonth()),
+    [viewDate]
+  )
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {}
+    events.forEach(e => {
+      if (!map[e.date]) map[e.date] = []
+      map[e.date].push(e)
+    })
+    return map
+  }, [events])
+
+  const selectedEvents = eventsByDate[selectedDate] ?? []
+
+  function prevMonth() {
+    setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+  }
+  function nextMonth() {
+    setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+  }
+  function handleDayPress(day: Date) {
+    setSelectedDate(toDateString(day))
+  }
+  function openNewEvent() {
+    setEditingEvent(null)
+    setModalOpen(true)
+  }
+  function openEditEvent(e: CalendarEvent) {
+    setEditingEvent(e)
+    setModalOpen(true)
+  }
+  function openCategoryHub(color: CalendarEvent['color']) {
+    setCategoryColor(color)
+  }
+
+  // Items for the hub, filtered by selected color
+  const hubEvents = categoryColor ? events.filter(e => e.color === categoryColor) : []
+  const hubTodos  = categoryColor ? todos.filter(t => t.color === categoryColor) : []
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div
+        className="px-5 pt-14 pb-4"
+        style={{
+          background: isSeval
+            ? 'linear-gradient(135deg, #f5f3ff, #fafafa)'
+            : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
+        }}
+      >
+        {/* Partner mood strip */}
+        {partnerMood && (
+          <div className={`flex items-center gap-2 mb-3 px-3 py-2 rounded-2xl ${lighterBg}`}>
+            <span className="text-lg">{MOOD_CONFIG[partnerMood.mood].emoji}</span>
+            <p className="text-xs text-gray-500">
+              <span className="font-semibold">{USERS[partnerUser].displayName}</span>
+              {' '}is feeling {MOOD_CONFIG[partnerMood.mood].label.toLowerCase()} today
+            </p>
+          </div>
+        )}
+
+        {/* Month navigation */}
+        <div className="flex items-center justify-between mt-1">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {format(viewDate, 'MMMM')}
+            </h1>
+            <p className="text-sm text-gray-400">{format(viewDate, 'yyyy')}</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={prevMonth}
+              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center
+                         active:scale-90 transition-transform"
+            >
+              <ChevronLeft size={18} className="text-gray-500" />
+            </button>
+            <button
+              onClick={nextMonth}
+              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center
+                         active:scale-90 transition-transform"
+            >
+              <ChevronRight size={18} className="text-gray-500" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4">
+        {/* Day-of-week headers */}
+        <div className="grid grid-cols-7 mb-1 mt-2">
+          {DOW_LABELS.map((d, i) => (
+            <div key={i} className="text-center text-[11px] font-semibold text-gray-400 py-1">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-y-1 mb-5">
+          {calendarDays.map((day, i) => {
+            const dateStr        = toDateString(day)
+            const isCurrentMonth = isSameMonth(day, viewDate)
+            const isSelected     = dateStr === selectedDate
+            const isTodayDate    = isToday(day)
+            const dayEvents      = eventsByDate[dateStr] ?? []
+            const hasEvents      = dayEvents.length > 0
+
+            return (
+              <motion.button
+                key={i}
+                whileTap={{ scale: 0.88 }}
+                onClick={() => handleDayPress(day)}
+                className="calendar-day flex-col relative"
+              >
+                <div
+                  className={cn(
+                    'absolute inset-1 rounded-full transition-all',
+                    isSelected && !isTodayDate && 'opacity-15',
+                    isSelected ? (isSeval ? 'bg-seval-400' : 'bg-mateo-400') : '',
+                  )}
+                />
+                {isTodayDate && (
+                  <div
+                    className={cn(
+                      'absolute inset-1 rounded-full',
+                      isSelected ? 'opacity-100' : 'opacity-20'
+                    )}
+                    style={{ background: primaryColor }}
+                  />
+                )}
+                <span
+                  className={cn(
+                    'relative z-10 text-sm font-medium transition-colors',
+                    !isCurrentMonth && 'text-gray-300',
+                    isCurrentMonth && !isSelected && !isTodayDate && 'text-gray-700',
+                    isTodayDate && !isSelected && textColor,
+                    isSelected && isTodayDate && 'text-white font-bold',
+                    isSelected && !isTodayDate && (isSeval ? 'text-seval-700' : 'text-mateo-700'),
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+                {hasEvents && (
+                  <div className="relative z-10 flex gap-0.5 mt-0.5">
+                    {dayEvents.slice(0, 3).map(ev => (
+                      <div
+                        key={ev.id}
+                        className={cn('w-1.5 h-1.5 rounded-full', EVENT_COLOR_CLASS[ev.color])}
+                      />
+                    ))}
+                  </div>
+                )}
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* Selected date events */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-gray-700">
+              {selectedDate === getTodayString()
+                ? 'Today'
+                : format(parseISO(selectedDate), 'EEEE, MMM d')}
+            </h2>
+            <button
+              onClick={openNewEvent}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white',
+                'active:scale-95 transition-transform shadow-sm'
+              )}
+              style={{ background: primaryColor }}
+            >
+              <Plus size={14} strokeWidth={2.5} />
+              Add
+            </button>
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {selectedEvents.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={cn('rounded-2xl py-4 px-4 text-center', lighterBg)}
+              >
+                <p className="text-xs text-gray-400">A quiet day 🌙</p>
+              </motion.div>
+            ) : (
+              selectedEvents.map(ev => (
+                <motion.button
+                  key={ev.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => openEditEvent(ev)}
+                  className="w-full text-left bg-white rounded-2xl p-4 mb-2 shadow-card flex gap-3
+                             active:scale-[0.98] transition-transform"
+                >
+                  <div
+                    className={cn('w-1 rounded-full shrink-0 self-stretch', EVENT_COLOR_CLASS[ev.color])}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{ev.title}</p>
+                    {(ev.startTime || ev.endTime) && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Clock size={11} className="text-gray-400" />
+                        <p className="text-xs text-gray-400">
+                          {ev.startTime && formatTime(ev.startTime)}
+                          {ev.startTime && ev.endTime && ' – '}
+                          {ev.endTime && formatTime(ev.endTime)}
+                        </p>
+                      </div>
+                    )}
+                    {ev.notes && (
+                      <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>
+                    )}
+                    {ev.todos && ev.todos.length > 0 && (
+                      <p className="text-xs text-gray-300 mt-1">
+                        {ev.todos.filter(t => t.isCompleted).length}/{ev.todos.length} done
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0 self-center">
+                    <div
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        background: ev.createdBy === 'seval' ? '#ede9fe' : '#ccfbf1',
+                        color: ev.createdBy === 'seval' ? '#7c3aed' : '#0d9488',
+                      }}
+                    >
+                      {USERS[ev.createdBy].displayName}
+                    </div>
+                  </div>
+                </motion.button>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Color category hubs — always visible */}
+        <div className={cn('rounded-2xl px-4 py-3 mb-8', lighterBg)}>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Browse by feeling ✨
+          </p>
+          <div className="flex justify-around">
+            {COLOR_OPTIONS.map(c => {
+              const evCount   = events.filter(e => e.color === c.value).length
+              const todoCount = todos.filter(t => t.color === c.value).length
+              const total     = evCount + todoCount
+              return (
+                <motion.button
+                  key={c.value}
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => openCategoryHub(c.value as CalendarEvent['color'])}
+                  className="flex flex-col items-center gap-1.5"
+                >
+                  <div className="relative">
+                    <div
+                      className="w-10 h-10 rounded-full shadow-card"
+                      style={{ background: c.hex }}
+                    />
+                    {total > 0 && (
+                      <div
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white
+                                   flex items-center justify-center shadow-sm"
+                      >
+                        <span className="text-[9px] font-bold text-gray-600">{total}</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-medium">{c.label}</span>
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* EventModal */}
+      <EventModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingEvent(null) }}
+        date={selectedDate}
+        event={editingEvent}
+      />
+
+      {/* Category Hub Modal */}
+      <AnimatePresence>
+        {categoryColor && (
+          <CategoryHubModal
+            color={categoryColor}
+            events={hubEvents}
+            todos={hubTodos}
+            primaryColor={primaryColor}
+            onClose={() => setCategoryColor(null)}
+            onEditEvent={ev => {
+              setCategoryColor(null)
+              setEditingEvent(ev)
+              setModalOpen(true)
+            }}
+            onAddEvent={() => {
+              setCategoryColor(null)
+              setModalOpen(true)
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ─── Category Hub Modal ─────────────────────────────────────────────────────── */
+function CategoryHubModal({
+  color, events, todos, primaryColor, onClose, onEditEvent, onAddEvent,
+}: {
+  color: CalendarEvent['color']
+  events: CalendarEvent[]
+  todos: SharedTodo[]
+  primaryColor: string
+  onClose: () => void
+  onEditEvent: (ev: CalendarEvent) => void
+  onAddEvent: () => void
+}) {
+  const [expandedTodo, setExpandedTodo] = useState<string | null>(null)
+
+  const colorOption = COLOR_OPTIONS.find(c => c.value === color)!
+  const totalCount  = events.length + todos.length
+
+  // Merge and sort by date (events have date, todos may have date)
+  type HubItem =
+    | { kind: 'event'; data: CalendarEvent }
+    | { kind: 'todo';  data: SharedTodo }
+
+  const allItems: HubItem[] = [
+    ...events.map(e => ({ kind: 'event' as const, data: e })),
+    ...todos.map(t => ({ kind: 'todo' as const, data: t })),
+  ].sort((a, b) => {
+    const dateA = a.data.date ?? a.data.createdAt ?? ''
+    const dateB = b.data.date ?? b.data.createdAt ?? ''
+    return dateA.localeCompare(dateB)
+  })
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+
+      {/* Sheet */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[85vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full shadow-card"
+                style={{ background: colorOption.hex }}
+              />
+              <div>
+                <h2 className="text-base font-bold text-gray-800">{colorOption.label}</h2>
+                <p className="text-xs text-gray-400">
+                  {totalCount === 0
+                    ? 'No items yet'
+                    : `${totalCount} item${totalCount !== 1 ? 's' : ''} · ${events.length} event${events.length !== 1 ? 's' : ''}, ${todos.length} task${todos.length !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+
+        {/* Scrollable list */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {allItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div
+                className="w-16 h-16 rounded-full mb-4 opacity-20"
+                style={{ background: colorOption.hex }}
+              />
+              <p className="font-semibold text-gray-500 mb-1">Nothing here yet 🌙</p>
+              <p className="text-sm text-gray-400">
+                Plan a moment with the {colorOption.label} colour.
+              </p>
+            </div>
+          ) : (
+            allItems.map(item => {
+              if (item.kind === 'event') {
+                const ev = item.data
+                return (
+                  <motion.button
+                    key={ev.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onEditEvent(ev)}
+                    className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-2xl p-3.5
+                               flex gap-3 transition-colors"
+                  >
+                    {/* Color bar */}
+                    <div
+                      className="w-1 rounded-full shrink-0 self-stretch"
+                      style={{ background: colorOption.hex }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-gray-800 leading-tight">{ev.title}</p>
+                        <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold
+                                         bg-blue-50 text-blue-400 px-2 py-0.5 rounded-full">
+                          <CalendarDays size={9} />
+                          Event
+                        </span>
+                      </div>
+                      {ev.date && (
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <CalendarDays size={10} />
+                          {format(parseISO(ev.date), 'MMM d, yyyy')}
+                          {ev.startTime && ` · ${formatTime(ev.startTime)}`}
+                        </p>
+                      )}
+                      {ev.notes && (
+                        <p className="text-xs text-gray-400 mt-1 truncate">{ev.notes}</p>
+                      )}
+                    </div>
+                  </motion.button>
+                )
+              }
+
+              // todo
+              const todo = item.data
+              const isExpanded = expandedTodo === todo.id
+              return (
+                <motion.div
+                  key={todo.id}
+                  layout
+                  className="bg-gray-50 rounded-2xl overflow-hidden"
+                >
+                  <button
+                    onClick={() => setExpandedTodo(isExpanded ? null : todo.id)}
+                    className="w-full text-left p-3.5 flex gap-3"
+                  >
+                    <div
+                      className="w-1 rounded-full shrink-0 self-stretch"
+                      style={{ background: colorOption.hex }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={cn(
+                          'text-sm font-semibold leading-tight',
+                          todo.isCompleted ? 'line-through text-gray-300' : 'text-gray-800'
+                        )}>
+                          {todo.title}
+                        </p>
+                        <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold
+                                         bg-purple-50 text-purple-400 px-2 py-0.5 rounded-full">
+                          <CheckSquare size={9} />
+                          Task
+                        </span>
+                      </div>
+                      {todo.date && (
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <CalendarDays size={10} />
+                          {format(parseISO(todo.date), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                      {!isExpanded && todo.notes && (
+                        <p className="text-xs text-gray-400 mt-1 truncate">{todo.notes}</p>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Expanded todo detail */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-3 border-t border-gray-100 pt-2 space-y-2">
+                          {todo.items && todo.items.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                Sub-items
+                              </p>
+                              {todo.items.map((it, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <div
+                                    className="w-1.5 h-1.5 rounded-full shrink-0 opacity-40"
+                                    style={{ background: colorOption.hex }}
+                                  />
+                                  <span className="text-xs text-gray-500">{it}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {todo.notes && (
+                            <div className="flex gap-2 bg-white rounded-xl px-3 py-2">
+                              <FileText size={12} className="text-gray-300 shrink-0 mt-0.5" />
+                              <p className="text-xs text-gray-500 leading-relaxed">{todo.notes}</p>
+                            </div>
+                          )}
+                          <p className="text-[10px] text-gray-300 pt-1">
+                            Open Together Plans to edit this plan
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-8 pt-3 shrink-0 border-t border-gray-100">
+          <button
+            onClick={onAddEvent}
+            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold
+                       flex items-center justify-center gap-2 active:opacity-80 transition-opacity"
+            style={{ background: colorOption.hex }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Plan a moment in {colorOption.label}
+          </button>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/components/layout/BottomNav.tsx
+================================================================
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Heart, Sparkles, BookOpen } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useAppStore } from '@/store/useAppStore'
+import { cn } from '@/lib/utils'
+
+const NAV_ITEMS = [
+  { href: '/together',  label: 'Together', icon: Heart },
+  { href: '/plans',     label: 'Plans',    icon: Sparkles },
+  { href: '/memories',  label: 'Memories', icon: BookOpen },
+]
+
+export function BottomNav() {
+  const pathname = usePathname()
+  const currentUser = useAppStore(s => s.currentUser)
+
+  const isSeval = currentUser === 'seval'
+  const activeColor = isSeval ? '#8b5cf6' : '#14b8a6'
+
+  return (
+    <nav className="glass-nav fixed bottom-0 left-0 right-0 z-40 pb-safe">
+      <div className="flex items-center justify-around px-2 h-16 max-w-lg mx-auto">
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full
+                         relative active:opacity-70 transition-opacity"
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="nav-indicator"
+                  className="absolute top-1.5 w-1 h-1 rounded-full"
+                  style={{ background: activeColor }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
+              <Icon
+                size={22}
+                strokeWidth={isActive ? 2.2 : 1.7}
+                color={isActive ? activeColor : '#9ca3af'}
+              />
+              <span
+                className={cn('text-[10px] font-medium transition-colors', {
+                  'font-semibold': isActive,
+                })}
+                style={{ color: isActive ? activeColor : '#9ca3af' }}
+              >
+                {label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/components/calendar/EventModal.tsx
+================================================================
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Clock, FileText, Plus, Check, Palette, Camera } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import { type CalendarEvent, type EventTodo } from '@/types'
+import { generateId, formatDate, cn } from '@/lib/utils'
+
+export const COLOR_OPTIONS = [
+  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
+  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
+  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
+  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
+  { value: 'green',  hex: '#34d399', label: 'Green'  },
+] as const
+
+interface EventModalProps {
+  isOpen: boolean
+  onClose: () => void
+  date: string
+  event?: CalendarEvent | null
+  initialColor?: CalendarEvent['color']
+}
+
+export function EventModal({ isOpen, onClose, date, event, initialColor }: EventModalProps) {
+  const currentUser       = useAppStore(s => s.currentUser)
+  const addEvent          = useAppStore(s => s.addEvent)
+  const updateEvent       = useAppStore(s => s.updateEvent)
+  const deleteEvent       = useAppStore(s => s.deleteEvent)
+  const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
+
+  const [title, setTitle]           = useState('')
+  const [selectedDate, setDate]     = useState(date)
+  const [startTime, setStartTime]   = useState('')
+  const [endTime, setEndTime]       = useState('')
+  const [notes, setNotes]           = useState('')
+  const [color, setColor]           = useState<CalendarEvent['color']>('seval')
+  const [todos, setTodos]           = useState<EventTodo[]>([])
+  const [newTodo, setNewTodo]       = useState('')
+  const [showDelete, setShowDelete] = useState(false)
+  const [colorPopup, setColorPopup] = useState(false)
+  const [photos, setPhotos]         = useState<string[]>([])
+  const [uploading, setUploading]   = useState(false)
+
+  const colorBtnRef  = useRef<HTMLButtonElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const isEdit = !!event
+
+  useEffect(() => {
+    if (event) {
+      setTitle(event.title)
+      setDate(event.date)
+      setStartTime(event.startTime ?? '')
+      setEndTime(event.endTime ?? '')
+      setNotes(event.notes ?? '')
+      setColor(event.color)
+      setTodos(event.todos ?? [])
+      setPhotos(event.photos ?? [])
+    } else {
+      setTitle('')
+      setDate(date)
+      setStartTime('')
+      setEndTime('')
+      setNotes('')
+      setColor(initialColor ?? (currentUser === 'mateo' ? 'mateo' : 'seval'))
+      setTodos([])
+      setPhotos([])
+    }
+    setShowDelete(false)
+    setColorPopup(false)
+    setNewTodo('')
+    setUploading(false)
+  }, [event, date, currentUser, isOpen, initialColor])
+
+  function handleSave() {
+    if (!title.trim() || !currentUser) return
+    const data = {
+      title: title.trim(),
+      date: selectedDate,
+      startTime: startTime || undefined,
+      notes: notes.trim() || undefined,
+      color,
+      todos: todos.length ? todos : undefined,
+      photos: photos.length ? photos : undefined,
+      createdBy: currentUser,
+    }
+    if (isEdit && event) updateEvent(event.id, data)
+    else addEvent(data)
+    onClose()
+  }
+
+  async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !event) return
+    setUploading(true)
+    await uploadEventPhoto(event.id, file)
+    const updated = useAppStore.getState().events.find(ev => ev.id === event.id)
+    if (updated?.photos) setPhotos(updated.photos)
+    setUploading(false)
+    if (e.target) e.target.value = ''
+  }
+
+  function handleDelete() {
+    if (event) deleteEvent(event.id)
+    onClose()
+  }
+
+  function addTodoItem() {
+    if (!newTodo.trim()) return
+    setTodos(prev => [...prev, { id: generateId(), title: newTodo.trim(), isCompleted: false }])
+    setNewTodo('')
+  }
+
+  function toggleTodo(id: string) {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t))
+  }
+
+  function removeTodo(id: string) {
+    setTodos(prev => prev.filter(t => t.id !== id))
+  }
+
+  const activeColor = COLOR_OPTIONS.find(c => c.value === color)
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+          />
+
+          {/* Sheet */}
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                       max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+          >
+            <div className="px-5 pt-4 pb-10">
+              <div className="drag-handle" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-800">
+                  {isEdit ? 'Edit Event' : `New Event · ${formatDate(date, 'MMM d')}`}
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Title + color row */}
+              <div className="flex items-end gap-3 mb-5">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Event title..."
+                  className="flex-1 text-xl font-semibold text-gray-800 placeholder:text-gray-300
+                             border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
+                             transition-colors bg-transparent"
+                  autoFocus={!isEdit}
+                />
+
+                {/* Color picker button */}
+                <div className="relative pb-1">
+                  <button
+                    ref={colorBtnRef}
+                    onClick={() => setColorPopup(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gray-50
+                               hover:bg-gray-100 transition-colors active:scale-95 shrink-0"
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full shrink-0"
+                      style={{ background: activeColor?.hex }}
+                    />
+                    <span className="text-xs font-medium text-gray-500">{activeColor?.label}</span>
+                    <Palette size={13} className="text-gray-400" />
+                  </button>
+
+                  {/* Color popup */}
+                  <AnimatePresence>
+                    {colorPopup && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[55]"
+                          onClick={() => setColorPopup(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 bottom-full mb-2 z-[56] bg-white rounded-2xl
+                                     shadow-modal p-3 min-w-[160px]"
+                        >
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                            Category color
+                          </p>
+                          {COLOR_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => { setColor(opt.value as CalendarEvent['color']); setColorPopup(false) }}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
+                                color === opt.value ? 'bg-gray-50' : 'hover:bg-gray-50'
+                              )}
+                            >
+                              <div
+                                className="w-5 h-5 rounded-full shrink-0"
+                                style={{ background: opt.hex }}
+                              />
+                              <span className="text-sm text-gray-700 flex-1 text-left">
+                                {opt.label}
+                              </span>
+                              {color === opt.value && (
+                                <Check size={13} className="text-gray-400 shrink-0" />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
+                    <Clock size={14} className="text-gray-400" />
+                  </div>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setDate(e.target.value)}
+                    className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8" />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={e => setStartTime(e.target.value)}
+                    className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
+                               outline-none shadow-card"
+                  />
+                  <span className="text-xs text-gray-400">start time (optional)</span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex gap-3">
+                <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
+                  <FileText size={14} className="text-gray-400" />
+                </div>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Add notes..."
+                  rows={3}
+                  className="flex-1 text-sm text-gray-700 bg-transparent outline-none resize-none
+                             placeholder:text-gray-300"
+                />
+              </div>
+
+              {/* Checklist */}
+              <div className="mb-6">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Checklist
+                </p>
+                <div className="space-y-2">
+                  {todos.map(todo => (
+                    <div key={todo.id} className="flex items-center gap-3 group">
+                      <button
+                        onClick={() => toggleTodo(todo.id)}
+                        className={cn(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                          todo.isCompleted ? 'border-emerald-400 bg-emerald-400' : 'border-gray-300'
+                        )}
+                      >
+                        {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
+                      </button>
+                      <span className={cn(
+                        'flex-1 text-sm',
+                        todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                      )}>
+                        {todo.title}
+                      </span>
+                      <button
+                        onClick={() => removeTodo(todo.id)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
+                                   transition-all"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-dashed border-gray-200 shrink-0" />
+                    <input
+                      type="text"
+                      value={newTodo}
+                      onChange={e => setNewTodo(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addTodoItem()}
+                      placeholder="Add item..."
+                      className="flex-1 text-sm text-gray-600 placeholder:text-gray-300 outline-none
+                                 bg-transparent"
+                    />
+                    {newTodo && (
+                      <button onClick={addTodoItem} className="text-gray-400 active:text-gray-600">
+                        <Plus size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Photos */}
+              {isEdit && (
+                <div className="mb-6">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Photos
+                  </p>
+                  {photos.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mb-3">
+                      {photos.map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          className="w-20 h-20 rounded-2xl object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                  />
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-50
+                               text-sm text-gray-500 font-medium active:bg-gray-100 disabled:opacity-50"
+                  >
+                    <Camera size={15} className="text-gray-400" />
+                    {uploading ? 'Uploading...' : 'Add photo'}
+                  </button>
+                </div>
+              )}
+
+              {/* Save */}
+              <button
+                onClick={handleSave}
+                disabled={!title.trim()}
+                className="btn-primary mb-3 disabled:opacity-40"
+                style={{ background: `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)` }}
+              >
+                {isEdit ? 'Save Changes' : 'Add Event'}
+              </button>
+
+              {isEdit && (
+                <button
+                  onClick={() => setShowDelete(true)}
+                  className="w-full py-3 rounded-2xl text-sm font-medium text-red-400
+                             active:bg-red-50 transition-colors"
+                >
+                  Delete Event
+                </button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Delete confirm */}
+          <AnimatePresence>
+            {showDelete && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] flex items-end justify-center p-4"
+              >
+                <div className="absolute inset-0 bg-black/40" onClick={() => setShowDelete(false)} />
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+                >
+                  <div className="text-4xl mb-3">🗑️</div>
+                  <h3 className="font-bold text-gray-800 mb-1">Delete Event?</h3>
+                  <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDelete(false)}
+                      className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/components/ui/QuickAddSheet.tsx
+================================================================
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Plus } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
+import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
+
+type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
+
+const TYPES: { id: QuickType; emoji: string; label: string }[] = [
+  { id: 'plan',   emoji: '✅', label: 'Plan'   },
+  { id: 'dream',  emoji: '✨', label: 'Dream'  },
+  { id: 'wish',   emoji: '💫', label: 'Wish'   },
+  { id: 'moment', emoji: '📅', label: 'Moment' },
+  { id: 'note',   emoji: '💌', label: 'Note'   },
+]
+
+const COLOR_OPTIONS: { value: EventColor; hex: string; label: string }[] = [
+  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
+  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
+  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
+  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
+  { value: 'green',  hex: '#34d399', label: 'Green'  },
+]
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  primary: string
+}
+
+export function QuickAddSheet({ open, onClose, primary }: Props) {
+  const currentUser     = useAppStore(s => s.currentUser)!
+  const addTodo         = useAppStore(s => s.addTodo)
+  const addGoal         = useAppStore(s => s.addGoal)
+  const addWishlistItem = useAppStore(s => s.addWishlistItem)
+  const addEvent        = useAppStore(s => s.addEvent)
+  const sendNote        = useAppStore(s => s.sendPartnerNote)
+
+  const [type, setType]   = useState<QuickType>('plan')
+  const [title, setTitle] = useState('')
+  const [notes, setNotes] = useState('')
+  const [date, setDate]   = useState('')
+  const [time, setTime]   = useState('')
+  const [color, setColor] = useState<EventColor>(currentUser === 'mateo' ? 'mateo' : 'seval')
+  const [sent, setSent]   = useState(false)
+
+  function reset() {
+    setTitle(''); setNotes(''); setDate(''); setTime(''); setSent(false)
+    setColor(currentUser === 'mateo' ? 'mateo' : 'seval')
+  }
+
+  function close() { reset(); onClose() }
+
+  function handleSubmit() {
+    switch (type) {
+      case 'plan':
+        if (!title.trim()) return
+        addTodo(title.trim(), undefined, date || undefined, undefined, notes.trim() || undefined, time || undefined)
+        break
+      case 'dream':
+        if (!title.trim()) return
+        addGoal('life', title.trim(), notes.trim() || undefined, date || undefined, 0, time || undefined)
+        break
+      case 'wish':
+        if (!title.trim()) return
+        addWishlistItem(title.trim(), 'plan', notes.trim() || undefined)
+        break
+      case 'moment':
+        if (!title.trim() || !date) return
+        addEvent({ title: title.trim(), date, startTime: time || undefined, notes: notes.trim() || undefined, color, createdBy: currentUser })
+        break
+      case 'note':
+        if (!title.trim()) return
+        sendNote(title.trim())
+        setSent(true)
+        setTimeout(() => close(), 1800)
+        return
+    }
+    close()
+  }
+
+  const canSubmit = type === 'moment' ? !!(title.trim() && date) : !!title.trim()
+  const showDatetime = type === 'plan' || type === 'dream' || type === 'moment'
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={close}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                       max-w-lg mx-auto"
+          >
+            <div className="px-5 pt-4 pb-10">
+              <div className="drag-handle" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-bold text-gray-800">Add something 💕</h3>
+                <button onClick={close}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Type chips — always visible */}
+              <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+                {TYPES.map(t => (
+                  <motion.button
+                    key={t.id}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => { setType(t.id); setTitle(''); setNotes('') }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
+                    style={type === t.id
+                      ? { background: primary, color: 'white' }
+                      : { background: '#f3f4f6', color: '#6b7280' }
+                    }
+                  >
+                    {t.emoji} {t.label}
+                  </motion.button>
+                ))}
+              </div>
+
+              <AnimatePresence mode="wait">
+                {sent ? (
+                  <motion.div
+                    key="sent"
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center py-8 text-center"
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ repeat: 2, duration: 0.4 }}
+                      className="text-5xl mb-3"
+                    >💌</motion.div>
+                    <p className="font-bold text-gray-800">Sent with love 💕</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={type}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="space-y-3"
+                  >
+                    {/* Main title / message input */}
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      {type === 'note' ? (
+                        <textarea
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          placeholder="Write something from the heart..."
+                          rows={4}
+                          autoFocus
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300
+                                     bg-transparent outline-none resize-none leading-relaxed"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={e => setTitle(e.target.value)}
+                          placeholder={
+                            type === 'plan'   ? 'What do you want to plan?' :
+                            type === 'dream'  ? 'What do you dream of?' :
+                            type === 'wish'   ? 'What do you wish for?' :
+                            'Name this moment...'
+                          }
+                          autoFocus
+                          className="w-full text-sm text-gray-700 placeholder:text-gray-300
+                                     bg-transparent outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Notes field (all types except note) */}
+                    {type !== 'note' && (
+                      <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                        <textarea
+                          value={notes}
+                          onChange={e => setNotes(e.target.value)}
+                          placeholder="Notes (optional)..."
+                          rows={2}
+                          className="w-full text-sm text-gray-500 placeholder:text-gray-300
+                                     bg-transparent outline-none resize-none"
+                        />
+                      </div>
+                    )}
+
+                    {/* Date + time */}
+                    {showDatetime && (
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={e => setDate(e.target.value)}
+                          className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+                        />
+                        <input
+                          type="time"
+                          value={time}
+                          onChange={e => setTime(e.target.value)}
+                          className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {/* Color picker (moments only) */}
+                    {type === 'moment' && (
+                      <div>
+                        <p className="text-xs text-gray-400 font-medium mb-2 px-1">Color</p>
+                        <div className="flex gap-3 px-1">
+                          {COLOR_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setColor(opt.value)}
+                              className="flex flex-col items-center gap-1"
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full transition-transform"
+                                style={{
+                                  background: opt.hex,
+                                  transform: color === opt.value ? 'scale(1.2)' : 'scale(1)',
+                                  boxShadow: color === opt.value ? `0 0 0 3px white, 0 0 0 5px ${opt.hex}` : 'none',
+                                }}
+                              />
+                              <span className="text-[9px] text-gray-400 font-medium">{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submit */}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleSubmit}
+                      disabled={!canSubmit}
+                      className="w-full py-4 rounded-2xl text-white text-sm font-semibold
+                                 disabled:opacity-40 flex items-center justify-center gap-2"
+                      style={{ background: primary }}
+                    >
+                      <Plus size={16} />
+                      {type === 'note' ? 'Send with love 💌' : 'Save 💕'}
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/components/SyncStatusDot.tsx
+================================================================
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+
+type Status = 'checking' | 'ok' | 'error'
+
+export function SyncStatusDot() {
+  const [status, setStatus] = useState<Status>('checking')
+  const [tooltip, setTooltip] = useState('')
+
+  useEffect(() => {
+    async function test() {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!url || !key) {
+        setStatus('error')
+        setTooltip('Env vars missing')
+        console.error('[Sync] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is undefined')
+        return
+      }
+
+      const { error } = await supabase
+        .from('couple_state')
+        .select('id')
+        .eq('id', 'sema')
+        .maybeSingle()
+
+      if (error) {
+        setStatus('error')
+        setTooltip(error.message)
+        console.error('[Sync] connection test failed:', error.message)
+      } else {
+        setStatus('ok')
+        setTooltip('Sync connected')
+        console.log('[Sync] connection test OK')
+      }
+    }
+    test()
+  }, [])
+
+  return (
+    <div
+      title={`Sync: ${tooltip}`}
+      className="fixed top-3 right-3 z-[999] pointer-events-none"
+    >
+      <div
+        className={`w-2.5 h-2.5 rounded-full ${
+          status === 'checking' ? 'bg-yellow-400 animate-pulse' :
+          status === 'ok'       ? 'bg-emerald-400' :
+                                  'bg-red-500 animate-pulse'
+        }`}
+      />
+    </div>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/components/PartnerNoteNotification.tsx
+================================================================
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useAppStore } from '@/store/useAppStore'
+import { USERS } from '@/types'
+import type { PartnerNote } from '@/types'
+
+// Deterministic burst positions — no Math.random() to avoid hydration issues
+const BURST_HEARTS = Array.from({ length: 10 }, (_, i) => {
+  const angle = (i / 10) * Math.PI * 2 - Math.PI / 2
+  const dist  = 70 + (i % 3) * 28
+  return {
+    x:     Math.cos(angle) * dist,
+    y:     Math.sin(angle) * dist,
+    emoji: (['💕', '💗', '❤️', '💖', '✨'] as const)[i % 5],
+    delay: (i % 3) * 0.04,
+  }
+})
+
+export function PartnerNoteNotification() {
+  const currentUser         = useAppStore(s => s.currentUser)
+  const partnerNotes        = useAppStore(s => s.partnerNotes)
+  const markPartnerNoteRead = useAppStore(s => s.markPartnerNoteRead)
+
+  const [readingId,  setReadingId]  = useState<string | null>(null)
+  const [showBurst,  setShowBurst]  = useState(false)
+
+  if (!currentUser) return null
+
+  // Oldest unread note addressed to me
+  const pending: PartnerNote | undefined = partnerNotes
+    .filter(n => n.to === currentUser && !n.isRead)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
+
+  const readingNote: PartnerNote | undefined = readingId
+    ? partnerNotes.find(n => n.id === readingId)
+    : undefined
+
+  const bubbleSenderColor  = pending?.from === 'seval' ? '#8b5cf6' : '#14b8a6'
+  const bubbleSenderConfig = pending ? USERS[pending.from] : null
+
+  const readSenderColor  = readingNote?.from === 'seval' ? '#8b5cf6' : '#14b8a6'
+  const readSenderConfig = readingNote ? USERS[readingNote.from] : null
+
+  function handleOpen() {
+    if (!pending) return
+    setReadingId(pending.id)
+    setShowBurst(true)
+    setTimeout(() => setShowBurst(false), 900)
+  }
+
+  function handleClose() {
+    if (readingId) markPartnerNoteRead(readingId)
+    setReadingId(null)
+  }
+
+  return (
+    <>
+      {/* ── Floating bubble ──────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {pending && !readingId && (
+          <motion.button
+            key={pending.id}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1, y: [0, -6, 0] }}
+            exit={{ scale: 0, opacity: 0, transition: { duration: 0.18 } }}
+            transition={{
+              scale:   { type: 'spring', stiffness: 420, damping: 22 },
+              opacity: { duration: 0.18 },
+              y:       { repeat: Infinity, duration: 2.8, ease: 'easeInOut', delay: 0.4 },
+            }}
+            onClick={handleOpen}
+            className="fixed bottom-24 right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5
+                       rounded-full shadow-lg active:scale-95 transition-transform max-w-[200px]"
+            style={{ background: bubbleSenderColor }}
+          >
+            <span className="text-xl leading-none shrink-0">{bubbleSenderConfig?.emoji}</span>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] text-white/75 font-medium leading-none mb-0.5 truncate">
+                {bubbleSenderConfig?.displayName} sent you
+              </p>
+              <p className="text-xs text-white font-bold leading-none">
+                a love note 💌
+              </p>
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* ── Heart burst particles ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showBurst && (
+          <div className="fixed inset-0 z-[70] pointer-events-none flex items-center justify-center">
+            {BURST_HEARTS.map((h, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-2xl select-none"
+                initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                animate={{ x: h.x, y: h.y, scale: 1, opacity: 0 }}
+                transition={{ duration: 0.75, ease: 'easeOut', delay: h.delay }}
+              >
+                {h.emoji}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Reading modal ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {readingNote && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+              onClick={handleClose}
+            />
+
+            {/* Card */}
+            <div className="fixed inset-0 z-[61] flex items-center justify-center p-6 pointer-events-none">
+              <motion.div
+                initial={{ scale: 0.82, opacity: 0, y: 32 }}
+                animate={{ scale: 1,    opacity: 1, y: 0  }}
+                exit={   { scale: 0.88, opacity: 0, y: 16 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                className="w-full max-w-sm rounded-3xl overflow-hidden shadow-modal pointer-events-auto bg-white"
+              >
+                {/* Header */}
+                <div
+                  className="px-6 pt-8 pb-6 flex flex-col items-center text-center relative overflow-hidden"
+                  style={{ background: `linear-gradient(145deg, ${readSenderColor}1a, ${readSenderColor}06)` }}
+                >
+                  {/* Giant background heart */}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+                    style={{ fontSize: 200, opacity: 0.04, lineHeight: 1 }}
+                  >
+                    ❤️
+                  </div>
+
+                  {/* Floating decorative hearts */}
+                  {([0, 1, 2, 3, 4] as const).map(i => (
+                    <motion.span
+                      key={i}
+                      className="absolute pointer-events-none select-none text-base"
+                      style={{
+                        left:    `${12 + i * 18}%`,
+                        top:     `${8  + (i % 2) * 30}%`,
+                        opacity: 0.25,
+                      }}
+                      animate={{ y: [0, -9, 0], opacity: [0.25, 0.55, 0.25] }}
+                      transition={{
+                        repeat:   Infinity,
+                        duration: 2.2 + i * 0.35,
+                        ease:     'easeInOut',
+                        delay:    i * 0.28,
+                      }}
+                    >
+                      {i % 2 === 0 ? '💕' : '✨'}
+                    </motion.span>
+                  ))}
+
+                  {/* Sender emoji */}
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', delay: 0.08, stiffness: 420, damping: 18 }}
+                    className="text-5xl mb-3 relative z-10"
+                  >
+                    {readSenderConfig?.emoji}
+                  </motion.div>
+
+                  <motion.p
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.18 }}
+                    className="text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10"
+                    style={{ color: readSenderColor }}
+                  >
+                    A note from
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.24 }}
+                    className="text-lg font-bold text-gray-800 relative z-10"
+                  >
+                    {readSenderConfig?.displayName}
+                  </motion.p>
+                </div>
+
+                {/* Note content */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="px-6 py-5"
+                >
+                  <div
+                    className="rounded-2xl px-5 py-4 mb-5"
+                    style={{ background: `${readSenderColor}0e` }}
+                  >
+                    <p className="text-sm text-gray-700 leading-relaxed italic text-center">
+                      &ldquo;{readingNote.content}&rdquo;
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleClose}
+                    className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold
+                               active:opacity-80 transition-opacity"
+                    style={{ background: readSenderColor }}
+                  >
+                    ❤️ Close with love
+                  </button>
+                </motion.div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+================================================================
+FILE: c:/Users/mateo/SeMaCalendar/src/app/auth/[user]/page.tsx
+================================================================
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function AuthRedirect() {
+  const router = useRouter()
+  useEffect(() => { router.replace('/') }, [router])
+  return null
+}

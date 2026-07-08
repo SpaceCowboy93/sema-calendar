@@ -7,6 +7,7 @@ import {
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
+  type ShoppingList, type ShoppingItem, type ShoppingCategory,
   OTHER_USER,
 } from '@/types'
 import { generateId, getTodayString } from '@/lib/utils'
@@ -71,6 +72,14 @@ interface AppState {
   partnerNotes: PartnerNote[]
   sendPartnerNote: (content: string) => void
   markPartnerNoteRead: (id: string) => void
+
+  // Shopping
+  shoppingLists: ShoppingList[]
+  createShoppingList: (name: string) => void
+  deleteShoppingList: (id: string) => void
+  addShoppingItem: (listId: string, name: string, quantity?: number, category?: ShoppingCategory) => void
+  toggleShoppingItem: (listId: string, itemId: string) => void
+  deleteShoppingItem: (listId: string, itemId: string) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -568,6 +577,68 @@ export const useAppStore = create<AppState>()(
         set(s => ({
           partnerNotes: s.partnerNotes.map(n =>
             n.id === id ? { ...n, isRead: true } : n
+          ),
+        })),
+
+      // ── Shopping ─────────────────────────────────────────────────────────────
+      shoppingLists: [],
+
+      createShoppingList: name => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const now = new Date().toISOString()
+        set(s => ({
+          shoppingLists: [
+            ...s.shoppingLists,
+            { id: generateId(), name: name.trim(), items: [], createdBy: currentUser, createdAt: now, updatedAt: now },
+          ],
+        }))
+      },
+
+      deleteShoppingList: id =>
+        set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
+
+      addShoppingItem: (listId, name, quantity = 1, category = 'other') => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const newItem: ShoppingItem = {
+          id: generateId(), name: name.trim(), quantity, isChecked: false,
+          category, createdAt: new Date().toISOString(),
+        }
+        set(s => ({
+          shoppingLists: s.shoppingLists.map(l =>
+            l.id === listId
+              ? { ...l, items: [...l.items, newItem], updatedAt: new Date().toISOString() }
+              : l
+          ),
+        }))
+      },
+
+      toggleShoppingItem: (listId, itemId) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          shoppingLists: s.shoppingLists.map(l => {
+            if (l.id !== listId) return l
+            return {
+              ...l,
+              updatedAt: new Date().toISOString(),
+              items: l.items.map(i =>
+                i.id === itemId
+                  ? { ...i, isChecked: !i.isChecked, checkedBy: !i.isChecked ? currentUser : undefined }
+                  : i
+              ),
+            }
+          }),
+        }))
+      },
+
+      deleteShoppingItem: (listId, itemId) =>
+        set(s => ({
+          shoppingLists: s.shoppingLists.map(l =>
+            l.id === listId
+              ? { ...l, items: l.items.filter(i => i.id !== itemId), updatedAt: new Date().toISOString() }
+              : l
           ),
         })),
     }),

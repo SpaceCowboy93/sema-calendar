@@ -130,6 +130,27 @@ export interface PartnerNote {
   isRead: boolean
 }
 
+export type ShoppingCategory = 'produce' | 'dairy' | 'meat' | 'bakery' | 'household' | 'other'
+
+export interface ShoppingItem {
+  id: string
+  name: string
+  quantity: number
+  isChecked: boolean
+  checkedBy?: UserName
+  category: ShoppingCategory
+  createdAt: string
+}
+
+export interface ShoppingList {
+  id: string
+  name: string
+  items: ShoppingItem[]
+  createdBy: UserName
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Memory {
   id: string
   date: string // YYYY-MM-DD

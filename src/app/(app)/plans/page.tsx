@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Calendar, Clock, X, Trash2 } from 'lucide-react'
+import { Check, Calendar, Clock, X, Trash2, ChevronDown } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatDate, formatTime } from '@/lib/utils'
 import type { Goal, GoalCategory, SharedTodo, WishlistItem, WishlistCategory } from '@/types'
@@ -80,7 +80,8 @@ export default function PlansPage() {
 function TodosSection({ primary }: { primary: string }) {
   const todos      = useAppStore(s => s.todos)
   const toggleTodo = useAppStore(s => s.toggleTodo)
-  const [editing, setEditing] = useState<SharedTodo | null>(null)
+  const [editing, setEditing]   = useState<SharedTodo | null>(null)
+  const [showDone, setShowDone] = useState(false)
 
   const pending   = todos.filter(t => !t.isCompleted)
   const completed = todos.filter(t => t.isCompleted)
@@ -132,26 +133,46 @@ function TodosSection({ primary }: { primary: string }) {
 
       {completed.length > 0 && (
         <div className="pt-4">
-          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
-            Shared 💞 ({completed.length})
-          </p>
-          {completed.map(todo => (
-            <motion.div
-              key={todo.id}
-              layout
-              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
-              onClick={() => setEditing(todo)}
-            >
-              <button
-                onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
-                className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center"
-                style={{ borderColor: primary, background: primary }}
-              >
-                <Check size={12} color="white" strokeWidth={3} />
-              </button>
-              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{todo.title}</p>
+          <button
+            onClick={() => setShowDone(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 mb-2"
+          >
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Done ({completed.length})
+            </span>
+            <motion.div animate={{ rotate: showDone ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown size={15} className="text-gray-400" />
             </motion.div>
-          ))}
+          </button>
+          <AnimatePresence>
+            {showDone && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-2"
+              >
+                {completed.map(todo => (
+                  <motion.div
+                    key={todo.id}
+                    layout
+                    className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 opacity-50 cursor-pointer"
+                    onClick={() => setEditing(todo)}
+                  >
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleTodo(todo.id) }}
+                      className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center"
+                      style={{ borderColor: primary, background: primary }}
+                    >
+                      <Check size={12} color="white" strokeWidth={3} />
+                    </button>
+                    <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{todo.title}</p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -169,7 +190,8 @@ function TodosSection({ primary }: { primary: string }) {
 /* ── Goals / Dreams ─────────────────────────────────────────────────────────── */
 function DreamsSection({ primary }: { primary: string }) {
   const goals  = useAppStore(s => s.goals)
-  const [editing, setEditing] = useState<Goal | null>(null)
+  const [editing, setEditing]   = useState<Goal | null>(null)
+  const [showDone, setShowDone] = useState(false)
 
   const active    = goals.filter(g => !g.isCompleted)
   const completed = goals.filter(g => g.isCompleted)
@@ -220,19 +242,39 @@ function DreamsSection({ primary }: { primary: string }) {
 
       {completed.length > 0 && (
         <div className="pt-4">
-          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
-            Dreams achieved 🎉 ({completed.length})
-          </p>
-          {completed.map(goal => (
-            <div
-              key={goal.id}
-              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
-              onClick={() => setEditing(goal)}
-            >
-              <span className="text-lg">{GOAL_CATEGORY_CONFIG[goal.categoryId].emoji}</span>
-              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{goal.title}</p>
-            </div>
-          ))}
+          <button
+            onClick={() => setShowDone(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 mb-2"
+          >
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Achieved ({completed.length})
+            </span>
+            <motion.div animate={{ rotate: showDone ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown size={15} className="text-gray-400" />
+            </motion.div>
+          </button>
+          <AnimatePresence>
+            {showDone && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-2"
+              >
+                {completed.map(goal => (
+                  <div
+                    key={goal.id}
+                    className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 opacity-50 cursor-pointer"
+                    onClick={() => setEditing(goal)}
+                  >
+                    <span className="text-lg">{GOAL_CATEGORY_CONFIG[goal.categoryId].emoji}</span>
+                    <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{goal.title}</p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -251,7 +293,8 @@ function DreamsSection({ primary }: { primary: string }) {
 function WishesSection({ primary }: { primary: string }) {
   const items  = useAppStore(s => s.wishlistItems)
   const toggle = useAppStore(s => s.toggleWishlistItem)
-  const [editing, setEditing] = useState<WishlistItem | null>(null)
+  const [editing, setEditing]   = useState<WishlistItem | null>(null)
+  const [showDone, setShowDone] = useState(false)
 
   const pending   = items.filter(i => !i.isCompleted)
   const completed = items.filter(i => i.isCompleted)
@@ -293,21 +336,41 @@ function WishesSection({ primary }: { primary: string }) {
 
       {completed.length > 0 && (
         <div className="pt-4">
-          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-2 px-1">
-            Made real ✨ ({completed.length})
-          </p>
-          {completed.map(item => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 mb-2 opacity-50 cursor-pointer"
-              onClick={() => setEditing(item)}
-            >
-              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: primary }}>
-                <Check size={12} color="white" strokeWidth={3} />
-              </div>
-              <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{item.title}</p>
-            </div>
-          ))}
+          <button
+            onClick={() => setShowDone(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 mb-2"
+          >
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Made real ({completed.length})
+            </span>
+            <motion.div animate={{ rotate: showDone ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown size={15} className="text-gray-400" />
+            </motion.div>
+          </button>
+          <AnimatePresence>
+            {showDone && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden space-y-2"
+              >
+                {completed.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 bg-white rounded-2xl shadow-card p-4 opacity-50 cursor-pointer"
+                    onClick={() => setEditing(item)}
+                  >
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: primary }}>
+                      <Check size={12} color="white" strokeWidth={3} />
+                    </div>
+                    <p className="text-sm text-gray-400 line-through flex-1 min-w-0 truncate">{item.title}</p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

@@ -16,13 +16,6 @@ const TYPES: { id: QuickType; emoji: string; label: string }[] = [
   { id: 'note',   emoji: '💌', label: 'Note'   },
 ]
 
-const COLOR_OPTIONS: { value: EventColor; hex: string; label: string }[] = [
-  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
-  { value: 'mateo',  hex: '#2dd4bf', label: 'Teal'   },
-  { value: 'pink',   hex: '#f472b6', label: 'Pink'   },
-  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
-  { value: 'green',  hex: '#34d399', label: 'Green'  },
-]
 
 interface Props {
   open: boolean
@@ -212,32 +205,6 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                           onChange={e => setTime(e.target.value)}
                           className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
                         />
-                      </div>
-                    )}
-
-                    {/* Color picker (moments only) */}
-                    {type === 'moment' && (
-                      <div>
-                        <p className="text-xs text-gray-400 font-medium mb-2 px-1">Color</p>
-                        <div className="flex gap-3 px-1">
-                          {COLOR_OPTIONS.map(opt => (
-                            <button
-                              key={opt.value}
-                              onClick={() => setColor(opt.value)}
-                              className="flex flex-col items-center gap-1"
-                            >
-                              <div
-                                className="w-8 h-8 rounded-full transition-transform"
-                                style={{
-                                  background: opt.hex,
-                                  transform: color === opt.value ? 'scale(1.2)' : 'scale(1)',
-                                  boxShadow: color === opt.value ? `0 0 0 3px white, 0 0 0 5px ${opt.hex}` : 'none',
-                                }}
-                              />
-                              <span className="text-[9px] text-gray-400 font-medium">{opt.label}</span>
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     )}
 
