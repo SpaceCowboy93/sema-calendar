@@ -53,6 +53,7 @@ interface AppState {
   // Countdowns
   countdowns: Countdown[]
   addCountdown: (title: string, date: string, emoji: string) => void
+  updateCountdown: (id: string, updates: Partial<Countdown>) => void
   deleteCountdown: (id: string) => void
 
   // Memories
@@ -398,6 +399,9 @@ export const useAppStore = create<AppState>()(
           ],
         }))
       },
+
+      updateCountdown: (id, updates) =>
+        set(s => ({ countdowns: s.countdowns.map(c => c.id === id ? { ...c, ...updates } : c) })),
 
       deleteCountdown: id =>
         set(s => ({ countdowns: s.countdowns.filter(c => c.id !== id) })),

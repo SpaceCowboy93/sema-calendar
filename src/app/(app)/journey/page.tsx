@@ -1,20 +1,384 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
-import { Plus, X, Trash2 } from 'lucide-react'
+import { Plus, X, Trash2, Check, Camera } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, type CalendarEvent } from '@/types'
+import { USERS, type CalendarEvent, type Countdown } from '@/types'
 import { getTodayString, cn } from '@/lib/utils'
 import { EventModal } from '@/components/calendar/EventModal'
 
-const EMOJI_OPTIONS = ['🎉', '✈️', '💕', '🎂', '🌟', '🎊', '🌸', '🌊', '💍', '🏖️', '🎄', '🎭']
+const RELATIONSHIP_START = new Date('2024-05-05T21:00:00')
+
+const EMOJI_OPTIONS = ['💕', '💍', '🎂', '🌟', '🎉', '✈️', '🌸', '🌊', '🏖️', '🎊', '🎄', '🎭']
+
+const ANNIVERSARY_SUGGESTIONS = [
+  { emoji: '🌹', text: 'Plan a dinner reservation' },
+  { emoji: '💐', text: 'Buy flowers' },
+  { emoji: '🎁', text: 'Prepare a small gift' },
+  { emoji: '💌', text: 'Write a love letter' },
+  { emoji: '📸', text: 'Choose a favourite photo together' },
+  { emoji: '🕯️', text: 'Set the mood with candles' },
+  { emoji: '🍾', text: 'Open something special to drink' },
+  { emoji: '📖', text: 'Write a memory from this day' },
+  { emoji: '🔔', text: 'Add a reminder one week before' },
+  { emoji: '🔔', text: 'Add a reminder one day before' },
+]
 
 type FeedItem =
   | { kind: 'memory'; id: string; title: string; date: string; notes?: string; createdBy: string; photos?: string[] }
   | { kind: 'lovenote'; id: string; content: string; createdAt: string; from: string; isPinned: boolean }
 
+/* ── Live counter ─────────────────────────────────────────────────────────── */
+function useTicker() {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+}
+
+function getRelationshipDuration() {
+  const now    = new Date()
+  const diffMs = now.getTime() - RELATIONSHIP_START.getTime()
+
+  const totalSecs  = Math.floor(diffMs / 1000)
+  const secs       = totalSecs % 60
+  const totalMins  = Math.floor(totalSecs / 60)
+  const mins       = totalMins % 60
+  const totalHours = Math.floor(totalMins / 60)
+  const hours      = totalHours % 24
+  const totalDays  = Math.floor(totalHours / 24)
+
+  // approximate months / years
+  const years  = Math.floor(totalDays / 365)
+  const months = Math.floor((totalDays % 365) / 30)
+  const days   = totalDays % 30
+
+  return { years, months, days, hours, mins, secs }
+}
+
+function RelationshipCounter({ primary }: { primary: string }) {
+  useTicker()
+  const { years, months, days, hours, mins, secs } = getRelationshipDuration()
+
+  const units = [
+    { value: years,  label: years  === 1 ? 'year'   : 'years'   },
+    { value: months, label: months === 1 ? 'month'  : 'months'  },
+    { value: days,   label: days   === 1 ? 'day'    : 'days'    },
+    { value: hours,  label: 'h'  },
+    { value: mins,   label: 'm'  },
+    { value: secs,   label: 's'  },
+  ]
+
+  return (
+    <div
+      className="rounded-3xl p-4 mb-1"
+      style={{ background: `${primary}08`, border: `1.5px solid ${primary}18` }}
+    >
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
+        Together since May 5, 2024 · 9:00 PM
+      </p>
+      <div className="grid grid-cols-6 gap-1.5">
+        {units.map(({ value, label }) => (
+          <div key={label} className="flex flex-col items-center">
+            <motion.div
+              key={value}
+              initial={{ y: -6, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="w-full rounded-xl py-2 flex items-center justify-center"
+              style={{ background: `${primary}15` }}
+            >
+              <span className="text-sm font-bold tabular-nums" style={{ color: primary }}>
+                {String(value).padStart(2, '0')}
+              </span>
+            </motion.div>
+            <span className="text-[9px] text-gray-400 mt-1 font-medium">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ── Anniversary detail sheet ─────────────────────────────────────────────── */
+function AnniversarySheet({
+  countdown,
+  primary,
+  onClose,
+  onDelete,
+}: {
+  countdown: Countdown
+  primary: string
+  onClose: () => void
+  onDelete: () => void
+}) {
+  const updateCountdown = useAppStore(s => s.updateCountdown)
+  const uploadPhoto     = useAppStore(s => s.uploadPhoto)
+
+  const [title,    setTitle]    = useState(countdown.title)
+  const [date,     setDate]     = useState(countdown.date)
+  const [time,     setTime]     = useState(countdown.time ?? '')
+  const [notes,    setNotes]    = useState(countdown.notes ?? '')
+  const [checklist, setChecklist] = useState<string[]>(countdown.checklist ?? [])
+  const [newItem,  setNewItem]  = useState('')
+  const [romantic, setRomantic] = useState(countdown.romanticMessage ?? '')
+  const [photos,   setPhotos]   = useState<string[]>(countdown.photos ?? [])
+  const [uploading, setUploading] = useState(false)
+  const [dirty,    setDirty]    = useState(false)
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  function mark() { setDirty(true) }
+
+  function addCheckItem(text: string) {
+    if (!text.trim()) return
+    setChecklist(c => [...c, text.trim()])
+    setNewItem('')
+    mark()
+  }
+
+  function removeCheckItem(i: number) {
+    setChecklist(c => c.filter((_, idx) => idx !== i))
+    mark()
+  }
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const url = await uploadPhoto(`anniversaries/${countdown.id}`, file)
+    if (url) setPhotos(p => [...p, url])
+    setUploading(false)
+    mark()
+  }
+
+  function handleSave() {
+    updateCountdown(countdown.id, {
+      title: title.trim() || countdown.title,
+      date,
+      time:     time     || undefined,
+      notes:    notes    || undefined,
+      checklist: checklist.length ? checklist : undefined,
+      photos:   photos.length   ? photos    : undefined,
+      romanticMessage: romantic || undefined,
+    })
+    onClose()
+  }
+
+  const daysSince = differenceInCalendarDays(new Date(), parseISO(countdown.date))
+  const years     = Math.floor(daysSince / 365)
+  const months    = Math.floor(daysSince / 30)
+  const ageLabel  = years >= 1
+    ? `${years} year${years > 1 ? 's' : ''} ago`
+    : months >= 1
+    ? `${months} month${months > 1 ? 's' : ''} ago`
+    : `${daysSince} days ago`
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={dirty ? handleSave : onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 360 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+      >
+        <div className="px-5 pt-4 pb-12">
+          <div className="drag-handle mb-4" />
+
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                style={{ background: `${primary}15` }}
+              >
+                {countdown.emoji}
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ageLabel}</p>
+                <input
+                  value={title}
+                  onChange={e => { setTitle(e.target.value); mark() }}
+                  className="text-base font-bold text-gray-800 bg-transparent outline-none w-full"
+                />
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Date and time row */}
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+              <input
+                type="date"
+                value={date}
+                onChange={e => { setDate(e.target.value); mark() }}
+                className="w-full text-sm text-gray-700 bg-transparent outline-none"
+              />
+            </div>
+            <div className="w-32 bg-gray-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Time</p>
+              <input
+                type="time"
+                value={time}
+                onChange={e => { setTime(e.target.value); mark() }}
+                className="w-full text-sm text-gray-700 bg-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Romantic message */}
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3"
+            style={{ background: `${primary}06` }}
+          >
+            <p className="text-[10px] font-bold mb-1" style={{ color: primary }}>
+              💌 A message to remember
+            </p>
+            <textarea
+              value={romantic}
+              onChange={e => { setRomantic(e.target.value); mark() }}
+              placeholder="Write something beautiful about this memory..."
+              rows={3}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
+            <textarea
+              value={notes}
+              onChange={e => { setNotes(e.target.value); mark() }}
+              placeholder="Details, feelings, memories..."
+              rows={2}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none"
+            />
+          </div>
+
+          {/* Checklist */}
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Things to prepare</p>
+            {checklist.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100">
+                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{ borderColor: primary }}>
+                  <Check size={9} style={{ color: primary }} />
+                </div>
+                <span className="flex-1 text-sm text-gray-700">{item}</span>
+                <button onClick={() => removeCheckItem(i)} className="text-gray-300 active:text-red-400">
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCheckItem(newItem) } }}
+                placeholder="Add something to prepare..."
+                className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-3 py-2 outline-none"
+              />
+              <button
+                onClick={() => addCheckItem(newItem)}
+                disabled={!newItem.trim()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-30"
+                style={{ background: primary }}
+              >
+                <Plus size={16} className="text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* Suggestions */}
+          <div className="mb-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Suggestions 💡</p>
+            <div className="flex flex-wrap gap-2">
+              {ANNIVERSARY_SUGGESTIONS.map((s, i) => {
+                const already = checklist.includes(s.text)
+                return (
+                  <motion.button
+                    key={i}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={() => { if (!already) { addCheckItem(s.text) } }}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                      already ? 'opacity-40' : 'active:opacity-80'
+                    )}
+                    style={{
+                      background: already ? `${primary}15` : `${primary}10`,
+                      color: already ? primary : '#6b7280',
+                      border: `1px solid ${primary}20`,
+                    }}
+                  >
+                    <span>{s.emoji}</span>
+                    {s.text}
+                    {already && <Check size={10} />}
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Photos */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
+              <button
+                onClick={() => photoRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-1 text-xs font-semibold disabled:opacity-40"
+                style={{ color: primary }}
+              >
+                <Camera size={12} /> {uploading ? 'Uploading…' : 'Add photo'}
+              </button>
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            {photos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {photos.map((src, i) => (
+                  <img key={i} src={src} alt="" className="w-24 h-24 object-cover rounded-2xl shrink-0" />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={onDelete}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0 active:opacity-80"
+            >
+              <Trash2 size={16} />
+            </button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSave}
+              className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold"
+              style={{ background: primary }}
+            >
+              Save
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
 export default function JourneyPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
   const countdowns      = useAppStore(s => s.countdowns)
@@ -29,13 +393,13 @@ export default function JourneyPage() {
   const today    = new Date()
   const todayStr = getTodayString()
 
-  const [addOpen, setAddOpen]         = useState(false)
-  const [newTitle, setNewTitle]       = useState('')
-  const [newDate, setNewDate]         = useState('')
-  const [newEmoji, setNewEmoji]       = useState('🎉')
-  const [editId, setEditId]           = useState<string | null>(null)
+  const [addOpen,   setAddOpen]   = useState(false)
+  const [newTitle,  setNewTitle]  = useState('')
+  const [newDate,   setNewDate]   = useState('')
+  const [newEmoji,  setNewEmoji]  = useState('💕')
+  const [selectedAnniversary, setSelectedAnniversary] = useState<Countdown | null>(null)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
-  const [modalOpen, setModalOpen]     = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const futureCountdowns = countdowns
     .filter(c => c.date >= todayStr)
@@ -68,22 +432,12 @@ export default function JourneyPage() {
   }, [memories, loveNotes])
 
   function openAdd() {
-    setNewTitle(''); setNewDate(''); setNewEmoji('🎉'); setEditId(null); setAddOpen(true)
+    setNewTitle(''); setNewDate(''); setNewEmoji('💕'); setAddOpen(true)
   }
 
-  function openEdit(c: typeof countdowns[0]) {
-    setNewTitle(c.title); setNewDate(c.date); setNewEmoji(c.emoji); setEditId(c.id); setAddOpen(true)
-  }
-
-  function handleSave() {
+  function handleAddSave() {
     if (!newTitle.trim() || !newDate) return
-    if (editId) deleteCountdown(editId)
     addCountdown(newTitle.trim(), newDate, newEmoji)
-    setAddOpen(false)
-  }
-
-  function handleDelete() {
-    if (editId) deleteCountdown(editId)
     setAddOpen(false)
   }
 
@@ -93,11 +447,12 @@ export default function JourneyPage() {
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
       <div
-        className="px-5 pt-14 pb-4"
+        className="px-5 pt-14 pb-5"
         style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
       >
-        <h1 className="text-2xl font-bold text-gray-800">Our Journey</h1>
-        <p className="text-sm text-gray-400">every moment, past and future</p>
+        <h1 className="text-2xl font-bold text-gray-800 mb-0.5">Our Journey</h1>
+        <p className="text-sm text-gray-400 mb-4">every moment, past and future</p>
+        <RelationshipCounter primary={primary} />
       </div>
 
       <div className="px-5 space-y-6 pt-4">
@@ -121,7 +476,7 @@ export default function JourneyPage() {
               onClick={openAdd}
               className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center"
             >
-              <span className="text-3xl block mb-2">⏳</span>
+              <span className="text-3xl block mb-2">💕</span>
               <p className="text-sm text-gray-400">Add your first countdown</p>
             </button>
           ) : (
@@ -132,7 +487,7 @@ export default function JourneyPage() {
                   <motion.button
                     key={c.id}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => openEdit(c)}
+                    onClick={() => setSelectedAnniversary(c)}
                     className="w-full bg-white rounded-2xl shadow-card px-4 py-3.5 flex items-center gap-3 text-left"
                   >
                     <span className="text-2xl shrink-0">{c.emoji}</span>
@@ -162,20 +517,41 @@ export default function JourneyPage() {
                       : months >= 1
                       ? `${months} month${months > 1 ? 's' : ''} together`
                       : `${days} day${days !== 1 ? 's' : ''} together`
+
                     return (
                       <motion.button
                         key={c.id}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => openEdit(c)}
-                        className="w-full rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left"
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setSelectedAnniversary(c)}
+                        className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
                         style={{ background: `${primary}0d`, border: `1.5px solid ${primary}25` }}
                       >
-                        <span className="text-2xl shrink-0">{c.emoji}</span>
+                        {/* soft glow accent */}
+                        <div
+                          className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
+                          style={{ background: `radial-gradient(circle at right, ${primary}, transparent)` }}
+                        />
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                          style={{ background: `${primary}18` }}
+                        >
+                          {c.emoji}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
-                          <p className="text-xs font-medium" style={{ color: primary }}>{label} 💕</p>
+                          <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label} 💕</p>
+                          {c.romanticMessage && (
+                            <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">
+                              &ldquo;{c.romanticMessage}&rdquo;
+                            </p>
+                          )}
+                          {c.checklist && c.checklist.length > 0 && (
+                            <p className="text-[10px] text-gray-300 mt-0.5">
+                              {c.checklist.length} thing{c.checklist.length !== 1 ? 's' : ''} to prepare
+                            </p>
+                          )}
                         </div>
-                        <span className="text-gray-300 text-lg">›</span>
+                        <span className="text-gray-300 text-base shrink-0">›</span>
                       </motion.button>
                     )
                   })}
@@ -252,7 +628,7 @@ export default function JourneyPage() {
         )}
       </div>
 
-      {/* ── Event modal (Coming up) ── */}
+      {/* ── Event modal ── */}
       <EventModal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
@@ -260,7 +636,20 @@ export default function JourneyPage() {
         event={editingEvent}
       />
 
-      {/* ── Add / Edit countdown sheet ── */}
+      {/* ── Anniversary detail sheet ── */}
+      <AnimatePresence>
+        {selectedAnniversary && (
+          <AnniversarySheet
+            key={selectedAnniversary.id}
+            countdown={selectedAnniversary}
+            primary={primary}
+            onClose={() => setSelectedAnniversary(null)}
+            onDelete={() => { deleteCountdown(selectedAnniversary.id); setSelectedAnniversary(null) }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Add countdown sheet ── */}
       <AnimatePresence>
         {addOpen && (
           <>
@@ -277,9 +666,7 @@ export default function JourneyPage() {
               <div className="px-5 pt-4 pb-10">
                 <div className="drag-handle mb-4" />
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-gray-800">
-                    {editId ? 'Edit Countdown' : 'New Countdown'}
-                  </h3>
+                  <h3 className="text-base font-bold text-gray-800">New Countdown</h3>
                   <button
                     onClick={() => setAddOpen(false)}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
@@ -325,25 +712,15 @@ export default function JourneyPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  {editId && (
-                    <button
-                      onClick={handleDelete}
-                      className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0 active:opacity-80"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleSave}
-                    disabled={!newTitle.trim() || !newDate}
-                    className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-                    style={{ background: primary }}
-                  >
-                    {editId ? 'Save Changes' : 'Add Countdown'}
-                  </motion.button>
-                </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddSave}
+                  disabled={!newTitle.trim() || !newDate}
+                  className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+                  style={{ background: primary }}
+                >
+                  Add Countdown
+                </motion.button>
               </div>
             </motion.div>
           </>
@@ -353,6 +730,7 @@ export default function JourneyPage() {
   )
 }
 
+/* ── Sub-components ────────────────────────────────────────────────────────── */
 function MemoryCard({ item }: { item: Extract<FeedItem, { kind: 'memory' }> }) {
   const user = USERS[item.createdBy as keyof typeof USERS]
   return (

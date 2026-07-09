@@ -103,6 +103,11 @@ export interface Countdown {
   date: string // YYYY-MM-DD
   emoji: string
   createdBy: UserName
+  time?: string            // HH:MM
+  notes?: string
+  checklist?: string[]
+  photos?: string[]
+  romanticMessage?: string
 }
 
 export type GoalCategory =
