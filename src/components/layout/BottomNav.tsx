@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { href: '/together', label: 'Together', icon: Heart },
   { href: '/plans',    label: 'Plans',    icon: Sparkles },
-  { href: '/memories', label: 'Us',       icon: BookOpen },
+  { href: '/us',       label: 'Us',       icon: BookOpen },
 ]
 
 export function BottomNav() {

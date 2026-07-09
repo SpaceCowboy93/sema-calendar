@@ -25,9 +25,9 @@ const WISH_CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [WishlistCat
 type PlanTab = 'plans' | 'dreams' | 'wishes' | 'shopping'
 
 const TABS: { id: PlanTab; label: string; emoji: string; hex: string }[] = [
-  { id: 'plans',    label: 'Plans',    emoji: '🗓️', hex: COLOR_HEX.green  },
-  { id: 'dreams',   label: 'Dreams',   emoji: '🌙', hex: COLOR_HEX.blue   },
-  { id: 'wishes',   label: 'Wishes',   emoji: '🌠', hex: COLOR_HEX.seval  },
+  { id: 'plans',    label: 'Plans',    emoji: '💚', hex: COLOR_HEX.green  },
+  { id: 'dreams',   label: 'Dreams',   emoji: '💙', hex: COLOR_HEX.blue   },
+  { id: 'wishes',   label: 'Wishes',   emoji: '💜', hex: COLOR_HEX.seval  },
   { id: 'shopping', label: 'Shopping', emoji: '🛒', hex: '#6b7280'        },
 ]
 
@@ -238,7 +238,7 @@ function DreamsSection({ primary }: { primary: string }) {
   const completed = goals.filter(g => g.isCompleted)
 
   if (goals.length === 0) {
-    return <EmptyState emoji="🌙" text="No dreams yet" sub="tap + to add something to dream about" />
+    return <EmptyState emoji="💙" text="No dreams yet" sub="tap + to add something to dream about" />
   }
 
   return (
@@ -341,7 +341,7 @@ function WishesSection({ primary }: { primary: string }) {
   const completed = items.filter(i => i.isCompleted)
 
   if (items.length === 0) {
-    return <EmptyState emoji="🌠" text="No wishes yet" sub="tap + to add something to wish for" />
+    return <EmptyState emoji="💜" text="No wishes yet" sub="tap + to add something to wish for" />
   }
 
   return (
@@ -829,7 +829,7 @@ function WishEditSheet({ item, primary, onClose }: { item: WishlistItem; primary
           onClick={() => { toggleWishlistItem(item.id); onClose() }}
           className="w-full py-3 rounded-2xl text-sm font-medium bg-gray-50 text-gray-600 mb-2"
         >
-          {item.isCompleted ? 'Mark as pending' : 'Mark as made real 🌠'}
+          {item.isCompleted ? 'Mark as pending' : 'Mark as made real 💜'}
         </button>
 
         <button

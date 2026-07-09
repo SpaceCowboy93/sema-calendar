@@ -10,10 +10,10 @@ import { COLOR_HEX } from '@/lib/utils'
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
 const TYPES: { id: QuickType; emoji: string; label: string }[] = [
-  { id: 'plan',   emoji: '🗓️', label: 'Plan'   },
-  { id: 'dream',  emoji: '🌙', label: 'Dream'  },
-  { id: 'wish',   emoji: '🌠', label: 'Wish'   },
-  { id: 'moment', emoji: '📸', label: 'Moment' },
+  { id: 'plan',   emoji: '💚', label: 'Plan'   },
+  { id: 'dream',  emoji: '💙', label: 'Dream'  },
+  { id: 'wish',   emoji: '💜', label: 'Wish'   },
+  { id: 'moment', emoji: '💛', label: 'Moment' },
   { id: 'note',   emoji: '💌', label: 'Note'   },
 ]
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
@@ -21,6 +21,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useNotifications()
 
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [scrolling, setScrolling]       = useState(false)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mainRef        = useRef<HTMLElement | null>(null)
+
+  const handleScroll = useCallback(() => {
+    setScrolling(true)
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = setTimeout(() => setScrolling(false), 600)
+  }, [])
+
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+    }
+  }, [handleScroll])
 
   useEffect(() => {
     if (currentUser === null) router.replace('/')
@@ -36,7 +55,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-dvh overflow-hidden">
-      <main className="h-full overflow-y-auto overscroll-none pb-24">
+      <main ref={mainRef} className="h-full overflow-y-auto overscroll-none pb-24">
         {children}
       </main>
 
@@ -44,13 +63,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Floating action button */}
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.88 }}
+        animate={{
+          scale:   scrolling ? 0.78 : 1,
+          opacity: scrolling ? 0.35 : 1,
+        }}
+        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         onClick={() => setQuickAddOpen(true)}
-        className="fixed bottom-20 right-5 z-30 w-14 h-14 rounded-full shadow-lg
-                   flex items-center justify-center text-white"
-        style={{ background: primary, boxShadow: `0 4px 20px ${primary}60` }}
+        className="fixed bottom-20 right-5 z-30 w-14 h-14 rounded-full
+                   flex items-center justify-center text-white backdrop-blur-sm"
+        style={{ background: primary, boxShadow: `0 4px 20px ${primary}55` }}
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <motion.div
+          animate={{ rotate: scrolling ? 45 : 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </motion.div>
       </motion.button>
 
       <PartnerNoteNotification />

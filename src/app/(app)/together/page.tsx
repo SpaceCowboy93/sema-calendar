@@ -28,10 +28,10 @@ const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; la
 
 type CategoryType = 'wishes' | 'plans' | 'dreams' | 'moments'
 const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string; color: EventColor }[] = [
-  { id: 'wishes',  emoji: '🌠', label: 'Wishes',  color: 'seval'  },
-  { id: 'plans',   emoji: '🗓️', label: 'Plans',   color: 'green'  },
-  { id: 'dreams',  emoji: '🌙', label: 'Dreams',  color: 'blue'   },
-  { id: 'moments', emoji: '📸', label: 'Moments', color: 'yellow' },
+  { id: 'wishes',  emoji: '💜', label: 'Wishes',  color: 'seval'  },
+  { id: 'plans',   emoji: '💚', label: 'Plans',   color: 'green'  },
+  { id: 'dreams',  emoji: '💙', label: 'Dreams',  color: 'blue'   },
+  { id: 'moments', emoji: '💛', label: 'Moments', color: 'yellow' },
 ]
 
 export default function TogetherPage() {
