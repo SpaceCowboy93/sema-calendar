@@ -1,12 +1,191 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Plus, Trash2, LogOut, X, Send, Camera } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import {
+  differenceInYears, differenceInMonths, differenceInDays,
+  addYears, addMonths,
+} from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type MoodType } from '@/types'
 import { MOOD_CONFIG, getDaysUntil, formatDate, cn } from '@/lib/utils'
+
+/* ── Relationship hero ───────────────────────────────────────────────────── */
+const RELATIONSHIP_START = new Date('2024-05-05T21:00:00')
+
+function calcDuration() {
+  const now    = new Date()
+  const years  = differenceInYears(now, RELATIONSHIP_START)
+  const after1 = addYears(RELATIONSHIP_START, years)
+  const months = differenceInMonths(now, after1)
+  const after2 = addMonths(after1, months)
+  const days   = differenceInDays(now, after2)
+  const rem    = Math.floor((now.getTime() - after2.getTime() - days * 86400000) / 1000)
+  const hours  = Math.floor(rem / 3600)
+  const mins   = Math.floor((rem % 3600) / 60)
+  const secs   = rem % 60
+  return { years, months, days, hours, mins, secs }
+}
+
+function FloatingHeart({ x, delay, primary }: { x: number; delay: number; primary: string }) {
+  return (
+    <motion.span
+      className="absolute pointer-events-none text-lg select-none"
+      style={{ left: `${x}%`, bottom: '10%', color: primary }}
+      initial={{ opacity: 0.9, y: 0, scale: 0.7 }}
+      animate={{ opacity: 0, y: -80, scale: 1.1 }}
+      transition={{ duration: 1.4, delay, ease: 'easeOut' }}
+    >
+      💕
+    </motion.span>
+  )
+}
+
+function RelationshipHero({ primary }: { primary: string }) {
+  const prefersReduced = useReducedMotion()
+  const [mounted,  setMounted]  = useState(false)
+  const [dur,      setDur]      = useState(calcDuration)
+  const [hearts,   setHearts]   = useState<{ id: number; x: number; delay: number }[]>([])
+  const [pulse,    setPulse]    = useState(false)
+  const heartId = useRef(0)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setDur(calcDuration()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  function handleTap() {
+    if (prefersReduced) return
+    setPulse(true)
+    setTimeout(() => setPulse(false), 600)
+    const newHearts = Array.from({ length: 5 }, (_, i) => ({
+      id: heartId.current++,
+      x: 15 + i * 17,
+      delay: i * 0.08,
+    }))
+    setHearts(h => [...h, ...newHearts])
+    setTimeout(() => setHearts(h => h.slice(5)), 1800)
+  }
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+
+  if (!mounted) {
+    return (
+      <div className="rounded-3xl h-44 mb-6 animate-pulse"
+        style={{ background: `${primary}08`, border: `1px solid ${primary}15` }} />
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      onClick={handleTap}
+      className="relative overflow-hidden rounded-3xl mb-6 cursor-pointer select-none"
+      style={{
+        background: `linear-gradient(145deg, ${primary}10 0%, ${primary}04 60%, transparent 100%)`,
+        border: `1px solid ${primary}20`,
+        boxShadow: `0 2px 24px ${primary}12`,
+      }}
+    >
+      {/* Soft glow orb */}
+      <div
+        className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${primary}, transparent 70%)` }}
+      />
+
+      <div className="px-5 pt-5 pb-4 relative z-10">
+        {/* Names + intro */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: `${primary}90` }}>
+            Seval &amp; Mateo
+          </span>
+          <div className="flex-1 h-px" style={{ background: `${primary}20` }} />
+          <motion.span
+            animate={pulse && !prefersReduced ? { scale: [1, 1.5, 1] } : {}}
+            transition={{ duration: 0.5 }}
+            className="text-sm"
+          >
+            ♾️
+          </motion.span>
+        </div>
+
+        <p className="text-[11px] text-gray-400 mb-0.5">Our story began</p>
+        <p className="text-base font-bold text-gray-800 mb-1">May 5, 2024 · 9:00 PM</p>
+        <p className="text-[11px] text-gray-400 italic mb-4 leading-snug">
+          Every second since then has been part of us.
+        </p>
+
+        {/* Main counter — years / months / days */}
+        <div className="flex items-end gap-3 mb-3">
+          {[
+            { value: dur.years,  label: dur.years  === 1 ? 'year'  : 'years'  },
+            { value: dur.months, label: dur.months === 1 ? 'month' : 'months' },
+            { value: dur.days,   label: dur.days   === 1 ? 'day'   : 'days'   },
+          ].map(({ value, label }) => (
+            <div key={label} className="flex-1 text-center">
+              <div
+                className="rounded-2xl py-3"
+                style={{ background: `${primary}12` }}
+              >
+                <motion.p
+                  key={value}
+                  initial={prefersReduced ? {} : { opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 30 }}
+                  className="text-2xl font-bold tabular-nums leading-none"
+                  style={{ color: primary }}
+                >
+                  {value}
+                </motion.p>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1 font-medium">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Secondary counter — h / m / s */}
+        <div
+          className="flex items-center justify-center gap-0.5 rounded-2xl py-2 px-4"
+          style={{ background: `${primary}08` }}
+        >
+          {[
+            { value: pad(dur.hours), label: 'h' },
+            { value: pad(dur.mins),  label: 'm' },
+            { value: pad(dur.secs),  label: 's' },
+          ].map(({ value, label }, i) => (
+            <span key={label} className="flex items-baseline gap-0.5">
+              {i > 0 && <span className="text-gray-300 text-xs mx-1">·</span>}
+              <motion.span
+                key={value}
+                initial={prefersReduced ? {} : { opacity: 0.4, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.15 }}
+                className="text-sm font-bold tabular-nums"
+                style={{ color: `${primary}cc` }}
+              >
+                {value}
+              </motion.span>
+              <span className="text-[10px] text-gray-400">{label}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Floating hearts on tap */}
+      <AnimatePresence>
+        {hearts.map(h => (
+          <FloatingHeart key={h.id} x={h.x} delay={h.delay} primary={primary} />
+        ))}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
 
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [
   keyof typeof MOOD_CONFIG,
@@ -142,6 +321,9 @@ export default function UsPage() {
 
       {/* Remaining content above overlay */}
       <div className="relative z-10">
+
+      {/* Relationship hero */}
+      <RelationshipHero primary={primaryColor} />
 
       {/* Leave a Note button */}
       <motion.button

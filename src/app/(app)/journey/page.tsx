@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
 import { Plus, X, Trash2, Check, Camera } from 'lucide-react'
@@ -8,8 +8,6 @@ import { useAppStore } from '@/store/useAppStore'
 import { USERS, type CalendarEvent, type Countdown } from '@/types'
 import { getTodayString, cn } from '@/lib/utils'
 import { EventModal } from '@/components/calendar/EventModal'
-
-const RELATIONSHIP_START = new Date('2024-05-05T21:00:00')
 
 const EMOJI_OPTIONS = ['💕', '💍', '🎂', '🌟', '🎉', '✈️', '🌸', '🌊', '🏖️', '🎊', '🎄', '🎭']
 
@@ -29,79 +27,6 @@ const ANNIVERSARY_SUGGESTIONS = [
 type FeedItem =
   | { kind: 'memory'; id: string; title: string; date: string; notes?: string; createdBy: string; photos?: string[] }
   | { kind: 'lovenote'; id: string; content: string; createdAt: string; from: string; isPinned: boolean }
-
-/* ── Live counter ─────────────────────────────────────────────────────────── */
-function useTicker() {
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
-}
-
-function getRelationshipDuration() {
-  const now    = new Date()
-  const diffMs = now.getTime() - RELATIONSHIP_START.getTime()
-
-  const totalSecs  = Math.floor(diffMs / 1000)
-  const secs       = totalSecs % 60
-  const totalMins  = Math.floor(totalSecs / 60)
-  const mins       = totalMins % 60
-  const totalHours = Math.floor(totalMins / 60)
-  const hours      = totalHours % 24
-  const totalDays  = Math.floor(totalHours / 24)
-
-  // approximate months / years
-  const years  = Math.floor(totalDays / 365)
-  const months = Math.floor((totalDays % 365) / 30)
-  const days   = totalDays % 30
-
-  return { years, months, days, hours, mins, secs }
-}
-
-function RelationshipCounter({ primary }: { primary: string }) {
-  useTicker()
-  const { years, months, days, hours, mins, secs } = getRelationshipDuration()
-
-  const units = [
-    { value: years,  label: years  === 1 ? 'year'   : 'years'   },
-    { value: months, label: months === 1 ? 'month'  : 'months'  },
-    { value: days,   label: days   === 1 ? 'day'    : 'days'    },
-    { value: hours,  label: 'h'  },
-    { value: mins,   label: 'm'  },
-    { value: secs,   label: 's'  },
-  ]
-
-  return (
-    <div
-      className="rounded-3xl p-4 mb-1"
-      style={{ background: `${primary}08`, border: `1.5px solid ${primary}18` }}
-    >
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 text-center">
-        Together since May 5, 2024 · 9:00 PM
-      </p>
-      <div className="grid grid-cols-6 gap-1.5">
-        {units.map(({ value, label }) => (
-          <div key={label} className="flex flex-col items-center">
-            <motion.div
-              key={value}
-              initial={{ y: -6, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="w-full rounded-xl py-2 flex items-center justify-center"
-              style={{ background: `${primary}15` }}
-            >
-              <span className="text-sm font-bold tabular-nums" style={{ color: primary }}>
-                {String(value).padStart(2, '0')}
-              </span>
-            </motion.div>
-            <span className="text-[9px] text-gray-400 mt-1 font-medium">{label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /* ── Anniversary detail sheet ─────────────────────────────────────────────── */
 function AnniversarySheet({
@@ -447,12 +372,11 @@ export default function JourneyPage() {
     <div className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
       <div
-        className="px-5 pt-14 pb-5"
+        className="px-5 pt-14 pb-4"
         style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 mb-0.5">Our Journey</h1>
-        <p className="text-sm text-gray-400 mb-4">every moment, past and future</p>
-        <RelationshipCounter primary={primary} />
+        <h1 className="text-2xl font-bold text-gray-800">Our Journey</h1>
+        <p className="text-sm text-gray-400">every moment, past and future</p>
       </div>
 
       <div className="px-5 space-y-6 pt-4">
