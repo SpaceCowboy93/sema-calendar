@@ -3,12 +3,12 @@
 import { useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, X, Check, ChevronDown, Camera, Wallet,
+  Plus, X, Camera, Wallet,
   TrendingUp, TrendingDown, Target, Pencil, Trash2,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, getTodayString, formatDate } from '@/lib/utils'
-import type { BudgetItem, SavingsGoal, SharedTodo } from '@/types'
+import type { BudgetItem, SavingsGoal } from '@/types'
 
 const CURRENCY = '€'
 
@@ -43,7 +43,6 @@ export default function FinancePage() {
   const monthlyIncome    = useAppStore(s => s.monthlyIncome)
   const budgetItems      = useAppStore(s => s.budgetItems)
   const savingsGoals     = useAppStore(s => s.savingsGoals)
-  const todos            = useAppStore(s => s.todos)
   const setMonthlyIncome = useAppStore(s => s.setMonthlyIncome)
   const updateBudgetItem = useAppStore(s => s.updateBudgetItem)
   const addBudgetItem    = useAppStore(s => s.addBudgetItem)
@@ -52,7 +51,6 @@ export default function FinancePage() {
   const updateSavingsGoal = useAppStore(s => s.updateSavingsGoal)
   const deleteSavingsGoal = useAppStore(s => s.deleteSavingsGoal)
   const addToSavings     = useAppStore(s => s.addToSavings)
-  const toggleTodo       = useAppStore(s => s.toggleTodo)
 
   const [editingBudget, setEditingBudget]   = useState<BudgetItem | null>(null)
   const [editingGoal, setEditingGoal]       = useState<SavingsGoal | null>(null)
@@ -60,16 +58,12 @@ export default function FinancePage() {
   const [addBudgetOpen, setAddBudgetOpen]   = useState(false)
   const [incomeEditing, setIncomeEditing]   = useState(false)
   const [incomeInput, setIncomeInput]       = useState(String(monthlyIncome))
-  const [showDoneTodos, setShowDoneTodos]   = useState(false)
   const [quote]                             = useState(() => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)])
 
   const totalExpenses = useMemo(() => budgetItems.reduce((a, b) => a + b.actual, 0), [budgetItems])
   const totalPlanned  = useMemo(() => budgetItems.reduce((a, b) => a + b.planned, 0), [budgetItems])
   const remaining     = monthlyIncome - totalExpenses
   const totalSaved    = useMemo(() => savingsGoals.reduce((a, g) => a + g.savedAmount, 0), [savingsGoals])
-
-  const pendingTodos    = todos.filter(t => !t.isCompleted)
-  const completedTodos  = todos.filter(t => t.isCompleted)
 
   async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -360,60 +354,6 @@ export default function FinancePage() {
           )}
         </div>
 
-        {/* ── Shared Plans (todos) ── */}
-        {(pendingTodos.length > 0 || completedTodos.length > 0) && (
-          <div className="px-4 mb-5">
-            <h2 className="text-sm font-bold text-gray-700 mb-3">Shared Plans</h2>
-            <div className="space-y-2">
-              {pendingTodos.map(todo => (
-                <div
-                  key={todo.id}
-                  className="bg-white rounded-2xl shadow-card flex items-center gap-3 px-4 py-3"
-                >
-                  <button
-                    onClick={() => toggleTodo(todo.id)}
-                    className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0 flex items-center justify-center"
-                  />
-                  <p className="flex-1 text-sm text-gray-700 truncate">{todo.title}</p>
-                  {todo.date && <span className="text-[10px] text-gray-400 shrink-0">{formatDate(todo.date, 'MMM d')}</span>}
-                </div>
-              ))}
-              {completedTodos.length > 0 && (
-                <>
-                  <button
-                    onClick={() => setShowDoneTodos(v => !v)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50"
-                  >
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Done ({completedTodos.length})</span>
-                    <motion.div animate={{ rotate: showDoneTodos ? 180 : 0 }}><ChevronDown size={14} className="text-gray-400" /></motion.div>
-                  </button>
-                  <AnimatePresence>
-                    {showDoneTodos && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                        className="overflow-hidden space-y-2"
-                      >
-                        {completedTodos.map(todo => (
-                          <div key={todo.id} className="bg-white rounded-2xl shadow-card flex items-center gap-3 px-4 py-3 opacity-50">
-                            <button
-                              onClick={() => toggleTodo(todo.id)}
-                              className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center"
-                              style={{ borderColor: primary, background: primary }}
-                            >
-                              <Check size={11} color="white" strokeWidth={3} />
-                            </button>
-                            <p className="flex-1 text-sm text-gray-400 line-through truncate">{todo.title}</p>
-                          </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Income edit modal ── */}
