@@ -13,7 +13,7 @@ import { USERS, OTHER_USER, type UserName, type MoodType } from '@/types'
 import { MOOD_CONFIG, getDaysUntil, formatDate, cn } from '@/lib/utils'
 
 /* ── Relationship hero ───────────────────────────────────────────────────── */
-const RELATIONSHIP_START = new Date('2024-05-05T21:00:00')
+const RELATIONSHIP_START = new Date('2025-03-05T21:00:00')
 
 function calcDuration() {
   const now    = new Date()
@@ -116,7 +116,7 @@ function RelationshipHero({ primary }: { primary: string }) {
         </div>
 
         <p className="text-[11px] text-gray-400 mb-0.5">Our story began</p>
-        <p className="text-base font-bold text-gray-800 mb-1">May 5, 2024 · 9:00 PM</p>
+        <p className="text-base font-bold text-gray-800 mb-1">March 5, 2025 · 9:00 PM</p>
         <p className="text-[11px] text-gray-400 italic mb-4 leading-snug">
           Every second since then has been part of us.
         </p>
