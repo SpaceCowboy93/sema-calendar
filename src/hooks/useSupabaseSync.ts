@@ -101,7 +101,8 @@ export function useSupabaseSync() {
     const merged: Record<string, unknown> = { ...remoteState }
 
     const ARRAY_KEYS = ['events', 'todos', 'moods', 'loveNotes', 'wishlistItems',
-                        'countdowns', 'memories', 'goals', 'partnerNotes']
+                        'countdowns', 'memories', 'goals', 'partnerNotes',
+                        'budgetItems', 'savingsGoals']
     for (const key of ARRAY_KEYS) {
       const r = Array.isArray(remoteState[key]) ? (remoteState[key] as unknown[]) : []
       const l = Array.isArray(local[key])       ? (local[key]       as unknown[]) : []

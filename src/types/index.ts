@@ -151,6 +151,30 @@ export interface ShoppingItem {
   isChecked: boolean
   checkedBy?: UserName
   createdAt: string
+  notes?: string
+  price?: number
+  link?: string
+}
+
+export interface BudgetItem {
+  id: string
+  category: string
+  emoji: string
+  planned: number
+  actual: number
+  note?: string
+}
+
+export interface SavingsGoal {
+  id: string
+  title: string
+  emoji: string
+  targetAmount: number
+  savedAmount: number
+  deadline?: string   // YYYY-MM-DD
+  notes?: string
+  createdBy: UserName
+  createdAt: string
 }
 
 export interface ShoppingList {

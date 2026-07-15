@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown, ShoppingBag, Trash2 } from 'lucide-react'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type MoodType, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor } from '@/types'
@@ -26,20 +27,23 @@ const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [MoodType, { emoji: string; label: string }][]
 
-type CategoryType = 'wishes' | 'plans' | 'dreams' | 'moments'
-const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string; color: EventColor }[] = [
-  { id: 'wishes',  emoji: '💜', label: 'Wishes',  color: 'seval'  },
-  { id: 'plans',   emoji: '💚', label: 'Plans',   color: 'green'  },
-  { id: 'dreams',  emoji: '💙', label: 'Dreams',  color: 'blue'   },
-  { id: 'moments', emoji: '💛', label: 'Moments', color: 'yellow' },
+type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments' | 'finance'
+const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor }[] = [
+  { id: 'wishes',   emoji: '💜', label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
+  { id: 'shopping', emoji: '❤️', label: 'Shopping', hex: '#ef4444'                  },
+  { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
+  { id: 'moments',  emoji: '💛', label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
+  { id: 'finance',  emoji: '💰', label: 'Finance',  hex: '#10b981'                  },
 ]
 
 export default function TogetherPage() {
+  const router       = useRouter()
   const currentUser  = useAppStore(s => s.currentUser)!
   const events       = useAppStore(s => s.events)
-  const todos        = useAppStore(s => s.todos)
   const goals        = useAppStore(s => s.goals)
   const wishlist     = useAppStore(s => s.wishlistItems)
+  const shoppingLists = useAppStore(s => s.shoppingLists)
+  const savingsGoals  = useAppStore(s => s.savingsGoals)
   const getMood      = useAppStore(s => s.getMoodForUser)
   const setMood      = useAppStore(s => s.setMood)
   const partnerNotes = useAppStore(s => s.partnerNotes)
@@ -103,6 +107,11 @@ export default function TogetherPage() {
   const [openCategory, setOpenCategory]   = useState<CategoryType | null>(null)
   const [quickAddOpen, setQuickAddOpen]   = useState(false)
 
+  function handleCategoryTap(type: CategoryType) {
+    if (type === 'finance') { router.push('/plans'); return }
+    setOpenCategory(type)
+  }
+
   // Mood / note sheets
   const [moodOpen, setMoodOpen]       = useState(false)
   const [pendingMood, setPending]     = useState<MoodType | null>(null)
@@ -139,10 +148,11 @@ export default function TogetherPage() {
 
   // Category counts
   const categoryCounts: Record<CategoryType, number> = {
-    wishes:  wishlist.filter(i => !i.isCompleted).length,
-    plans:   todos.filter(t => !t.isCompleted).length,
-    dreams:  goals.filter(g => !g.isCompleted).length,
-    moments: events.length,
+    wishes:   wishlist.filter(i => !i.isCompleted).length,
+    shopping: shoppingLists.reduce((acc, l) => acc + l.items.filter(i => !i.isChecked).length, 0),
+    dreams:   goals.filter(g => !g.isCompleted).length,
+    moments:  events.length,
+    finance:  savingsGoals.length,
   }
 
   function saveMood() {
@@ -279,39 +289,36 @@ export default function TogetherPage() {
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Overview</p>
           <button
-            onClick={() => setOpenCategory('plans')}
+            onClick={() => handleCategoryTap('shopping')}
             className="flex items-center gap-1 text-[10px] font-semibold"
             style={{ color: primary }}
           >
             <Plus size={11} /> Add New
           </button>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {CATEGORY_DEFS.map(cat => {
-            const catHex = COLOR_HEX[cat.color]
-            return (
-              <motion.button
-                key={cat.id}
-                whileTap={{ scale: 0.93 }}
-                onClick={() => setOpenCategory(cat.id)}
-                className="bg-white rounded-xl shadow-card p-2.5 flex flex-col items-center gap-1"
+        <div className="grid grid-cols-5 gap-1.5">
+          {CATEGORY_DEFS.map(cat => (
+            <motion.button
+              key={cat.id}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => handleCategoryTap(cat.id)}
+              className="bg-white rounded-xl shadow-card p-2 flex flex-col items-center gap-1"
+            >
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+                style={{ background: `${cat.hex}20` }}
               >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-                  style={{ background: `${catHex}20` }}
-                >
-                  {cat.emoji}
-                </div>
-                <span className="text-[9px] font-semibold text-gray-500">{cat.label}</span>
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: `${catHex}20`, color: catHex }}
-                >
-                  {categoryCounts[cat.id]}
-                </span>
-              </motion.button>
-            )
-          })}
+                {cat.emoji}
+              </div>
+              <span className="text-[8px] font-semibold text-gray-500 leading-tight">{cat.label}</span>
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: `${cat.hex}20`, color: cat.hex }}
+              >
+                {categoryCounts[cat.id]}
+              </span>
+            </motion.button>
+          ))}
         </div>
       </div>
 
@@ -484,9 +491,9 @@ export default function TogetherPage() {
 
       {/* ── Category hub sheet ── */}
       <AnimatePresence>
-        {openCategory && (
+        {openCategory && openCategory !== 'shopping' && (
           <CategoryHubSheet
-            type={openCategory}
+            type={openCategory as 'wishes' | 'dreams' | 'moments'}
             primary={primary}
             currentUser={currentUser}
             onClose={() => setOpenCategory(null)}
@@ -495,6 +502,16 @@ export default function TogetherPage() {
               setEditingEvent(ev)
               setModalOpen(true)
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {openCategory === 'shopping' && (
+          <ShoppingHubSheet
+            primary={primary}
+            currentUser={currentUser}
+            onClose={() => setOpenCategory(null)}
           />
         )}
       </AnimatePresence>
@@ -668,27 +685,22 @@ export default function TogetherPage() {
 function CategoryHubSheet({
   type, primary, currentUser, onClose, onEditMoment,
 }: {
-  type: CategoryType
+  type: 'wishes' | 'dreams' | 'moments'
   primary: string
   currentUser: UserName
   onClose: () => void
   onEditMoment: (ev: CalendarEvent) => void
 }) {
-  const todos          = useAppStore(s => s.todos)
   const goals          = useAppStore(s => s.goals)
   const wishlist       = useAppStore(s => s.wishlistItems)
   const events         = useAppStore(s => s.events)
-  const toggleTodo     = useAppStore(s => s.toggleTodo)
   const toggleWishlist = useAppStore(s => s.toggleWishlistItem)
-  const updateTodo     = useAppStore(s => s.updateTodo)
   const updateGoal     = useAppStore(s => s.updateGoal)
   const updateWishlist = useAppStore(s => s.updateWishlistItem)
-  const deleteTodo     = useAppStore(s => s.deleteTodo)
   const deleteGoal     = useAppStore(s => s.deleteGoal)
   const deleteWishlist = useAppStore(s => s.deleteWishlistItem)
   const sendNote       = useAppStore(s => s.sendPartnerNote)
   // Add-form store actions
-  const addTodoDo      = useAppStore(s => s.addTodo)
   const addGoalDo      = useAppStore(s => s.addGoal)
   const addWishDo      = useAppStore(s => s.addWishlistItem)
   const addEventDo     = useAppStore(s => s.addEvent)
@@ -696,7 +708,7 @@ function CategoryHubSheet({
   const updateEventDo  = useAppStore(s => s.updateEvent)
 
   const def = CATEGORY_DEFS.find(d => d.id === type)!
-  const catHex = COLOR_HEX[def.color]
+  const catHex = def.hex
 
   // ── Add-form state ──────────────────────────────────────────────────────────
   const [addOpen, setAddOpen]             = useState(false)
@@ -704,7 +716,7 @@ function CategoryHubSheet({
   const [addNotes, setAddNotes]           = useState('')
   const [addDate, setAddDate]             = useState('')
   const [addTime, setAddTime]             = useState('')
-  const [addColor, setAddColor]           = useState<EventColor>(def.color)
+  const [addColor, setAddColor]           = useState<EventColor>(def.color ?? 'yellow')
   const [addTodoItems, setAddTodoItems]   = useState<EventTodo[]>([])
   const [addNewTodo, setAddNewTodo]       = useState('')
   const [addPhotos, setAddPhotos]         = useState<string[]>([])
@@ -718,7 +730,7 @@ function CategoryHubSheet({
 
   function resetAdd() {
     setAddTitle(''); setAddNotes(''); setAddDate(''); setAddTime('')
-    setAddColor(def.color)
+    setAddColor(def.color ?? 'yellow')
     setAddTodoItems([]); setAddNewTodo('')
     setAddPhotos([]); setAddFiles([]); setAddBgIdx(null)
     setAddWishCat('plan'); setAddGoalCat('life'); setAddColorPopup(false)
@@ -726,16 +738,7 @@ function CategoryHubSheet({
 
   async function handleAddSave() {
     if (!addTitle.trim()) return
-    if (type === 'plans') {
-      addTodoDo(
-        addTitle.trim(),
-        addTodoItems.length ? addTodoItems.map(t => t.title) : undefined,
-        addDate || undefined,
-        addColor,
-        addNotes.trim() || undefined,
-        addTime || undefined,
-      )
-    } else if (type === 'dreams') {
+    if (type === 'dreams') {
       addGoalDo(addGoalCat, addTitle.trim(), addNotes.trim() || undefined, addDate || undefined, 0, addTime || undefined)
     } else if (type === 'wishes') {
       addWishDo(addTitle.trim(), addWishCat, addNotes.trim() || undefined)
@@ -765,7 +768,7 @@ function CategoryHubSheet({
     setAddOpen(false)
   }
 
-  const addLabel = type === 'plans' ? 'Plan' : type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : 'Moment'
+  const addLabel = type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : 'Moment'
   const addActiveColor = COLOR_OPTIONS.find(c => c.value === addColor)
 
   type ListItem = { id: string; title: string; sub?: string; done: boolean }
@@ -777,12 +780,6 @@ function CategoryHubSheet({
           id: i.id, title: i.title,
           sub: i.notes || WISHLIST_CATEGORY_CONFIG[i.category].label,
           done: i.isCompleted,
-        }))
-      case 'plans':
-        return todos.map(t => ({
-          id: t.id, title: t.title,
-          sub: t.notes || t.date,
-          done: t.isCompleted,
         }))
       case 'dreams':
         return goals.map(g => ({
@@ -797,7 +794,7 @@ function CategoryHubSheet({
           done: false,
         }))
     }
-  }, [type, todos, goals, wishlist, events])
+  }, [type, goals, wishlist, events])
 
   // ── edit state ──
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -814,7 +811,6 @@ function CategoryHubSheet({
     }
     let src: { title: string; notes?: string; date?: string; startTime?: string; targetDate?: string } | undefined
     if (type === 'wishes') src = wishlist.find(i => i.id === id)
-    if (type === 'plans')  src = todos.find(t => t.id === id)
     if (type === 'dreams') src = goals.find(g => g.id === id)
     if (!src) return
     setEditTitle(src.title)
@@ -827,7 +823,6 @@ function CategoryHubSheet({
   function saveEdit() {
     if (!editingId || !editTitle.trim()) return
     const base = { title: editTitle.trim(), notes: editNotes.trim() || undefined, startTime: editTime || undefined }
-    if (type === 'plans')  updateTodo(editingId,     { ...base, date:       editDate || undefined })
     if (type === 'dreams') updateGoal(editingId,     { ...base, targetDate: editDate || undefined })
     if (type === 'wishes') updateWishlist(editingId, { ...base, date:       editDate || undefined })
     setEditingId(null)
@@ -835,14 +830,12 @@ function CategoryHubSheet({
 
   function handleDelete() {
     if (!editingId) return
-    if (type === 'plans')  deleteTodo(editingId)
     if (type === 'dreams') deleteGoal(editingId)
     if (type === 'wishes') deleteWishlist(editingId)
     setEditingId(null)
   }
 
   function handleToggle(id: string, title: string, done: boolean) {
-    if (type === 'plans')  toggleTodo(id)
     if (type === 'wishes') toggleWishlist(id)
     if (type === 'dreams') updateGoal(id, { isCompleted: !done })
     if (!done) sendNote(`${USERS[currentUser].emoji} just confirmed "${title}" ✅`)
@@ -977,7 +970,7 @@ function CategoryHubSheet({
                     value={addTitle}
                     onChange={e => setAddTitle(e.target.value)}
                     placeholder={
-                      type === 'plans' ? "What's the plan?" :
+                      type === 'moments' ? "What's the plan?" :
                       type === 'dreams' ? "What do you dream of?" :
                       type === 'wishes' ? "What do you wish for?" :
                       "Name this moment..."
@@ -1020,8 +1013,8 @@ function CategoryHubSheet({
                   </div>
                 )}
 
-                {/* Color picker (Plans + Moments) */}
-                {(type === 'plans' || type === 'moments') && (
+                {/* Color picker (Moments only) */}
+                {type === 'moments' && (
                   <div className="relative mb-4">
                     <button
                       onClick={() => setAddColorPopup(v => !v)}
@@ -1089,8 +1082,8 @@ function CategoryHubSheet({
                     className="flex-1 text-sm text-gray-700 bg-transparent outline-none resize-none placeholder:text-gray-300" />
                 </div>
 
-                {/* Checklist (Plans + Moments) */}
-                {(type === 'plans' || type === 'moments') && (
+                {/* Checklist (Moments only) */}
+                {type === 'moments' && (
                   <div className="mb-5">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Checklist</p>
                     <div className="space-y-2">
@@ -1273,6 +1266,295 @@ function CategoryHubSheet({
                   >
                     Save
                   </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+/* ── Shopping Hub Sheet ────────────────────────────────────────────────────────── */
+function ShoppingHubSheet({
+  primary, currentUser, onClose,
+}: {
+  primary: string
+  currentUser: UserName
+  onClose: () => void
+}) {
+  const lists      = useAppStore(s => s.shoppingLists)
+  const createList = useAppStore(s => s.createShoppingList)
+  const deleteList = useAppStore(s => s.deleteShoppingList)
+  const addItem    = useAppStore(s => s.addShoppingItem)
+  const toggleItem = useAppStore(s => s.toggleShoppingItem)
+  const deleteItem = useAppStore(s => s.deleteShoppingItem)
+
+  const RED = '#ef4444'
+  const [expandedId, setExpandedId]   = useState<string | null>(lists[0]?.id ?? null)
+  const [showNewList, setShowNewList] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [newItemName, setNewItemName] = useState('')
+  const [newItemQty,  setNewItemQty]  = useState('1')
+  const [newItemPrice, setNewItemPrice] = useState('')
+  const [newItemNotes, setNewItemNotes] = useState('')
+
+  function handleCreateList() {
+    if (!newListName.trim()) return
+    createList(newListName.trim())
+    setNewListName('')
+    setShowNewList(false)
+  }
+
+  function handleAddItem(listId: string) {
+    if (!newItemName.trim()) return
+    addItem(listId, newItemName.trim(), parseInt(newItemQty) || 1,
+      newItemNotes.trim() || undefined,
+      newItemPrice ? parseFloat(newItemPrice) : undefined)
+    setNewItemName(''); setNewItemQty('1'); setNewItemPrice(''); setNewItemNotes('')
+  }
+
+  const totalPending = lists.reduce((a, l) => a + l.items.filter(i => !i.isChecked).length, 0)
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[85vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl" style={{ background: '#fff0f0' }}>❤️</div>
+              <div>
+                <h2 className="text-base font-bold text-gray-800">Shopping</h2>
+                <p className="text-xs text-gray-400">{totalPending} item{totalPending !== 1 ? 's' : ''} to get</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowNewList(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
+                style={{ background: RED }}
+              >
+                <Plus size={12} /> New List
+              </button>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {lists.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-5xl mb-3 opacity-30">🛍️</span>
+              <p className="text-sm text-gray-400">No shopping lists yet</p>
+              <button
+                onClick={() => setShowNewList(true)}
+                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold"
+                style={{ background: RED }}
+              >
+                <Plus size={14} /> Create a list
+              </button>
+            </div>
+          ) : (
+            lists.map(list => {
+              const checked = list.items.filter(i => i.isChecked).length
+              const total   = list.items.length
+              const pct     = total > 0 ? (checked / total) * 100 : 0
+              const allDone = total > 0 && checked === total
+              const isOpen  = expandedId === list.id
+
+              return (
+                <div key={list.id} className="bg-gray-50 rounded-2xl overflow-hidden">
+                  {/* List header */}
+                  <button
+                    onClick={() => setExpandedId(isOpen ? null : list.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                  >
+                    <ShoppingBag size={16} style={{ color: RED }} className="shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">{list.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: allDone ? '#10b981' : RED }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-400 shrink-0">{checked}/{total}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={e => { e.stopPropagation(); deleteList(list.id) }} className="text-gray-300 active:text-red-400 p-1">
+                        <Trash2 size={13} />
+                      </button>
+                      <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                        <ChevronDown size={15} className="text-gray-400" />
+                      </motion.div>
+                    </div>
+                  </button>
+
+                  {/* Expanded items */}
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-3 space-y-1.5">
+                          {/* Add item row */}
+                          <div className="bg-white rounded-xl p-2.5 space-y-1.5 mb-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={newItemName}
+                                onChange={e => setNewItemName(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleAddItem(list.id)}
+                                placeholder="Add item..."
+                                className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                              />
+                              <input
+                                type="number"
+                                value={newItemQty}
+                                onChange={e => setNewItemQty(e.target.value)}
+                                className="w-10 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1 outline-none border border-gray-200"
+                                min="1"
+                              />
+                              <input
+                                type="number"
+                                value={newItemPrice}
+                                onChange={e => setNewItemPrice(e.target.value)}
+                                placeholder="€"
+                                className="w-14 text-xs bg-gray-50 rounded-lg px-1.5 py-1 outline-none border border-gray-200"
+                              />
+                              <button
+                                onClick={() => handleAddItem(list.id)}
+                                disabled={!newItemName.trim()}
+                                className="w-7 h-7 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+                                style={{ background: RED }}
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {allDone && total > 0 && (
+                            <motion.div
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="text-center py-2 rounded-xl"
+                              style={{ background: '#f0fdf4' }}
+                            >
+                              <p className="text-xs font-bold text-emerald-600">🎉 All done!</p>
+                            </motion.div>
+                          )}
+
+                          {list.items.map(item => (
+                            <motion.div
+                              key={item.id}
+                              layout
+                              className={cn(
+                                'flex items-center gap-2.5 p-2.5 rounded-xl border transition-all',
+                                item.isChecked ? 'opacity-50 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
+                              )}
+                            >
+                              <button
+                                onClick={() => toggleItem(list.id, item.id)}
+                                className={cn(
+                                  'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                                  item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
+                                )}
+                              >
+                                {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
+                                  {item.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
+                                  {item.price != null && <span className="text-[10px] text-gray-400">€{item.price}</span>}
+                                  {item.notes && <span className="text-[10px] text-gray-400 truncate">{item.notes}</span>}
+                                </div>
+                              </div>
+                              <button onClick={() => deleteItem(list.id, item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
+                                <X size={13} />
+                              </button>
+                            </motion.div>
+                          ))}
+
+                          {list.items.length === 0 && (
+                            <p className="text-center text-xs text-gray-400 py-3">No items yet — add one above</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </motion.div>
+
+      {/* New list modal */}
+      <AnimatePresence>
+        {showNewList && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowNewList(false)}
+              className="fixed inset-0 z-[60] bg-black/20"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+            >
+              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
+                <h3 className="font-bold text-gray-800 mb-1">New Shopping List ❤️</h3>
+                <p className="text-xs text-gray-400 mb-4">e.g. Groceries, IKEA, Birthday</p>
+                <input
+                  type="text"
+                  value={newListName}
+                  onChange={e => setNewListName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCreateList()}
+                  placeholder="List name..."
+                  autoFocus
+                  className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none mb-4"
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => setShowNewList(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button
+                    onClick={handleCreateList}
+                    disabled={!newListName.trim()}
+                    className="flex-1 py-3 rounded-2xl text-white font-medium text-sm disabled:opacity-40"
+                    style={{ background: RED }}
+                  >
+                    Create
+                  </button>
                 </div>
               </div>
             </motion.div>

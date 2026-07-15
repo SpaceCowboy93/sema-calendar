@@ -8,8 +8,23 @@ import {
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
   type ShoppingList, type ShoppingItem, type PageBackgrounds,
+  type BudgetItem, type SavingsGoal,
   OTHER_USER,
 } from '@/types'
+
+const DEFAULT_BUDGET_ITEMS: BudgetItem[] = [
+  { id: 'b1',  category: 'Housing / Rent',  emoji: '🏠', planned: 1200, actual: 0 },
+  { id: 'b2',  category: 'Groceries',       emoji: '🛒', planned: 400,  actual: 0 },
+  { id: 'b3',  category: 'Transport',       emoji: '🚗', planned: 200,  actual: 0 },
+  { id: 'b4',  category: 'Utilities',       emoji: '⚡', planned: 150,  actual: 0 },
+  { id: 'b5',  category: 'Subscriptions',   emoji: '📱', planned: 50,   actual: 0 },
+  { id: 'b6',  category: 'Gifts',           emoji: '🎁', planned: 100,  actual: 0 },
+  { id: 'b7',  category: 'Date Nights',     emoji: '🍽️', planned: 200,  actual: 0 },
+  { id: 'b8',  category: 'Travel',          emoji: '✈️', planned: 300,  actual: 0 },
+  { id: 'b9',  category: 'Pets',            emoji: '🐱', planned: 100,  actual: 0 },
+  { id: 'b10', category: 'Shopping',        emoji: '🛍️', planned: 200,  actual: 0 },
+  { id: 'b11', category: 'Other',           emoji: '❤️', planned: 100,  actual: 0 },
+]
 import { generateId, getTodayString } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
@@ -78,9 +93,22 @@ interface AppState {
   shoppingLists: ShoppingList[]
   createShoppingList: (name: string) => void
   deleteShoppingList: (id: string) => void
-  addShoppingItem: (listId: string, name: string, quantity?: number) => void
+  addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number, link?: string) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
+
+  // Finance
+  monthlyIncome: number
+  budgetItems: BudgetItem[]
+  savingsGoals: SavingsGoal[]
+  setMonthlyIncome: (amount: number) => void
+  updateBudgetItem: (id: string, updates: Partial<Omit<BudgetItem, 'id'>>) => void
+  addBudgetItem: (item: Omit<BudgetItem, 'id'>) => void
+  deleteBudgetItem: (id: string) => void
+  addSavingsGoal: (data: Omit<SavingsGoal, 'id' | 'createdAt' | 'createdBy'>) => void
+  updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void
+  deleteSavingsGoal: (id: string) => void
+  addToSavings: (id: string, amount: number) => void
 
   // Page backgrounds
   pageBackgrounds: PageBackgrounds
@@ -609,12 +637,15 @@ export const useAppStore = create<AppState>()(
       deleteShoppingList: id =>
         set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
 
-      addShoppingItem: (listId, name, quantity = 1) => {
+      addShoppingItem: (listId, name, quantity = 1, notes, price, link) => {
         const { currentUser } = get()
         if (!currentUser) return
         const newItem: ShoppingItem = {
           id: generateId(), name: name.trim(), quantity, isChecked: false,
           createdAt: new Date().toISOString(),
+          notes: notes?.trim() || undefined,
+          price: price ?? undefined,
+          link: link?.trim() || undefined,
         }
         set(s => ({
           shoppingLists: s.shoppingLists.map(l =>
@@ -650,6 +681,54 @@ export const useAppStore = create<AppState>()(
             l.id === listId
               ? { ...l, items: l.items.filter(i => i.id !== itemId), updatedAt: new Date().toISOString() }
               : l
+          ),
+        })),
+
+      // ── Finance ──────────────────────────────────────────────────────────────
+      monthlyIncome: 0,
+      budgetItems: DEFAULT_BUDGET_ITEMS,
+      savingsGoals: [],
+
+      setMonthlyIncome: (amount) => set({ monthlyIncome: amount }),
+
+      updateBudgetItem: (id, updates) =>
+        set(s => ({
+          budgetItems: s.budgetItems.map(b => b.id === id ? { ...b, ...updates } : b),
+        })),
+
+      addBudgetItem: (item) =>
+        set(s => ({
+          budgetItems: [...s.budgetItems, { ...item, id: generateId() }],
+        })),
+
+      deleteBudgetItem: (id) =>
+        set(s => ({ budgetItems: s.budgetItems.filter(b => b.id !== id) })),
+
+      addSavingsGoal: (data) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        const goal: SavingsGoal = {
+          ...data,
+          id: generateId(),
+          savedAmount: data.savedAmount ?? 0,
+          createdBy: currentUser,
+          createdAt: new Date().toISOString(),
+        }
+        set(s => ({ savingsGoals: [...s.savingsGoals, goal] }))
+      },
+
+      updateSavingsGoal: (id, updates) =>
+        set(s => ({
+          savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, ...updates } : g),
+        })),
+
+      deleteSavingsGoal: (id) =>
+        set(s => ({ savingsGoals: s.savingsGoals.filter(g => g.id !== id) })),
+
+      addToSavings: (id, amount) =>
+        set(s => ({
+          savingsGoals: s.savingsGoals.map(g =>
+            g.id === id ? { ...g, savedAmount: Math.max(0, g.savedAmount + amount) } : g
           ),
         })),
 
