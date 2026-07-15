@@ -325,6 +325,7 @@ export default function JourneyPage() {
   const [selectedAnniversary, setSelectedAnniversary] = useState<Countdown | null>(null)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
 
   const futureCountdowns = countdowns
     .filter(c => c.date >= todayStr)
@@ -335,14 +336,18 @@ export default function JourneyPage() {
     .sort((a, b) => b.date.localeCompare(a.date))
 
   const upcomingEvents = useMemo(() => {
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() + 90)
-    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    const seen = new Set<string>()
     return events
-      .filter(e => e.date >= todayStr && e.date <= cutoffStr)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 10)
+      .filter(e => {
+        if (e.date < todayStr || seen.has(e.id)) return false
+        seen.add(e.id)
+        return true
+      })
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '').localeCompare(b.startTime ?? ''))
   }, [events, todayStr])
+
+  const UPCOMING_PAGE = 5
+  const visibleUpcoming = showAllUpcoming ? upcomingEvents : upcomingEvents.slice(0, UPCOMING_PAGE)
 
   const feed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -490,33 +495,54 @@ export default function JourneyPage() {
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Coming up</p>
             <div className="space-y-2">
-              {upcomingEvents.map(ev => {
-                const days = differenceInCalendarDays(parseISO(ev.date), today)
-                return (
-                  <motion.button
-                    key={ev.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
-                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left active:opacity-90 transition-opacity"
-                  >
-                    <div className="shrink-0 text-center w-10">
-                      {days === 0
-                        ? <span className="text-xl">🎉</span>
-                        : <>
-                            <p className="text-base font-bold text-gray-700">{days}</p>
-                            <p className="text-[9px] text-gray-400">days</p>
-                          </>
-                      }
-                    </div>
-                    <div className="w-px h-8 bg-gray-100 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
-                      <p className="text-xs text-gray-400">{format(parseISO(ev.date), 'EEE, MMM d')}</p>
-                    </div>
-                    <span className="text-gray-300 shrink-0">›</span>
-                  </motion.button>
-                )
-              })}
+              <AnimatePresence initial={false}>
+                {visibleUpcoming.map(ev => {
+                  const days = differenceInCalendarDays(parseISO(ev.date), today)
+                  return (
+                    <motion.button
+                      key={ev.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
+                      className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left active:opacity-90 transition-opacity"
+                    >
+                      <div className="shrink-0 text-center w-10">
+                        {days === 0
+                          ? <span className="text-xl">🎉</span>
+                          : <>
+                              <p className="text-base font-bold text-gray-700">{days}</p>
+                              <p className="text-[9px] text-gray-400">days</p>
+                            </>
+                        }
+                      </div>
+                      <div className="w-px h-8 bg-gray-100 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
+                        <p className="text-xs text-gray-400">{format(parseISO(ev.date), 'EEE, MMM d')}</p>
+                      </div>
+                      <span className="text-gray-300 shrink-0">›</span>
+                    </motion.button>
+                  )
+                })}
+              </AnimatePresence>
+
+              {upcomingEvents.length > UPCOMING_PAGE && (
+                <motion.button
+                  layout
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowAllUpcoming(v => !v)}
+                  className="w-full py-2.5 rounded-2xl text-xs font-semibold text-center transition-colors"
+                  style={{ color: primary, background: `${primary}10` }}
+                >
+                  {showAllUpcoming
+                    ? `Show less ↑`
+                    : `Show ${upcomingEvents.length - UPCOMING_PAGE} more ↓`}
+                </motion.button>
+              )}
             </div>
           </div>
         )}
