@@ -128,7 +128,14 @@ export default function TogetherPage() {
     return map
   }, [events])
 
-  const selectedEvents = eventsByDate[selectedDate] ?? []
+  const selectedEvents = useMemo(() => {
+    const seen = new Set<string>()
+    return (eventsByDate[selectedDate] ?? []).filter(ev => {
+      if (seen.has(ev.id)) return false
+      seen.add(ev.id)
+      return true
+    })
+  }, [eventsByDate, selectedDate])
 
   // Category counts
   const categoryCounts: Record<CategoryType, number> = {

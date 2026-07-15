@@ -106,32 +106,15 @@ export const useAppStore = create<AppState>()(
       addEvent: data => {
         const now = new Date().toISOString()
         const eventId = generateId()
-        const todoId  = generateId()
-        const { currentUser } = get()
 
         const newEvent: CalendarEvent = {
           ...data,
           id: eventId,
           createdAt: now,
           updatedAt: now,
-          linkedTodoId: todoId,
         }
 
-        const newTodo: SharedTodo = {
-          id: todoId,
-          title: data.title,
-          isCompleted: false,
-          createdBy: data.createdBy ?? (currentUser ?? 'seval'),
-          createdAt: now,
-          date: data.date,
-          color: data.color,
-          linkedEventId: eventId,
-        }
-
-        set(s => ({
-          events: [...s.events, newEvent],
-          todos:  [...s.todos,  newTodo],
-        }))
+        set(s => ({ events: [...s.events, newEvent] }))
         return eventId
       },
 
@@ -512,20 +495,37 @@ export const useAppStore = create<AppState>()(
                 )
               }
             } else if (newDate) {
-              // No linked event yet, date added → create one
-              const eventId = generateId()
-              linkedEventId = eventId
-              const newEvent: CalendarEvent = {
-                id: eventId,
-                title: updates.title ?? goal.title,
-                date: newDate,
-                color: (currentUser ?? goal.createdBy) === 'mateo' ? 'blue' : 'seval',
-                createdBy: currentUser ?? goal.createdBy,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                linkedGoalId: id,
+              // No linked event yet — check if one already exists with linkedGoalId
+              // (can happen when sync clears linkedEventId via race condition)
+              const orphaned = events.find(e => e.linkedGoalId === id)
+              if (orphaned) {
+                linkedEventId = orphaned.id
+                events = events.map(e =>
+                  e.id === orphaned.id
+                    ? {
+                        ...e,
+                        date: newDate,
+                        ...(updates.title !== undefined ? { title: updates.title } : {}),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : e
+                )
+              } else {
+                // Date added → create one
+                const eventId = generateId()
+                linkedEventId = eventId
+                const newEvent: CalendarEvent = {
+                  id: eventId,
+                  title: updates.title ?? goal.title,
+                  date: newDate,
+                  color: (currentUser ?? goal.createdBy) === 'mateo' ? 'blue' : 'seval',
+                  createdBy: currentUser ?? goal.createdBy,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  linkedGoalId: id,
+                }
+                events = [...events, newEvent]
               }
-              events = [...events, newEvent]
             }
           } else if (updates.title !== undefined && goal.linkedEventId) {
             // Title-only change → keep event title in sync

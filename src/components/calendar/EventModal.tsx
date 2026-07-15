@@ -41,6 +41,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [colorPopup, setColorPopup] = useState(false)
   const [photos, setPhotos]         = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [saving, setSaving]         = useState(false)
   const [uploading, setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [bgPhotoIdx, setBgPhotoIdx]   = useState<number | null>(null)
@@ -79,12 +80,14 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setShowDelete(false)
     setColorPopup(false)
     setNewTodo('')
+    setSaving(false)
     setUploading(false)
     setUploadError(null)
   }, [event, date, currentUser, isOpen, initialColor])
 
   async function handleSave() {
-    if (!title.trim() || !currentUser) return
+    if (!title.trim() || !currentUser || saving) return
+    setSaving(true)
     const data = {
       title: title.trim(),
       date: selectedDate,
@@ -115,6 +118,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
         }
       }
     }
+    setSaving(false)
     onClose()
   }
 
@@ -431,11 +435,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               {/* Save */}
               <button
                 onClick={handleSave}
-                disabled={!title.trim()}
+                disabled={!title.trim() || saving}
                 className="btn-primary mb-3 disabled:opacity-40"
                 style={{ background: `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)` }}
               >
-                {isEdit ? 'Save Changes' : 'Add Event'}
+                {saving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Add Event')}
               </button>
 
               {isEdit && (
