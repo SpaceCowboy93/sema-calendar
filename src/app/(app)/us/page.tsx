@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Plus, Trash2, LogOut, X, Send, Camera } from 'lucide-react'
+import { Plus, Trash2, LogOut, X, Send, Camera, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import {
   differenceInYears, differenceInMonths, differenceInDays,
@@ -357,99 +357,80 @@ export default function UsPage() {
           How we feel today
         </h2>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {([currentUser, partnerUser] as UserName[]).map(uid => {
-            const u    = USERS[uid]
-            const mood = getMood(uid)
-            const isMe = uid === currentUser
-            const color = uid === 'seval' ? '#8b5cf6' : '#14b8a6'
-            const bg    = uid === 'seval' ? 'bg-seval-50' : 'bg-mateo-50'
-
-            return (
-              <div
-                key={uid}
-                className={cn('rounded-3xl p-4 text-center', bg)}
-              >
-                <div className="text-2xl mb-1">{u.emoji}</div>
-                <p className="text-xs font-semibold text-gray-600 mb-2">
-                  {isMe ? 'You' : u.displayName}
-                </p>
-                {mood ? (
-                  <div>
-                    <span className="text-2xl">{MOOD_CONFIG[mood.mood].emoji}</span>
-                    <p className="text-xs text-gray-500 mt-1">{MOOD_CONFIG[mood.mood].label}</p>
-                    {mood.note && (
-                      <p className="text-[10px] text-gray-400 italic mt-1 leading-snug line-clamp-2">
-                        &ldquo;{mood.note}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-300 italic">not set yet</p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Show note if present */}
-        {myMood?.note && (
-          <p className="text-xs text-gray-400 italic mt-1 mb-3 px-1">
-            &ldquo;{myMood.note}&rdquo;
-          </p>
-        )}
-
-        {/* Set my mood – hover/tap to reveal */}
-        <div
-          onMouseEnter={() => setMoodVisible(true)}
-          onMouseLeave={() => { if (!moodPopup) setMoodVisible(false) }}
+        {/* Tappable card — opens mood picker */}
+        <motion.button
+          whileTap={{ scale: 0.985 }}
+          onClick={() => setMoodVisible(v => !v)}
+          className="w-full text-left rounded-3xl overflow-hidden mb-3 relative"
+          style={{ border: `1px solid ${primaryColor}15` }}
         >
-          <button
-            onClick={() => setMoodVisible(v => !v)}
-            className="flex items-center gap-1.5 mb-3 group/btn"
-          >
-            <span className="text-xs font-semibold text-gray-400 group-hover/btn:text-gray-500 transition-colors">
-              How are you feeling?
-            </span>
-            <motion.span
-              animate={{ rotate: moodVisible ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-gray-300 text-xs leading-none"
-            >
-              ▾
-            </motion.span>
-          </button>
+          <div className="grid grid-cols-2 gap-3 p-3">
+            {([currentUser, partnerUser] as UserName[]).map(uid => {
+              const u    = USERS[uid]
+              const mood = getMood(uid)
+              const isMe = uid === currentUser
+              const bg   = uid === 'seval' ? 'bg-seval-50' : 'bg-mateo-50'
 
-          <AnimatePresence>
-            {moodVisible && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18 }}
-                className="flex gap-2 flex-wrap"
-              >
-                {MOOD_TYPES.map(([type, cfg]) => (
-                  <motion.button
-                    key={type}
-                    whileTap={{ scale: 0.88 }}
-                    onClick={() => openMoodPopup(type)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all',
-                      myMood?.mood === type
-                        ? 'text-white shadow-sm'
-                        : 'bg-white text-gray-600 shadow-card'
-                    )}
-                    style={myMood?.mood === type ? { background: primaryColor } : {}}
-                  >
-                    <span className="text-base">{cfg.emoji}</span>
-                    {cfg.label}
-                  </motion.button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              return (
+                <div key={uid} className={cn('rounded-2xl p-4 text-center', bg)}>
+                  <div className="text-2xl mb-1">{u.emoji}</div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">
+                    {isMe ? 'You' : u.displayName}
+                  </p>
+                  {mood ? (
+                    <div>
+                      <span className="text-2xl">{MOOD_CONFIG[mood.mood].emoji}</span>
+                      <p className="text-xs text-gray-500 mt-1">{MOOD_CONFIG[mood.mood].label}</p>
+                      {mood.note && (
+                        <p className="text-[10px] text-gray-400 italic mt-1 leading-snug line-clamp-2">
+                          &ldquo;{mood.note}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-300 italic">not set yet</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {/* Tap hint */}
+          <div className="flex items-center justify-center gap-1 pb-3">
+            <Pencil size={10} className="text-gray-300" />
+            <span className="text-[10px] text-gray-300 font-medium">Tap to update your mood</span>
+          </div>
+        </motion.button>
+
+        {/* Mood chips – revealed on tap */}
+        <AnimatePresence>
+          {moodVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="flex gap-2 flex-wrap mb-2"
+            >
+              {MOOD_TYPES.map(([type, cfg]) => (
+                <motion.button
+                  key={type}
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => openMoodPopup(type)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all',
+                    myMood?.mood === type
+                      ? 'text-white shadow-sm'
+                      : 'bg-white text-gray-600 shadow-card'
+                  )}
+                  style={myMood?.mood === type ? { background: primaryColor } : {}}
+                >
+                  <span className="text-base">{cfg.emoji}</span>
+                  {cfg.label}
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Emotion popup */}
