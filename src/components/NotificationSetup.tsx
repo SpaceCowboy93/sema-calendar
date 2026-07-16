@@ -17,7 +17,7 @@ function isInStandaloneMode() {
 }
 
 export function NotificationSetup({ primary }: { primary: string }) {
-  const { status, loading, enable, disable } = usePushNotifications()
+  const { status, swError, loading, enable, disable } = usePushNotifications()
   const currentUser = useAppStore(s => s.currentUser)
 
   const [testState, setTestState]   = useState<'idle' | 'sending' | 'ok' | 'err'>('idle')
@@ -35,8 +35,8 @@ export function NotificationSetup({ primary }: { primary: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userName: currentUser,
-          title: 'SeMa 💕',
-          body: 'Push notifications are working! 🎉',
+          title: 'SeMa',
+          body: 'Push notifications are working!',
           tag: 'sema-test',
         }),
       })
@@ -57,11 +57,9 @@ export function NotificationSetup({ primary }: { primary: string }) {
     setTimeout(() => { setTestState('idle'); setTestDetail('') }, 6000)
   }
 
+  // iOS Safari not in standalone mode — push requires Home Screen install
   if (status === 'unsupported') {
-    // Likely iOS Safari not in standalone mode
-    const ios  = isIOS()
-    const standalone = isInStandaloneMode()
-    if (ios && !standalone) {
+    if (isIOS() && !isInStandaloneMode()) {
       return (
         <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #e9d5ff' }}>
           <button
@@ -106,6 +104,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
         </div>
       )
     }
+    // Non-iOS unsupported (e.g. desktop without push support) — show nothing
     return null
   }
 
@@ -127,7 +126,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
         <div className="flex items-center gap-3 px-4 py-3">
           <BellRing size={18} className="text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-700">Notifications on</p>
+            <p className="text-sm font-semibold text-gray-700">Notifications connected</p>
             <p className="text-xs text-gray-400">Reminders will arrive even when SeMa is closed</p>
           </div>
           <motion.button
@@ -149,7 +148,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
             {testState === 'sending' && <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-emerald-400 inline-block" />}
             {testState === 'ok'      && '✓ '}
             {testState === 'err'     && '✗ '}
-            {testState === 'idle'    && '🔔 '}
+            {testState === 'idle'    && <Bell size={12} />}
             {testState === 'sending' ? 'Sending…'
               : testState === 'ok'  ? 'Delivered! Background the app to see it.'
               : testState === 'err' ? 'Not delivered — see detail below'
@@ -165,29 +164,67 @@ export function NotificationSetup({ primary }: { primary: string }) {
     )
   }
 
-  // default — not yet subscribed
+  // 'granted' — permission granted but no PushManager subscription yet
+  if (status === 'granted') {
+    return (
+      <div className="space-y-2">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={enable}
+          disabled={loading}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
+          style={{ background: `${primary}10`, border: `1.5px solid ${primary}25` }}
+        >
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: `${primary}18` }}
+          >
+            {loading
+              ? <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: primary }} />
+              : <Bell size={16} style={{ color: primary }} />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-800">Connect this device</p>
+            <p className="text-xs text-gray-400">Permission granted — tap to finish setup</p>
+          </div>
+          <span className="text-gray-300 shrink-0">›</span>
+        </motion.button>
+        {swError && (
+          <p className="text-[11px] text-red-400 px-1">{swError}</p>
+        )}
+      </div>
+    )
+  }
+
+  // 'default' — permission not yet requested
   return (
-    <motion.button
-      whileTap={{ scale: 0.97 }}
-      onClick={enable}
-      disabled={loading}
-      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
-      style={{ background: `${primary}10`, border: `1.5px solid ${primary}25` }}
-    >
-      <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: `${primary}18` }}
+    <div className="space-y-2">
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={enable}
+        disabled={loading}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
+        style={{ background: `${primary}10`, border: `1.5px solid ${primary}25` }}
       >
-        {loading
-          ? <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: primary }} />
-          : <Bell size={16} style={{ color: primary }} />
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800">Enable notifications</p>
-        <p className="text-xs text-gray-400">Get reminders 5 min, 1 hour, and 1 day before events</p>
-      </div>
-      <span className="text-gray-300 shrink-0">›</span>
-    </motion.button>
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `${primary}18` }}
+        >
+          {loading
+            ? <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: primary }} />
+            : <Bell size={16} style={{ color: primary }} />
+          }
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800">Enable notifications</p>
+          <p className="text-xs text-gray-400">Get reminders 5 min, 1 hour, and 1 day before events</p>
+        </div>
+        <span className="text-gray-300 shrink-0">›</span>
+      </motion.button>
+      {swError && (
+        <p className="text-[11px] text-red-400 px-1">{swError}</p>
+      )}
+    </div>
   )
 }

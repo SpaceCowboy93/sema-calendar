@@ -7,7 +7,12 @@ import type { UserName } from '@/types'
 const LOG = (...args: unknown[]) => console.log('[Push]', ...args)
 const ERR = (...args: unknown[]) => console.error('[Push]', ...args)
 
-export type PushStatus = 'unsupported' | 'denied' | 'default' | 'subscribed'
+// default  — permission not yet requested
+// granted  — permission granted, but no PushManager subscription yet
+// subscribed — subscription exists in PushManager
+// denied  — user blocked notifications
+// unsupported — platform has no Service Worker or PushManager at all
+export type PushStatus = 'unsupported' | 'denied' | 'default' | 'granted' | 'subscribed'
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -50,11 +55,11 @@ async function getCurrentSub(): Promise<PushSubscription | null> {
 
 export function usePushNotifications() {
   const currentUser = useAppStore(s => s.currentUser)
-  const [status, setStatus] = useState<PushStatus>('default')
+  const [status,  setStatus]  = useState<PushStatus>('default')
+  const [swError, setSwError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [swReady, setSwReady] = useState(false)
 
-  // Register SW and determine initial status
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -65,18 +70,10 @@ export function usePushNotifications() {
       LOG('Notification.permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
 
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        LOG('Push unsupported on this browser/platform')
+        LOG('Push not supported on this platform')
         setStatus('unsupported')
         return
       }
-
-      const reg = await registerSW()
-      if (!reg) {
-        ERR('SW could not be registered — aborting push init')
-        setStatus('unsupported')
-        return
-      }
-      setSwReady(true)
 
       if (Notification.permission === 'denied') {
         LOG('Notification permission is denied')
@@ -84,12 +81,31 @@ export function usePushNotifications() {
         return
       }
 
+      const reg = await registerSW()
+      if (!reg) {
+        // SW failed to register — still show UI so the user can retry,
+        // but surface the error. Fall back to 'default' so the button is visible.
+        ERR('SW registration failed — showing degraded UI')
+        setSwError('Service worker failed to register. Try refreshing.')
+        setStatus('default')
+        return
+      }
+      setSwReady(true)
+
+      // Check for an existing subscription FIRST, independent of Notification.permission
       const sub = await getCurrentSub()
       if (sub) {
-        LOG('Already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
+        LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
         setStatus('subscribed')
+        return
+      }
+
+      // No subscription yet — distinguish between "permission already granted" and "not yet asked"
+      if (Notification.permission === 'granted') {
+        LOG('Permission granted but no subscription — showing "Connect this device"')
+        setStatus('granted')
       } else {
-        LOG('Not subscribed yet — permission:', Notification.permission)
+        LOG('Permission not yet requested — showing "Enable Notifications"')
         setStatus('default')
       }
     })()
@@ -120,10 +136,25 @@ export function usePushNotifications() {
   }, [])
 
   const enable = useCallback(async () => {
-    if (!swReady || !currentUser) {
-      ERR('enable() called but swReady:', swReady, 'currentUser:', currentUser)
+    if (!currentUser) {
+      ERR('enable() called but currentUser is null')
       return
     }
+
+    // If SW failed, try re-registering once before giving up
+    let reg: ServiceWorkerRegistration | null = null
+    if (!swReady) {
+      LOG('SW not ready — attempting registration before subscribe')
+      reg = await registerSW()
+      if (!reg) {
+        ERR('SW still cannot register — cannot subscribe')
+        setSwError('Service worker failed. Try refreshing the page.')
+        return
+      }
+      setSwReady(true)
+      setSwError(null)
+    }
+
     setLoading(true)
     try {
       LOG('Requesting notification permission …')
@@ -137,16 +168,17 @@ export function usePushNotifications() {
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
       if (!vapidKey) {
         ERR('NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set in environment')
+        setSwError('App misconfiguration: VAPID key missing.')
         return
       }
       LOG('VAPID public key present — length:', vapidKey.length)
 
       LOG('Waiting for SW ready …')
-      const reg = await navigator.serviceWorker.ready
-      LOG('SW ready — scope:', reg.scope)
+      const swReg = reg ?? await navigator.serviceWorker.ready
+      LOG('SW ready — scope:', swReg.scope)
 
       LOG('Calling PushManager.subscribe() …')
-      const sub = await reg.pushManager.subscribe({
+      const sub = await swReg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
@@ -166,12 +198,15 @@ export function usePushNotifications() {
 
       if (res.ok) {
         setStatus('subscribed')
+        setSwError(null)
         await syncReminders(currentUser)
       } else {
         ERR('subscribe API returned error:', data)
+        setSwError(data.error ?? 'Failed to save subscription.')
       }
     } catch (err) {
       ERR('enable() error:', err)
+      setSwError(String(err))
     } finally {
       setLoading(false)
     }
@@ -195,6 +230,7 @@ export function usePushNotifications() {
         LOG('disable() — no active subscription found')
       }
       setStatus('default')
+      setSwError(null)
     } catch (err) {
       ERR('disable() error:', err)
     } finally {
@@ -202,7 +238,7 @@ export function usePushNotifications() {
     }
   }, [])
 
-  return { status, loading, enable, disable, syncReminders }
+  return { status, swError, loading, enable, disable, syncReminders }
 }
 
 /* ── Collect all dated items from store state ─────────────────────────────── */
@@ -210,7 +246,7 @@ interface DatedItem {
   id: string
   type: 'event' | 'todo' | 'goal' | 'wishlist' | 'countdown'
   title: string
-  fireAts: string[] // UTC ISO strings
+  fireAts: string[]
 }
 
 function computeFireAts(dateStr: string, timeStr: string): string[] {
@@ -233,7 +269,7 @@ function computeFireAts(dateStr: string, timeStr: string): string[] {
     { label: '5min-before',  ms: eventMs - 5  * 60 * 1000 },
   ]
 
-  const future = candidates.filter(c => c.ms > now)
+  const future  = candidates.filter(c => c.ms > now)
   const skipped = candidates.filter(c => c.ms <= now)
   if (skipped.length) {
     LOG(`computeFireAts(${dateStr} ${timeStr}) — skipped past:`, skipped.map(c => c.label).join(', '))
@@ -254,28 +290,24 @@ function collectDatedItems(
       if (fireAts.length) items.push({ id: e.id, type: 'event', title: e.title, fireAts })
     }
   })
-
   store.todos.forEach(t => {
     if (!t.isCompleted && t.date && t.startTime) {
       const fireAts = computeFireAts(t.date, t.startTime)
       if (fireAts.length) items.push({ id: t.id, type: 'todo', title: t.title, fireAts })
     }
   })
-
   store.goals.forEach(g => {
     if (!g.isCompleted && g.targetDate && g.startTime) {
       const fireAts = computeFireAts(g.targetDate, g.startTime)
       if (fireAts.length) items.push({ id: g.id, type: 'goal', title: g.title, fireAts })
     }
   })
-
   store.wishlistItems.forEach(w => {
     if (!w.isCompleted && w.date && w.startTime) {
       const fireAts = computeFireAts(w.date, w.startTime)
       if (fireAts.length) items.push({ id: w.id, type: 'wishlist', title: w.title, fireAts })
     }
   })
-
   store.countdowns.forEach(c => {
     if (c.date) {
       const fireAts = computeFireAts(c.date, c.time ?? '09:00')

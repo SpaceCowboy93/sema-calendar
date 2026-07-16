@@ -653,7 +653,7 @@ export default function UsPage() {
 
       {/* Notifications */}
       <section className="mb-7">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">This device</h2>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notifications</h2>
         <NotificationSetup primary={primaryColor} />
       </section>
 
