@@ -3,60 +3,67 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 
-// Reminder offsets in milliseconds → label used in message
-const REMINDERS = [
-  {
-    ms: 24 * 60 * 60 * 1000,
-    message: (title: string) => `Tomorrow: ${title} 💞`,
-  },
-  {
-    ms: 3 * 60 * 60 * 1000,
-    message: (title: string) => `In 3 hours: ${title} 🌸`,
-  },
-  {
-    ms: 60 * 60 * 1000,
-    message: (title: string) => `1 hour until your moment — ${title} 🌊`,
-  },
-  {
-    ms: 10 * 60 * 1000,
-    message: (title: string) => `Starting in 10 minutes… ${title} 💫`,
-  },
-  {
-    ms: 0,
-    message: (title: string) => `It's starting now — ${title} 💞`,
-  },
-]
+interface ScheduledItem {
+  id: string
+  title: string
+  datetime: Date
+}
 
-// Max scheduling window — only schedule notifications within 25 hours
-const MAX_MS = 25 * 60 * 60 * 1000
+function parseDateTime(date: string, time: string): Date | null {
+  // Avoid appending :00 if startTime already contains seconds (HH:MM:SS)
+  const timeStr = /^\d{2}:\d{2}:\d{2}$/.test(time) ? time : `${time}:00`
+  const dt = new Date(`${date}T${timeStr}`)
+  if (isNaN(dt.getTime())) {
+    console.warn(`[SeMa] Invalid Date: "${date}T${timeStr}" — skipping`)
+    return null
+  }
+  return dt
+}
 
-interface TimedItem { title: string; datetime: Date }
+function prevDayAt8PM(eventDate: Date): Date {
+  // Previous calendar day at 20:00 local — NOT simply eventMs - 24h
+  const d = new Date(eventDate)
+  d.setDate(d.getDate() - 1)
+  d.setHours(20, 0, 0, 0)
+  return d
+}
 
-function collectTimedItems(): TimedItem[] {
-  const { events, todos, goals, wishlistItems } = useAppStore.getState()
-  const items: TimedItem[] = []
+function collectTimedItems(): ScheduledItem[] {
+  const { events, todos, goals, wishlistItems, countdowns } = useAppStore.getState()
+  const items: ScheduledItem[] = []
 
   events.forEach(e => {
     if (e.date && e.startTime) {
-      items.push({ title: e.title, datetime: new Date(`${e.date}T${e.startTime}:00`) })
+      const dt = parseDateTime(e.date, e.startTime)
+      if (dt) items.push({ id: e.id, title: e.title, datetime: dt })
     }
   })
 
   todos.forEach(t => {
     if (!t.isCompleted && t.date && t.startTime) {
-      items.push({ title: t.title, datetime: new Date(`${t.date}T${t.startTime}:00`) })
+      const dt = parseDateTime(t.date, t.startTime)
+      if (dt) items.push({ id: t.id, title: t.title, datetime: dt })
     }
   })
 
   goals.forEach(g => {
     if (!g.isCompleted && g.targetDate && g.startTime) {
-      items.push({ title: g.title, datetime: new Date(`${g.targetDate}T${g.startTime}:00`) })
+      const dt = parseDateTime(g.targetDate, g.startTime)
+      if (dt) items.push({ id: g.id, title: g.title, datetime: dt })
     }
   })
 
   wishlistItems.forEach(w => {
     if (!w.isCompleted && w.date && w.startTime) {
-      items.push({ title: w.title, datetime: new Date(`${w.date}T${w.startTime}:00`) })
+      const dt = parseDateTime(w.date, w.startTime)
+      if (dt) items.push({ id: w.id, title: w.title, datetime: dt })
+    }
+  })
+
+  countdowns.forEach(c => {
+    if (c.date) {
+      const dt = parseDateTime(c.date, c.time ?? '09:00')
+      if (dt) items.push({ id: c.id, title: c.title, datetime: dt })
     }
   })
 
@@ -87,37 +94,72 @@ export function useNotifications() {
     const now   = Date.now()
     const items = collectTimedItems()
 
+    console.log(
+      `[SeMa] scheduleAll — now: ${new Date(now).toLocaleTimeString()}, items: ${items.length}`,
+    )
+
     items.forEach(item => {
       const eventMs = item.datetime.getTime()
 
-      REMINDERS.forEach(reminder => {
-        const fireAt = eventMs - reminder.ms
-        const delay  = fireAt - now
+      if (eventMs <= now) {
+        console.log(`[SeMa] SKIP past event: "${item.title}" at ${item.datetime.toLocaleString()}`)
+        return
+      }
 
-        // Only schedule if in the future and within 25h window
-        if (delay <= 0 || delay > MAX_MS) return
+      const reminders: { fireAt: number; label: string; message: string }[] = [
+        {
+          fireAt: prevDayAt8PM(item.datetime).getTime(),
+          label: 'prev-day-8PM',
+          message: `Tomorrow: ${item.title} 💞`,
+        },
+        {
+          fireAt: eventMs - 60 * 60 * 1000,   // exactly 1 hour before
+          label: '1h-before',
+          message: `1 hour until your moment — ${item.title} 🌊`,
+        },
+        {
+          fireAt: eventMs - 5 * 60 * 1000,    // exactly 5 minutes before
+          label: '5min-before',
+          message: `Starting in 5 minutes… ${item.title} 💫`,
+        },
+      ]
 
-        const id = setTimeout(
-          () => fireNotification(reminder.message(item.title)),
-          delay
+      reminders.forEach(r => {
+        const delay = r.fireAt - now
+        if (delay <= 0) {
+          console.log(
+            `[SeMa] SKIP past reminder "${r.label}" for "${item.title}":`,
+            `was ${new Date(r.fireAt).toLocaleString()}`,
+          )
+          return
+        }
+
+        console.log(
+          `[SeMa] SCHEDULE "${r.label}" for "${item.title}":`,
+          `fire at ${new Date(r.fireAt).toLocaleString()}`,
+          `delay ${Math.round(delay / 1000)}s (${Math.round(delay / 60000)}min)`,
         )
+
+        const id = setTimeout(() => {
+          console.log(`[SeMa] FIRE "${r.label}" for "${item.title}"`)
+          fireNotification(r.message)
+        }, delay)
         timerIds.current.push(id)
       })
     })
   }
 
   useEffect(() => {
-    // Request permission on first mount (only prompts if 'default')
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().then(() => scheduleAll())
     } else {
       scheduleAll()
     }
 
-    // Re-schedule whenever state changes
+    // Re-schedule immediately whenever any store state changes (add/edit/delete)
     const unsub = useAppStore.subscribe(scheduleAll)
 
-    // Re-schedule when app comes back to foreground
+    // Re-schedule when tab comes back to foreground
     function onVisibility() {
       if (document.visibilityState === 'visible') scheduleAll()
     }
