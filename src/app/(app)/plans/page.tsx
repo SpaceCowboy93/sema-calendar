@@ -879,18 +879,6 @@ function FinanceCategoryEditorSheet({
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-5 pb-2 space-y-3">
 
-            {/* Photos */}
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Photos</p>
-              <PhotoGallery
-                photos={photos}
-                size="sm"
-                onRemove={idx => setPhotos(p => p.filter((_, i) => i !== idx))}
-                onAddClick={() => photoInputRef.current?.click()}
-                uploading={uploading}
-              />
-            </div>
-
             {/* Planned Budget */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Planned Budget</p>
@@ -956,6 +944,26 @@ function FinanceCategoryEditorSheet({
               )}
             </div>
 
+            {/* Note */}
+            <div className="bg-gray-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Note (optional)</p>
+              <input type="text" value={note} onChange={e => setNote(e.target.value)}
+                placeholder="e.g. includes electricity and water"
+                className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+            </div>
+
+            {/* Photos */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Photos</p>
+              <PhotoGallery
+                photos={photos}
+                size="sm"
+                onRemove={idx => setPhotos(p => p.filter((_, i) => i !== idx))}
+                onAddClick={() => photoInputRef.current?.click()}
+                uploading={uploading}
+              />
+            </div>
+
             {/* Expense Items */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1002,13 +1010,6 @@ function FinanceCategoryEditorSheet({
               )}
             </div>
 
-            {/* Note */}
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Note (optional)</p>
-              <input type="text" value={note} onChange={e => setNote(e.target.value)}
-                placeholder="e.g. includes electricity and water"
-                className="w-full text-sm text-gray-700 bg-transparent outline-none" />
-            </div>
           </div>
 
           {/* Fixed footer */}
