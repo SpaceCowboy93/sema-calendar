@@ -7,7 +7,7 @@ import {
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
-  type ShoppingList, type ShoppingItem, type PageBackgrounds,
+  type ShoppingList, type ShoppingItem, type ShoppingListInput, type PageBackgrounds,
   type BudgetItem, type SavingsGoal,
   OTHER_USER,
 } from '@/types'
@@ -91,9 +91,10 @@ interface AppState {
 
   // Shopping
   shoppingLists: ShoppingList[]
-  createShoppingList: (name: string) => void
+  createShoppingList: (data: ShoppingListInput) => string
+  updateShoppingList: (id: string, updates: Partial<ShoppingList>) => void
   deleteShoppingList: (id: string) => void
-  addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number, link?: string) => void
+  addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
 
@@ -622,22 +623,40 @@ export const useAppStore = create<AppState>()(
       // ── Shopping ─────────────────────────────────────────────────────────────
       shoppingLists: [],
 
-      createShoppingList: name => {
+      createShoppingList: (data) => {
         const { currentUser } = get()
-        if (!currentUser) return
-        const now = new Date().toISOString()
+        if (!currentUser) return ''
+        const now  = new Date().toISOString()
+        const id   = generateId()
         set(s => ({
           shoppingLists: [
             ...s.shoppingLists,
-            { id: generateId(), name: name.trim(), items: [], createdBy: currentUser, createdAt: now, updatedAt: now },
+            {
+              id, name: data.name.trim(), items: [],
+              createdBy: currentUser, createdAt: now, updatedAt: now,
+              storeName:  data.storeName?.trim() || undefined,
+              date:       data.date || undefined,
+              time:       data.time || undefined,
+              notes:      data.notes?.trim() || undefined,
+              coverPhoto: data.coverPhoto || undefined,
+              isCompleted: false,
+            },
           ],
         }))
+        return id
       },
+
+      updateShoppingList: (id, updates) =>
+        set(s => ({
+          shoppingLists: s.shoppingLists.map(l =>
+            l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l
+          ),
+        })),
 
       deleteShoppingList: id =>
         set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
 
-      addShoppingItem: (listId, name, quantity = 1, notes, price, link) => {
+      addShoppingItem: (listId, name, quantity = 1, notes, price) => {
         const { currentUser } = get()
         if (!currentUser) return
         const newItem: ShoppingItem = {
@@ -645,7 +664,6 @@ export const useAppStore = create<AppState>()(
           createdAt: new Date().toISOString(),
           notes: notes?.trim() || undefined,
           price: price ?? undefined,
-          link: link?.trim() || undefined,
         }
         set(s => ({
           shoppingLists: s.shoppingLists.map(l =>
@@ -662,14 +680,20 @@ export const useAppStore = create<AppState>()(
         set(s => ({
           shoppingLists: s.shoppingLists.map(l => {
             if (l.id !== listId) return l
+            const updatedItems = l.items.map(i =>
+              i.id === itemId
+                ? { ...i, isChecked: !i.isChecked, checkedBy: !i.isChecked ? currentUser : undefined }
+                : i
+            )
+            const allChecked = updatedItems.length > 0 && updatedItems.every(i => i.isChecked)
             return {
               ...l,
-              updatedAt: new Date().toISOString(),
-              items: l.items.map(i =>
-                i.id === itemId
-                  ? { ...i, isChecked: !i.isChecked, checkedBy: !i.isChecked ? currentUser : undefined }
-                  : i
-              ),
+              updatedAt:   new Date().toISOString(),
+              items:       updatedItems,
+              isCompleted: allChecked,
+              completedAt: allChecked
+                ? (l.isCompleted && l.completedAt ? l.completedAt : new Date().toISOString())
+                : undefined,
             }
           }),
         }))
@@ -679,7 +703,14 @@ export const useAppStore = create<AppState>()(
         set(s => ({
           shoppingLists: s.shoppingLists.map(l =>
             l.id === listId
-              ? { ...l, items: l.items.filter(i => i.id !== itemId), updatedAt: new Date().toISOString() }
+              ? {
+                  ...l,
+                  items: l.items.filter(i => i.id !== itemId),
+                  updatedAt: new Date().toISOString(),
+                  // Un-complete if an item is deleted while completed
+                  isCompleted: false,
+                  completedAt: undefined,
+                }
               : l
           ),
         })),

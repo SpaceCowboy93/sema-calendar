@@ -184,6 +184,23 @@ export interface ShoppingList {
   createdBy: UserName
   createdAt: string
   updatedAt: string
+  // Enhanced fields
+  storeName?: string
+  date?: string        // YYYY-MM-DD
+  time?: string        // HH:MM
+  notes?: string
+  coverPhoto?: string  // base64 data URL
+  isCompleted?: boolean
+  completedAt?: string
+}
+
+export type ShoppingListInput = {
+  name: string
+  storeName?: string
+  date?: string
+  time?: string
+  notes?: string
+  coverPhoto?: string
 }
 
 export interface Memory {
