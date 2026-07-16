@@ -1,69 +1,158 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, X, Camera, Wallet,
-  TrendingUp, TrendingDown, Target, Trash2,
+  Plus, X, Camera, ChevronLeft, ChevronRight,
+  TrendingUp, TrendingDown, Wallet, Trash2, Sparkles,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
-import type { BudgetItem } from '@/types'
+import type { BudgetItem, FinanceMonth, FinanceMonthReport } from '@/types'
 
 const CURRENCY = '€'
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 function fmt(n: number) {
-  return `${CURRENCY}${n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  return `${CURRENCY}${Math.abs(n).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
+function fmtSigned(n: number) {
+  return `${n >= 0 ? '+' : '-'}${fmt(n)}`
 }
 
+function currentMonthKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+function prevKey(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 2, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+function nextKey(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+function monthLabel(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+}
+function shortMonthLabel(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+function lastDayOf(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(y, m, 0)
+}
+function canFinalize(key: string) {
+  const now = new Date()
+  const ck  = currentMonthKey()
+  if (key < ck) return true
+  if (key > ck) return false
+  return now.getDate() >= lastDayOf(key).getDate() - 2
+}
 function pctColor(pct: number) {
   if (pct > 100) return '#ef4444'
   if (pct > 80)  return '#f59e0b'
   return '#10b981'
 }
+function buildReport(month: FinanceMonth, totalSaved: number): FinanceMonthReport {
+  const totalExpenses = month.budgetItems.reduce((a, b) => a + b.actual, 0)
+  const remaining     = month.income - totalExpenses
+  const savingsRate   = month.income > 0 ? Math.round((totalSaved / month.income) * 1000) / 10 : 0
+  const sorted        = [...month.budgetItems].sort((a, b) => b.actual - a.actual)
+  const topItem       = sorted.find(b => b.actual > 0)
+  const overBudget    = month.budgetItems.filter(b => b.planned > 0 && b.actual > b.planned)
+  return {
+    generatedAt: new Date().toISOString(),
+    totalIncome: month.income,
+    totalExpenses,
+    totalSaved,
+    remaining,
+    savingsRate,
+    topCategory: topItem ? `${topItem.emoji} ${topItem.category}` : undefined,
+    overBudgetCategories: overBudget.map(b => `${b.emoji} ${b.category}`),
+  }
+}
 
-const MOTIVATIONAL = [
-  'Every little step builds our future. 💕',
-  'Together we\'re stronger. Keep going!',
-  'Small savings, big dreams. You\'ve got this.',
-  'Your future self will thank you. ❤️',
-]
+async function scheduleMonthEndPush(monthKey: string) {
+  try {
+    const last = lastDayOf(monthKey)
+    last.setHours(22, 0, 0, 0)
+    await fetch('/api/push/finance-month-end', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monthKey, fireAt: last.toISOString() }),
+    })
+  } catch { /* non-fatal */ }
+}
 
 /* ── main page ───────────────────────────────────────────────────────────────── */
 export default function FinancePage() {
-  const currentUser      = useAppStore(s => s.currentUser)!
-  const isSeval          = currentUser === 'seval'
-  const primary          = isSeval ? '#8b5cf6' : '#14b8a6'
-  const pageBg           = useAppStore(s => s.pageBackgrounds.plans)
-  const uploadPageBg     = useAppStore(s => s.uploadPageBackground)
-  const setPageBg        = useAppStore(s => s.setPageBackground)
-  const bgInputRef       = useRef<HTMLInputElement>(null)
+  const currentUser        = useAppStore(s => s.currentUser)!
+  const isSeval            = currentUser === 'seval'
+  const primary            = isSeval ? '#8b5cf6' : '#14b8a6'
+  const pageBg             = useAppStore(s => s.pageBackgrounds.plans)
+  const uploadPageBg       = useAppStore(s => s.uploadPageBackground)
+  const setPageBg          = useAppStore(s => s.setPageBackground)
+  const bgInputRef         = useRef<HTMLInputElement>(null)
 
-  const monthlyIncome    = useAppStore(s => s.monthlyIncome)
-  const budgetItems      = useAppStore(s => s.budgetItems)
-  const savingsGoals     = useAppStore(s => s.savingsGoals)
-  const setMonthlyIncome = useAppStore(s => s.setMonthlyIncome)
-  const updateBudgetItem = useAppStore(s => s.updateBudgetItem)
-  const addBudgetItem    = useAppStore(s => s.addBudgetItem)
-  const deleteBudgetItem = useAppStore(s => s.deleteBudgetItem)
-  const shoppingLists    = useAppStore(s => s.shoppingLists)
+  const financeMonths      = useAppStore(s => s.financeMonths)
+  const savingsTransactions = useAppStore(s => s.savingsTransactions)
+  const shoppingLists      = useAppStore(s => s.shoppingLists)
+  const createFinanceMonth = useAppStore(s => s.createFinanceMonth)
+  const updateFinanceMonth = useAppStore(s => s.updateFinanceMonth)
+  const deleteFinanceMonth = useAppStore(s => s.deleteFinanceMonth)
+  const addSavingsTransaction    = useAppStore(s => s.addSavingsTransaction)
+  const deleteSavingsTransaction = useAppStore(s => s.deleteSavingsTransaction)
+  const migrateFinanceData = useAppStore(s => s.migrateFinanceData)
 
-  const [editingBudget, setEditingBudget]   = useState<BudgetItem | null>(null)
-  const [addBudgetOpen, setAddBudgetOpen]   = useState(false)
-  const [incomeEditing, setIncomeEditing]   = useState(false)
-  const [incomeInput, setIncomeInput]       = useState(String(monthlyIncome))
-  const [quote]                             = useState(() => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)])
+  const [monthKey, setMonthKey]           = useState(currentMonthKey)
+  const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null)
+  const [addBudgetOpen, setAddBudgetOpen] = useState(false)
+  const [savingsOpen, setSavingsOpen]     = useState(false)
+  const [incomeEditing, setIncomeEditing] = useState(false)
+  const [incomeInput, setIncomeInput]     = useState('')
+  const [confirmFinalize, setConfirmFinalize] = useState(false)
+  const [deleteTxId, setDeleteTxId]       = useState<string | null>(null)
 
-  const totalExpenses = useMemo(() => budgetItems.reduce((a, b) => a + b.actual, 0), [budgetItems])
-  const totalPlanned  = useMemo(() => budgetItems.reduce((a, b) => a + b.planned, 0), [budgetItems])
-  const remaining     = monthlyIncome - totalExpenses
-  const totalSaved         = useMemo(() => savingsGoals.reduce((a, g) => a + g.savedAmount, 0), [savingsGoals])
-  const completedLists     = useMemo(() => shoppingLists.filter(l => l.isCompleted), [shoppingLists])
-  const totalShoppingSpent = useMemo(
-    () => completedLists.reduce((s, l) => s + l.items.reduce((a, i) => a + (i.price ?? 0) * i.quantity, 0), 0),
-    [completedLists],
+  // One-time migration of legacy data
+  useEffect(() => { migrateFinanceData() }, [migrateFinanceData])
+
+  const currentMonth = useMemo(
+    () => financeMonths.find(m => m.key === monthKey) ?? null,
+    [financeMonths, monthKey],
   )
+
+  const totalSavings = useMemo(
+    () => savingsTransactions.reduce((a, t) => a + t.amount, 0),
+    [savingsTransactions],
+  )
+  const thisMonthSavings = useMemo(
+    () => savingsTransactions.filter(t => t.monthKey === monthKey).reduce((a, t) => a + t.amount, 0),
+    [savingsTransactions, monthKey],
+  )
+  const thisMonthTx = useMemo(
+    () => [...savingsTransactions.filter(t => t.monthKey === monthKey)].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ),
+    [savingsTransactions, monthKey],
+  )
+
+  // Shopping lists completed in this month
+  const monthShoppingLists = useMemo(
+    () => shoppingLists.filter(l => l.isCompleted && l.completedAt?.startsWith(monthKey)),
+    [shoppingLists, monthKey],
+  )
+  const monthShoppingTotal = useMemo(
+    () => monthShoppingLists.reduce((s, l) => s + l.items.reduce((a, i) => a + (i.price ?? 0) * i.quantity, 0), 0),
+    [monthShoppingLists],
+  )
+
+  const prevMonthKey = prevKey(monthKey)
+  const prevMonth    = financeMonths.find(m => m.key === prevMonthKey) ?? null
 
   async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -71,11 +160,31 @@ export default function FinancePage() {
     e.target.value = ''
   }
 
+  function handleStartBlank() {
+    createFinanceMonth(monthKey)
+    scheduleMonthEndPush(monthKey)
+  }
+  function handleCopyPrev() {
+    createFinanceMonth(monthKey, prevMonthKey)
+    scheduleMonthEndPush(monthKey)
+  }
+
   function saveIncome() {
+    if (!currentMonth) return
     const v = parseFloat(incomeInput.replace(',', '.'))
-    if (!isNaN(v) && v >= 0) setMonthlyIncome(v)
+    if (!isNaN(v) && v >= 0) updateFinanceMonth(monthKey, { income: v })
     setIncomeEditing(false)
   }
+
+  function handleFinalize() {
+    if (!currentMonth) return
+    const report = buildReport(currentMonth, thisMonthSavings)
+    updateFinanceMonth(monthKey, { isFinalized: true, report })
+    setConfirmFinalize(false)
+  }
+
+  const totalExpenses = currentMonth?.budgetItems.reduce((a, b) => a + b.actual, 0) ?? 0
+  const remaining     = (currentMonth?.income ?? 0) - totalExpenses
 
   return (
     <div
@@ -89,12 +198,10 @@ export default function FinancePage() {
 
         {/* ── Hero ── */}
         <div
-          className="px-5 pt-14 pb-6"
-          style={{
-            background: pageBg ? 'transparent' : 'linear-gradient(135deg, #fef9ee 0%, #f0fdf4 60%, #fafafa 100%)',
-          }}
+          className="px-5 pt-14 pb-5"
+          style={{ background: pageBg ? 'transparent' : 'linear-gradient(135deg, #fef9ee 0%, #f0fdf4 60%, #fafafa 100%)' }}
         >
-          <div className="flex items-start justify-between mb-1">
+          <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: '#10b98120' }}>
@@ -123,178 +230,304 @@ export default function FinancePage() {
           </div>
         </div>
 
-        {/* ── Summary Cards ── */}
-        <div className="px-4 -mt-2 mb-4 grid grid-cols-2 gap-2.5">
-          {/* Income */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => { setIncomeInput(String(monthlyIncome)); setIncomeEditing(true) }}
-            className="bg-white rounded-2xl shadow-card p-4 text-left relative overflow-hidden"
+        {/* ── Month Selector ── */}
+        <div className="mx-4 mb-4 bg-white rounded-2xl shadow-card px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setMonthKey(prevKey(monthKey))}
+            className="w-9 h-9 flex items-center justify-center rounded-xl active:bg-gray-100"
           >
-            <div className="absolute inset-0 opacity-5" style={{ background: '#10b981' }} />
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#10b98120' }}>
-                <TrendingUp size={14} color="#10b981" />
-              </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Income</span>
-            </div>
-            <p className="text-xl font-bold" style={{ color: '#10b981' }}>{fmt(monthlyIncome)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">per month</p>
-          </motion.button>
-
-          {/* Expenses */}
-          <div className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-5" style={{ background: '#ef4444' }} />
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#ef444420' }}>
-                <TrendingDown size={14} color="#ef4444" />
-              </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Expenses</span>
-            </div>
-            <p className="text-xl font-bold text-red-400">{fmt(totalExpenses)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">of {fmt(totalPlanned)} planned</p>
+            <ChevronLeft size={18} className="text-gray-500" />
+          </button>
+          <div className="text-center">
+            <p className="font-bold text-gray-800 text-base">{monthLabel(monthKey)}</p>
+            {currentMonth && (
+              <span
+                className={cn(
+                  'text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block',
+                  currentMonth.isFinalized
+                    ? 'bg-purple-100 text-purple-600'
+                    : monthKey === currentMonthKey()
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-gray-100 text-gray-500'
+                )}
+              >
+                {currentMonth.isFinalized ? 'Finalized' : monthKey === currentMonthKey() ? 'Active' : 'Past'}
+              </span>
+            )}
           </div>
-
-          {/* Left */}
-          <div className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-5" style={{ background: remaining >= 0 ? '#60a5fa' : '#ef4444' }} />
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#60a5fa20' }}>
-                <Wallet size={14} color="#60a5fa" />
-              </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Remaining</span>
-            </div>
-            <p className="text-xl font-bold" style={{ color: remaining >= 0 ? '#60a5fa' : '#ef4444' }}>
-              {remaining < 0 ? '-' : ''}{fmt(Math.abs(remaining))}
-            </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{remaining >= 0 ? 'still available' : 'over budget'}</p>
-          </div>
-
-          {/* Goals saved */}
-          <div className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-5" style={{ background: '#f59e0b' }} />
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#f59e0b20' }}>
-                <Target size={14} color="#f59e0b" />
-              </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Savings</span>
-            </div>
-            <p className="text-xl font-bold" style={{ color: '#f59e0b' }}>{fmt(totalSaved)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{savingsGoals.length} goal{savingsGoals.length !== 1 ? 's' : ''}</p>
-          </div>
+          <button
+            onClick={() => setMonthKey(nextKey(monthKey))}
+            className="w-9 h-9 flex items-center justify-center rounded-xl active:bg-gray-100"
+          >
+            <ChevronRight size={18} className="text-gray-500" />
+          </button>
         </div>
 
-        {/* ── Motivational quote ── */}
-        <div className="mx-4 mb-4 px-4 py-3 rounded-2xl" style={{ background: 'linear-gradient(135deg, #fef3c710, #d1fae510)' }}>
-          <p className="text-xs text-gray-500 text-center italic">{quote}</p>
+        {/* ── Total Savings Banner ── */}
+        <div className="mx-4 mb-4 rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)' }}>
+          <span className="text-2xl">🏦</span>
+          <div>
+            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Total Savings Balance</p>
+            <p className="text-xl font-bold text-amber-800">{fmt(totalSavings)}</p>
+          </div>
+          {thisMonthSavings !== 0 && (
+            <div className="ml-auto text-right">
+              <p className="text-[10px] text-amber-600">This month</p>
+              <p className={cn('text-sm font-bold', thisMonthSavings > 0 ? 'text-green-600' : 'text-red-500')}>
+                {fmtSigned(thisMonthSavings)}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* ── Monthly Budget ── */}
-        <div className="px-4 mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">Monthly Budget</h2>
-            <button
-              onClick={() => setAddBudgetOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: '#10b98115', color: '#10b981' }}
-            >
-              <Plus size={11} /> Category
-            </button>
-          </div>
+        {/* ── Content ── */}
+        {!currentMonth ? (
+          <EmptyMonthState
+            monthKey={monthKey}
+            prevMonth={prevMonth}
+            prevMonthKey={prevMonthKey}
+            onStartBlank={handleStartBlank}
+            onCopyPrev={handleCopyPrev}
+          />
+        ) : (
+          <>
+            {/* Month-end report (if finalized) */}
+            {currentMonth.isFinalized && currentMonth.report && (
+              <ReportCard report={currentMonth.report} />
+            )}
 
-          <div className="space-y-2">
-            {budgetItems.map((item, idx) => {
-              const pct    = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0
-              const color  = pctColor(item.planned > 0 ? (item.actual / item.planned) * 100 : 0)
-              const over   = item.planned > 0 && item.actual > item.planned
-              return (
-                <motion.button
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setEditingBudget(item)}
-                  className="w-full bg-white rounded-2xl shadow-card p-3.5 text-left active:bg-gray-50"
+            {/* Summary cards */}
+            <div className="px-4 mb-4 grid grid-cols-2 gap-2.5">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { setIncomeInput(String(currentMonth.income)); setIncomeEditing(true) }}
+                className="bg-white rounded-2xl shadow-card p-4 text-left relative overflow-hidden"
+              >
+                <div className="absolute inset-0 opacity-5" style={{ background: '#10b981' }} />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#10b98120' }}>
+                    <TrendingUp size={14} color="#10b981" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Income</span>
+                </div>
+                <p className="text-xl font-bold" style={{ color: '#10b981' }}>{fmt(currentMonth.income)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">tap to edit</p>
+              </motion.button>
+
+              <div className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-5" style={{ background: '#ef4444' }} />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#ef444420' }}>
+                    <TrendingDown size={14} color="#ef4444" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Expenses</span>
+                </div>
+                <p className="text-xl font-bold text-red-400">{fmt(totalExpenses)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">of {fmt(currentMonth.budgetItems.reduce((a, b) => a + b.planned, 0))} planned</p>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-5" style={{ background: remaining >= 0 ? '#60a5fa' : '#ef4444' }} />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#60a5fa20' }}>
+                    <Wallet size={14} color="#60a5fa" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Remaining</span>
+                </div>
+                <p className="text-xl font-bold" style={{ color: remaining >= 0 ? '#60a5fa' : '#ef4444' }}>
+                  {remaining < 0 ? '-' : ''}{fmt(remaining)}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{remaining >= 0 ? 'still available' : 'over budget'}</p>
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setSavingsOpen(true)}
+                className="bg-white rounded-2xl shadow-card p-4 text-left relative overflow-hidden"
+              >
+                <div className="absolute inset-0 opacity-5" style={{ background: '#f59e0b' }} />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#f59e0b20' }}>
+                    <span className="text-xs">🏦</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Saved</span>
+                </div>
+                <p className="text-xl font-bold" style={{ color: '#f59e0b' }}>
+                  {thisMonthSavings >= 0 ? '' : '-'}{fmt(thisMonthSavings)}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5">this month · tap to add</p>
+              </motion.button>
+            </div>
+
+            {/* Budget categories */}
+            <div className="px-4 mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-700">Budget Categories</h2>
+                <button
+                  onClick={() => setAddBudgetOpen(true)}
+                  className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: '#10b98115', color: '#10b981' }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">{item.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-sm font-medium text-gray-700 truncate">{item.category}</p>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          <span className="text-[11px] font-semibold" style={{ color }}>
-                            {fmt(item.actual)}
-                          </span>
-                          <span className="text-[10px] text-gray-300">/</span>
-                          <span className="text-[10px] text-gray-400">{fmt(item.planned)}</span>
-                          {over && <span className="text-[9px] font-bold text-red-400 bg-red-50 px-1 rounded">OVER</span>}
+                  <Plus size={11} /> Category
+                </button>
+              </div>
+              <div className="space-y-2">
+                {currentMonth.budgetItems.map((item, idx) => {
+                  const pct   = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0
+                  const color = pctColor(item.planned > 0 ? (item.actual / item.planned) * 100 : 0)
+                  const over  = item.planned > 0 && item.actual > item.planned
+                  return (
+                    <motion.button
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setEditingBudget(item)}
+                      className="w-full bg-white rounded-2xl shadow-card p-3.5 text-left active:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl shrink-0">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-sm font-medium text-gray-700 truncate">{item.category}</p>
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              <span className="text-[11px] font-semibold" style={{ color }}>{fmt(item.actual)}</span>
+                              <span className="text-[10px] text-gray-300">/</span>
+                              <span className="text-[10px] text-gray-400">{fmt(item.planned)}</span>
+                              {over && <span className="text-[9px] font-bold text-red-400 bg-red-50 px-1 rounded">OVER</span>}
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ background: color }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ type: 'spring', stiffness: 100, damping: 20, delay: idx * 0.02 }}
+                            />
+                          </div>
+                          {item.note && <p className="text-[10px] text-gray-400 mt-1 truncate">{item.note}</p>}
                         </div>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ background: color }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: idx * 0.03 }}
-                        />
-                      </div>
-                      {item.note && (
-                        <p className="text-[10px] text-gray-400 mt-1 truncate">{item.note}</p>
-                      )}
-                    </div>
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* ── Shopping History ── */}
-        {completedLists.length > 0 && (
-          <div className="px-4 mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-gray-700">Shopping History 🛍️</h2>
-              {totalShoppingSpent > 0 && (
-                <span className="text-[11px] font-bold" style={{ color: '#ef4444' }}>{fmt(totalShoppingSpent)} total</span>
-              )}
+                    </motion.button>
+                  )
+                })}
+              </div>
             </div>
-            <div className="space-y-2">
-              {completedLists.map((list, idx) => {
-                const cost = list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
-                return (
-                  <motion.div
-                    key={list.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
-                  >
-                    {list.coverPhoto ? (
-                      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
-                        <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+
+            {/* Savings transactions this month */}
+            {thisMonthTx.length > 0 && (
+              <div className="px-4 mb-5">
+                <h2 className="text-sm font-bold text-gray-700 mb-3">Savings This Month</h2>
+                <div className="space-y-2">
+                  {thisMonthTx.map(t => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
+                    >
+                      <div className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0',
+                        t.amount > 0 ? 'bg-green-100' : 'bg-red-100'
+                      )}>
+                        {t.amount > 0 ? '💸' : '📤'}
                       </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">🛒</div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-700 truncate">{list.name}</p>
-                      <p className="text-[10px] text-gray-400">
-                        {list.storeName ? `📍 ${list.storeName} · ` : ''}
-                        {list.items.length} item{list.items.length !== 1 ? 's' : ''}
-                        {list.completedAt ? ` · ${new Date(list.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-700 truncate">
+                          {t.note || (t.amount > 0 ? 'Contribution' : 'Withdrawal')}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {new Date(t.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          {' · '}{t.createdBy}
+                        </p>
+                      </div>
+                      <p className={cn('text-sm font-bold shrink-0 mr-1', t.amount > 0 ? 'text-green-500' : 'text-red-400')}>
+                        {t.amount > 0 ? '+' : ''}{fmt(t.amount)}
                       </p>
-                    </div>
-                    {cost > 0 && <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(cost)}</p>}
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+                      <button
+                        onClick={() => setDeleteTxId(t.id)}
+                        className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 active:text-red-400"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
+            {/* Shopping completed this month */}
+            {monthShoppingLists.length > 0 && (
+              <div className="px-4 mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-bold text-gray-700">Shopping This Month 🛍️</h2>
+                  {monthShoppingTotal > 0 && (
+                    <span className="text-[11px] font-bold text-red-400">{fmt(monthShoppingTotal)} total</span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {monthShoppingLists.map((list, idx) => {
+                    const cost = list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
+                    return (
+                      <motion.div
+                        key={list.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
+                      >
+                        {list.coverPhoto ? (
+                          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+                            <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">🛒</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-700 truncate">{list.name}</p>
+                          <p className="text-[10px] text-gray-400">
+                            {list.storeName ? `📍 ${list.storeName} · ` : ''}
+                            {list.items.length} item{list.items.length !== 1 ? 's' : ''}
+                            {list.completedAt ? ` · ${new Date(list.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                          </p>
+                        </div>
+                        {cost > 0 && <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(cost)}</p>}
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Finalize button */}
+            {!currentMonth.isFinalized && canFinalize(monthKey) && (
+              <div className="px-4 mb-5">
+                <button
+                  onClick={() => setConfirmFinalize(true)}
+                  className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
+                >
+                  <Sparkles size={16} />
+                  Generate Month-End Report
+                </button>
+              </div>
+            )}
+
+            {/* Delete month */}
+            <div className="px-4 mb-5">
+              <button
+                onClick={() => { if (confirm(`Delete ${monthLabel(monthKey)}?`)) deleteFinanceMonth(monthKey) }}
+                className="w-full py-2.5 rounded-2xl text-red-400 text-sm flex items-center justify-center gap-1.5 bg-white shadow-card"
+              >
+                <Trash2 size={13} /> Delete This Month
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Income edit modal ── */}
@@ -312,7 +545,7 @@ export default function FinancePage() {
             >
               <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <h3 className="font-bold text-gray-800 mb-1">Monthly Income 💶</h3>
-                <p className="text-xs text-gray-400 mb-4">Combined household income</p>
+                <p className="text-xs text-gray-400 mb-4">Combined household income for {shortMonthLabel(monthKey)}</p>
                 <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-3 mb-4">
                   <span className="text-gray-400 font-semibold">{CURRENCY}</span>
                   <input
@@ -335,13 +568,25 @@ export default function FinancePage() {
         )}
       </AnimatePresence>
 
-      {/* ── Budget item edit sheet ── */}
+      {/* ── Budget edit sheet ── */}
       <AnimatePresence>
-        {editingBudget && (
+        {editingBudget && currentMonth && (
           <BudgetEditSheet
             item={editingBudget}
-            onSave={(updates) => { updateBudgetItem(editingBudget.id, updates); setEditingBudget(null) }}
-            onDelete={() => { deleteBudgetItem(editingBudget.id); setEditingBudget(null) }}
+            onSave={updates => {
+              updateFinanceMonth(monthKey, {
+                budgetItems: currentMonth.budgetItems.map(b =>
+                  b.id === editingBudget.id ? { ...b, ...updates } : b
+                ),
+              })
+              setEditingBudget(null)
+            }}
+            onDelete={() => {
+              updateFinanceMonth(monthKey, {
+                budgetItems: currentMonth.budgetItems.filter(b => b.id !== editingBudget.id),
+              })
+              setEditingBudget(null)
+            }}
             onClose={() => setEditingBudget(null)}
           />
         )}
@@ -349,14 +594,166 @@ export default function FinancePage() {
 
       {/* ── Add budget category sheet ── */}
       <AnimatePresence>
-        {addBudgetOpen && (
+        {addBudgetOpen && currentMonth && (
           <AddBudgetSheet
-            onSave={(item) => { addBudgetItem(item); setAddBudgetOpen(false) }}
+            onSave={item => {
+              updateFinanceMonth(monthKey, {
+                budgetItems: [...currentMonth.budgetItems, { ...item, id: Math.random().toString(36).slice(2) }],
+              })
+              setAddBudgetOpen(false)
+            }}
             onClose={() => setAddBudgetOpen(false)}
           />
         )}
       </AnimatePresence>
 
+      {/* ── Savings sheet ── */}
+      <AnimatePresence>
+        {savingsOpen && (
+          <SavingsSheet
+            monthKey={monthKey}
+            monthLabel={shortMonthLabel(monthKey)}
+            onSave={(amount, note) => { addSavingsTransaction(monthKey, amount, note); setSavingsOpen(false) }}
+            onClose={() => setSavingsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Finalize confirm ── */}
+      <AnimatePresence>
+        {confirmFinalize && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setConfirmFinalize(false)}
+              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            >
+              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
+                <div className="text-center mb-4">
+                  <div className="text-4xl mb-2">📊</div>
+                  <h3 className="font-bold text-gray-800">Generate Report?</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    This will finalize {shortMonthLabel(monthKey)} and generate your month-end report. You can still edit entries after.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setConfirmFinalize(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button onClick={handleFinalize} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}>
+                    Generate
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete savings transaction confirm ── */}
+      <AnimatePresence>
+        {deleteTxId && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setDeleteTxId(null)}
+              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            >
+              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
+                <h3 className="font-bold text-gray-800 mb-3 text-center">Remove transaction?</h3>
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteTxId(null)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button onClick={() => { deleteSavingsTransaction(deleteTxId!); setDeleteTxId(null) }}
+                    className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm">Delete</button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ── Empty Month State ────────────────────────────────────────────────────────── */
+function EmptyMonthState({
+  monthKey, prevMonth, prevMonthKey, onStartBlank, onCopyPrev,
+}: {
+  monthKey: string
+  prevMonth: FinanceMonth | null
+  prevMonthKey: string
+  onStartBlank: () => void
+  onCopyPrev: () => void
+}) {
+  return (
+    <div className="px-4">
+      <div className="bg-white rounded-3xl shadow-card p-6 text-center">
+        <div className="text-5xl mb-3">📋</div>
+        <h3 className="font-bold text-gray-800 text-base mb-1">No budget for {monthLabel(monthKey)}</h3>
+        <p className="text-xs text-gray-400 mb-5">Start tracking your finances for this month.</p>
+        <div className="space-y-2">
+          <button
+            onClick={onStartBlank}
+            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
+            style={{ background: '#10b981' }}
+          >
+            Start blank
+          </button>
+          {prevMonth && (
+            <button
+              onClick={onCopyPrev}
+              className="w-full py-3.5 rounded-2xl text-sm font-semibold bg-gray-50 text-gray-700"
+            >
+              Copy from {shortMonthLabel(prevMonthKey)}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Report Card ─────────────────────────────────────────────────────────────── */
+function ReportCard({ report }: { report: FinanceMonthReport }) {
+  const fmt2 = (n: number) => `€${Math.abs(n).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  return (
+    <div className="mx-4 mb-4 rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, #f5f3ff, #eef2ff)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">📊</span>
+        <h3 className="font-bold text-gray-800 text-sm">Month-End Report</h3>
+        <span className="ml-auto text-[10px] text-gray-400">
+          {new Date(report.generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {[
+          { label: 'Income',    value: fmt2(report.totalIncome),    color: '#10b981' },
+          { label: 'Expenses',  value: fmt2(report.totalExpenses),  color: '#ef4444' },
+          { label: 'Saved',     value: fmt2(report.totalSaved),     color: '#f59e0b' },
+          { label: 'Remaining', value: `${report.remaining < 0 ? '-' : ''}${fmt2(report.remaining)}`, color: report.remaining >= 0 ? '#60a5fa' : '#ef4444' },
+        ].map(row => (
+          <div key={row.label} className="bg-white/70 rounded-xl px-3 py-2">
+            <p className="text-[10px] text-gray-400 mb-0.5">{row.label}</p>
+            <p className="text-sm font-bold" style={{ color: row.color }}>{row.value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="bg-white/70 rounded-xl px-3 py-2 mb-2">
+        <p className="text-[10px] text-gray-400 mb-0.5">Savings Rate</p>
+        <p className="text-sm font-bold text-purple-600">{report.savingsRate.toFixed(1)}%</p>
+      </div>
+      {report.topCategory && (
+        <p className="text-xs text-gray-500">Top category: <span className="font-semibold">{report.topCategory}</span></p>
+      )}
+      {report.overBudgetCategories.length > 0 && (
+        <p className="text-xs text-red-400 mt-1">Over budget: {report.overBudgetCategories.join(', ')}</p>
+      )}
     </div>
   )
 }
@@ -403,7 +800,6 @@ function BudgetEditSheet({
               <X size={16} />
             </button>
           </div>
-
           <div className="space-y-3 mb-5">
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Planned Budget</p>
@@ -428,14 +824,12 @@ function BudgetEditSheet({
                 className="w-full text-sm text-gray-700 bg-transparent outline-none" />
             </div>
           </div>
-
           <button onClick={save}
             className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
             style={{ background: '#10b981' }}
           >
             Save Changes
           </button>
-
           {!confirmDelete ? (
             <button onClick={() => setConfirmDelete(true)}
               className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
@@ -521,3 +915,96 @@ function AddBudgetSheet({
   )
 }
 
+/* ── Savings Sheet ────────────────────────────────────────────────────────────── */
+function SavingsSheet({
+  monthKey: _monthKey, monthLabel: label, onSave, onClose,
+}: {
+  monthKey: string
+  monthLabel: string
+  onSave: (amount: number, note?: string) => void
+  onClose: () => void
+}) {
+  const [type,   setType]   = useState<'add' | 'withdraw'>('add')
+  const [amount, setAmount] = useState('')
+  const [note,   setNote]   = useState('')
+
+  function save() {
+    const v = parseFloat(amount.replace(',', '.'))
+    if (isNaN(v) || v <= 0) return
+    onSave(type === 'add' ? v : -v, note.trim() || undefined)
+  }
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose} className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+      >
+        <div className="px-5 pt-4 pb-10">
+          <div className="drag-handle mb-5" />
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-base font-bold text-gray-800">Savings Entry</h3>
+              <p className="text-xs text-gray-400">{label}</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Type toggle */}
+          <div className="flex gap-2 mb-4 bg-gray-100 rounded-2xl p-1">
+            <button
+              onClick={() => setType('add')}
+              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'add' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500')}
+            >
+              + Contribute
+            </button>
+            <button
+              onClick={() => setType('withdraw')}
+              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'withdraw' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-500')}
+            >
+              - Withdraw
+            </button>
+          </div>
+
+          <div className="space-y-3 mb-5">
+            <div className="bg-gray-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Amount</p>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400 font-semibold">{CURRENCY}</span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && save()}
+                  autoFocus
+                  placeholder="0"
+                  className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none"
+                />
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Note (optional)</p>
+              <input type="text" value={note} onChange={e => setNote(e.target.value)}
+                placeholder="e.g. Monthly transfer"
+                className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+            </div>
+          </div>
+
+          <button
+            onClick={save}
+            disabled={!amount || parseFloat(amount) <= 0}
+            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+            style={{ background: type === 'add' ? '#10b981' : '#ef4444' }}
+          >
+            {type === 'add' ? 'Add Contribution' : 'Record Withdrawal'}
+          </button>
+        </div>
+      </motion.div>
+    </>
+  )
+}

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   // 1. Fetch due, unsent reminders
   const { data: reminders, error: remErr } = await supabase
     .from('push_reminders')
-    .select('id, couple_id, user_name, title, message, fire_at')
+    .select('id, couple_id, user_name, title, message, fire_at, item_type')
     .lte('fire_at', now)
     .is('sent_at', null)
     .order('fire_at', { ascending: true })
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
   const staleEndpoints: string[] = []
 
   await Promise.all(
-    reminders.map(async (r: { id: string; user_name: string; title: string; message: string; fire_at: string }) => {
+    reminders.map(async (r: { id: string; user_name: string; title: string; message: string; fire_at: string; item_type?: string }) => {
       const normalizedUser = r.user_name.toLowerCase()
       const userSubs = subsByUser[normalizedUser] ?? []
       console.log(`[process GET] Processing reminder ${r.id} for ${normalizedUser} — subscriptions: ${userSubs.length}`)
@@ -115,10 +115,11 @@ export async function GET(req: NextRequest) {
 
       await Promise.all(
         userSubs.map(async sub => {
+          const notifUrl = r.item_type === 'finance-month-end' ? '/plans' : '/together'
           const payload = JSON.stringify({
             title: r.title,
             body:  r.message,
-            url:   '/together',
+            url:   notifUrl,
             tag:   `sema-${r.id}`,
           })
           try {

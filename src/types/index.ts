@@ -220,3 +220,33 @@ export interface Memory {
   createdBy: UserName
   createdAt: string
 }
+
+export interface FinanceMonth {
+  key: string              // 'YYYY-MM'
+  income: number
+  budgetItems: BudgetItem[]
+  isFinalized: boolean
+  report?: FinanceMonthReport
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FinanceMonthReport {
+  generatedAt: string
+  totalIncome: number
+  totalExpenses: number
+  totalSaved: number
+  remaining: number
+  savingsRate: number      // percentage
+  topCategory?: string
+  overBudgetCategories: string[]
+}
+
+export interface SavingsTransaction {
+  id: string
+  monthKey: string         // 'YYYY-MM'
+  amount: number           // positive = contribution, negative = withdrawal
+  note?: string
+  createdAt: string
+  createdBy: UserName
+}

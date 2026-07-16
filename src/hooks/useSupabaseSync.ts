@@ -102,12 +102,17 @@ export function useSupabaseSync() {
 
     const ARRAY_KEYS = ['events', 'todos', 'moods', 'loveNotes', 'wishlistItems',
                         'countdowns', 'memories', 'goals', 'partnerNotes',
-                        'budgetItems', 'savingsGoals']
+                        'budgetItems', 'savingsGoals', 'savingsTransactions']
     for (const key of ARRAY_KEYS) {
       const r = Array.isArray(remoteState[key]) ? (remoteState[key] as unknown[]) : []
       const l = Array.isArray(local[key])       ? (local[key]       as unknown[]) : []
       merged[key] = mergeArrayById(r, l)
     }
+
+    // financeMonths uses 'key' (YYYY-MM) as identifier instead of 'id'
+    const rFM = Array.isArray(remoteState.financeMonths) ? (remoteState.financeMonths as unknown[]) : []
+    const lFM = Array.isArray(local.financeMonths)       ? (local.financeMonths       as unknown[]) : []
+    merged.financeMonths = mergeArrayById(rFM, lFM, 'key')
 
     const remoteShop = Array.isArray(remoteState.shoppingLists) ? (remoteState.shoppingLists as ShoppingList[]) : []
     const localShop  = Array.isArray(local.shoppingLists)       ? (local.shoppingLists       as ShoppingList[]) : []

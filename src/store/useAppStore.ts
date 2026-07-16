@@ -9,6 +9,7 @@ import {
   type Goal, type GoalCategory, type PartnerNote,
   type ShoppingList, type ShoppingItem, type ShoppingListInput, type PageBackgrounds,
   type BudgetItem, type SavingsGoal,
+  type FinanceMonth, type FinanceMonthReport, type SavingsTransaction,
   OTHER_USER,
 } from '@/types'
 
@@ -100,7 +101,7 @@ interface AppState {
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
 
-  // Finance
+  // Finance (legacy — kept for backward compat)
   monthlyIncome: number
   budgetItems: BudgetItem[]
   savingsGoals: SavingsGoal[]
@@ -112,6 +113,16 @@ interface AppState {
   updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void
   deleteSavingsGoal: (id: string) => void
   addToSavings: (id: string, amount: number) => void
+
+  // Finance v2 — per-month budgets + savings ledger
+  financeMonths: FinanceMonth[]
+  savingsTransactions: SavingsTransaction[]
+  createFinanceMonth: (key: string, copyFromKey?: string) => void
+  updateFinanceMonth: (key: string, updates: Partial<Pick<FinanceMonth, 'income' | 'budgetItems' | 'isFinalized' | 'report'>>) => void
+  deleteFinanceMonth: (key: string) => void
+  addSavingsTransaction: (monthKey: string, amount: number, note?: string) => void
+  deleteSavingsTransaction: (id: string) => void
+  migrateFinanceData: () => void
 
   // Page backgrounds
   pageBackgrounds: PageBackgrounds
@@ -792,6 +803,81 @@ export const useAppStore = create<AppState>()(
             g.id === id ? { ...g, savedAmount: Math.max(0, g.savedAmount + amount) } : g
           ),
         })),
+
+      // ── Finance v2 ───────────────────────────────────────────────────────────
+      financeMonths: [],
+      savingsTransactions: [],
+
+      createFinanceMonth: (key, copyFromKey) => {
+        const s = get()
+        if (s.financeMonths.find(m => m.key === key)) return
+        let income = 0
+        let items: BudgetItem[] = DEFAULT_BUDGET_ITEMS.map(b => ({ ...b, actual: 0 }))
+        if (copyFromKey) {
+          const source = s.financeMonths.find(m => m.key === copyFromKey)
+          if (source) {
+            income = source.income
+            items = source.budgetItems.map(b => ({ ...b, id: generateId(), actual: 0 }))
+          }
+        }
+        const now = new Date().toISOString()
+        set(s2 => ({
+          financeMonths: [...s2.financeMonths, {
+            key, income, budgetItems: items, isFinalized: false,
+            createdAt: now, updatedAt: now,
+          }],
+        }))
+      },
+
+      updateFinanceMonth: (key, updates) =>
+        set(s => ({
+          financeMonths: s.financeMonths.map(m =>
+            m.key === key ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m
+          ),
+        })),
+
+      deleteFinanceMonth: (key) =>
+        set(s => ({
+          financeMonths: s.financeMonths.filter(m => m.key !== key),
+          savingsTransactions: s.savingsTransactions.filter(t => t.monthKey !== key),
+        })),
+
+      addSavingsTransaction: (monthKey, amount, note) => {
+        const { currentUser } = get()
+        if (!currentUser) return
+        set(s => ({
+          savingsTransactions: [...s.savingsTransactions, {
+            id: generateId(), monthKey, amount,
+            note: note?.trim() || undefined,
+            createdAt: new Date().toISOString(),
+            createdBy: currentUser,
+          }],
+        }))
+      },
+
+      deleteSavingsTransaction: (id) =>
+        set(s => ({ savingsTransactions: s.savingsTransactions.filter(t => t.id !== id) })),
+
+      migrateFinanceData: () => {
+        const s = get()
+        if (s.financeMonths.length > 0) return
+        const hasData = s.monthlyIncome > 0 || s.budgetItems.some(b => b.actual > 0)
+        if (!hasData) return
+        const now = new Date()
+        const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+        const timestamp = new Date().toISOString()
+        const totalSaved = s.savingsGoals.reduce((a, g) => a + g.savedAmount, 0)
+        const month: FinanceMonth = {
+          key, income: s.monthlyIncome, budgetItems: s.budgetItems,
+          isFinalized: false, createdAt: timestamp, updatedAt: timestamp,
+        }
+        const transactions: SavingsTransaction[] = totalSaved > 0 ? [{
+          id: generateId(), monthKey: key, amount: totalSaved,
+          note: 'Imported from savings goals',
+          createdAt: timestamp, createdBy: s.currentUser ?? 'mateo',
+        }] : []
+        set({ financeMonths: [month], savingsTransactions: transactions })
+      },
 
       // ── Page backgrounds ─────────────────────────────────────────────────────
       pageBackgrounds: {},
