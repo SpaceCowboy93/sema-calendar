@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Palette, Camera, ChevronDown } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
 import { generateId, cn } from '@/lib/utils'
@@ -12,10 +12,10 @@ import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet
 type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
 
 const COLOR_OPTIONS = [
-  { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
-  { value: 'blue',   hex: '#60a5fa', label: 'Blue'   },
-  { value: 'yellow', hex: '#fbbf24', label: 'Yellow' },
-  { value: 'green',  hex: '#34d399', label: 'Green'  },
+  { value: 'seval',  hex: '#a78bfa', label: 'Wishes'  },
+  { value: 'blue',   hex: '#60a5fa', label: 'Dreams'  },
+  { value: 'yellow', hex: '#fbbf24', label: 'Moments' },
+  { value: 'green',  hex: '#34d399', label: 'Plans'   },
 ] as const
 
 type TypeConfig = {
@@ -38,13 +38,13 @@ const TYPE_CONFIG: Record<CreateType, TypeConfig> = {
     emoji: '💛', label: 'Moment',
     placeholder: 'Name this moment...',
     defaultColor: 'yellow', saveLabel: 'Save Moment',
-    showColor: true, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
+    showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   plan: {
     emoji: '💚', label: 'Plan',
     placeholder: 'What do you want to plan?',
     defaultColor: 'green', saveLabel: 'Save Plan',
-    showColor: true, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
+    showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   dream: {
     emoji: '💙', label: 'Dream',
@@ -107,7 +107,6 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
   const [photos,     setPhotos]     = useState<string[]>([])      // blob or real URLs
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [bgPhotoIdx, setBgPhotoIdx] = useState<number | null>(null)
-  const [colorPopup, setColorPopup] = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [uploading,  setUploading]  = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -126,7 +125,7 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime('')
     setCheckItems([]); setNewItem(''); setPhotos([]); setPendingFiles([])
-    setBgPhotoIdx(null); setColorPopup(false); setSaving(false)
+    setBgPhotoIdx(null); setSaving(false)
     setUploading(false); setUploadError(null); setSent(false)
   }
 
@@ -135,7 +134,6 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
   function switchType(t: CreateType) {
     setType(t)
     setColor(TYPE_CONFIG[t].defaultColor)
-    setColorPopup(false)
     // Keep title, notes, date, time, checkItems, photos across type switches
   }
 
@@ -408,57 +406,6 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
 
                     {!cfg.noteMode && (
                       <>
-                        {/* Color picker (moment + plan) */}
-                        {cfg.showColor && (
-                          <div className="relative">
-                            <button
-                              onClick={() => setColorPopup(v => !v)}
-                              className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl bg-gray-50
-                                         active:bg-gray-100 transition-colors"
-                            >
-                              <div className="w-5 h-5 rounded-full shrink-0" style={{ background: activeColor?.hex }} />
-                              <span className="text-sm font-medium text-gray-700 flex-1 text-left">{activeColor?.label}</span>
-                              <Palette size={14} className="text-gray-400" />
-                              <ChevronDown
-                                size={14}
-                                className={cn('text-gray-400 transition-transform', colorPopup && 'rotate-180')}
-                              />
-                            </button>
-                            <AnimatePresence>
-                              {colorPopup && (
-                                <>
-                                  <div className="fixed inset-0 z-[55]" onClick={() => setColorPopup(false)} />
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                                    transition={{ duration: 0.12 }}
-                                    className="absolute left-0 right-0 top-full mt-1.5 z-[56] bg-white
-                                               rounded-2xl shadow-modal border border-gray-100 p-2.5"
-                                  >
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      {COLOR_OPTIONS.map(opt => (
-                                        <button
-                                          key={opt.value}
-                                          onClick={() => { setColor(opt.value as EventColor); setColorPopup(false) }}
-                                          className={cn(
-                                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all',
-                                            color === opt.value ? 'bg-gray-100' : 'hover:bg-gray-50'
-                                          )}
-                                        >
-                                          <div className="w-6 h-6 rounded-full shrink-0" style={{ background: opt.hex }} />
-                                          <span className="text-sm font-medium text-gray-700 flex-1 text-left">{opt.label}</span>
-                                          {color === opt.value && <Check size={13} className="text-gray-400 shrink-0" strokeWidth={2.5} />}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        )}
-
                         {/* Date & Time */}
                         {cfg.showDate && (
                           <div className="bg-gray-50 rounded-2xl p-4 space-y-3">

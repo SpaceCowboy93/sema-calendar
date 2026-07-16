@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, type SharedTodo, type EventColor } from '@/types'
+import { USERS, type SharedTodo } from '@/types'
 import { cn } from '@/lib/utils'
 import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
 
@@ -20,14 +20,12 @@ export default function TodosPage() {
   const isSeval      = currentUser === 'seval'
   const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
   const lightBg      = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
-  const defaultColor: EventColor = isSeval ? 'seval' : 'blue'
 
   const [showForm, setShowForm]       = useState(false)
   const [taskTitle, setTaskTitle]     = useState('')
   const [subItems, setSubItems]       = useState<string[]>([''])
   const [taskNotes, setTaskNotes]     = useState('')
   const [taskDate, setTaskDate]       = useState('')
-  const [taskColor, setTaskColor]     = useState<EventColor>(defaultColor)
   const [focusLast, setFocusLast]     = useState(false)
   const [editingTodo, setEditingTodo] = useState<SharedTodo | null>(null)
 
@@ -48,7 +46,6 @@ export default function TodosPage() {
     setTaskTitle('')
     setSubItems([''])
     setTaskDate('')
-    setTaskColor(defaultColor)
     setShowForm(true)
     setTimeout(() => titleRef.current?.focus(), 50)
   }
@@ -89,7 +86,7 @@ export default function TodosPage() {
       taskTitle.trim(),
       validItems.length ? validItems : undefined,
       taskDate || undefined,
-      taskColor,
+      'green',
       taskNotes.trim() || undefined,
     )
     closeForm()
@@ -183,44 +180,17 @@ export default function TodosPage() {
               />
             </div>
 
-            {/* Date + Color */}
-            <div className="mt-4 space-y-3">
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
-                  Date (marks on calendar)
-                </p>
-                <input
-                  type="date"
-                  value={taskDate}
-                  onChange={e => setTaskDate(e.target.value)}
-                  className="w-full text-sm text-gray-700 bg-white/70 rounded-xl px-3 py-2 outline-none"
-                />
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Color
-                </p>
-                <div className="flex gap-2">
-                  {COLOR_OPTIONS.map(c => (
-                    <button
-                      key={c.value}
-                      onClick={() => setTaskColor(c.value as EventColor)}
-                      className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                    >
-                      <div
-                        className="w-8 h-8 rounded-full"
-                        style={{
-                          background: c.hex,
-                          outline: taskColor === c.value ? `3px solid ${c.hex}` : '3px solid transparent',
-                          outlineOffset: '2px',
-                        }}
-                      />
-                      <span className="text-[9px] text-gray-400">{c.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Date */}
+            <div className="mt-4">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                Date (marks on calendar)
+              </p>
+              <input
+                type="date"
+                value={taskDate}
+                onChange={e => setTaskDate(e.target.value)}
+                className="w-full text-sm text-gray-700 bg-white/70 rounded-xl px-3 py-2 outline-none"
+              />
             </div>
 
             {/* Actions */}
@@ -496,7 +466,6 @@ function EditTodoModal({
   const [items, setItems]           = useState<string[]>(todo.items?.length ? todo.items : [''])
   const [notes, setNotes]           = useState(todo.notes ?? '')
   const [date, setDate]             = useState(todo.date ?? '')
-  const [color, setColor]           = useState<EventColor>(todo.color ?? 'seval')
   const [showDelete, setShowDelete] = useState(false)
   const [focusLast, setFocusLast]   = useState(false)
   const itemRefs = useRef<(HTMLInputElement | null)[]>([])
@@ -537,7 +506,6 @@ function EditTodoModal({
       items: validItems.length ? validItems : undefined,
       notes: notes.trim() || undefined,
       date: date || undefined,
-      color,
     })
   }
 
@@ -647,28 +615,6 @@ function EditTodoModal({
             onChange={e => setDate(e.target.value)}
             className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 mb-4 outline-none"
           />
-
-          {/* Color */}
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Color</p>
-          <div className="flex justify-around mb-6">
-            {COLOR_OPTIONS.map(c => (
-              <button
-                key={c.value}
-                onClick={() => setColor(c.value as EventColor)}
-                className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform"
-              >
-                <div
-                  className="w-9 h-9 rounded-full shadow-card"
-                  style={{
-                    background: c.hex,
-                    outline: color === c.value ? `3px solid ${c.hex}` : '3px solid transparent',
-                    outlineOffset: '2px',
-                  }}
-                />
-                <span className="text-[10px] text-gray-400 font-medium">{c.label}</span>
-              </button>
-            ))}
-          </div>
 
           {/* Save */}
           <button

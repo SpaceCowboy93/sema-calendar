@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown, ShoppingBag, Trash2, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Trash2, Pencil } from 'lucide-react'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER, type UserName, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor, type ShoppingList, type ShoppingItem } from '@/types'
@@ -26,11 +26,12 @@ const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments'
+type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments' | 'plans'
 const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor }[] = [
+  { id: 'plans',    emoji: '💚', label: 'Plans',    hex: '#34d399', color: 'green'  },
+  { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
   { id: 'wishes',   emoji: '💜', label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
   { id: 'shopping', emoji: '❤️', label: 'Shopping', hex: '#ef4444'                  },
-  { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
   { id: 'moments',  emoji: '💛', label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
 ]
 
@@ -38,6 +39,7 @@ export default function TogetherPage() {
   const currentUser  = useAppStore(s => s.currentUser)!
   const events       = useAppStore(s => s.events)
   const goals        = useAppStore(s => s.goals)
+  const todos        = useAppStore(s => s.todos)
   const wishlist     = useAppStore(s => s.wishlistItems)
   const shoppingLists = useAppStore(s => s.shoppingLists)
   const partnerNotes = useAppStore(s => s.partnerNotes)
@@ -138,6 +140,7 @@ export default function TogetherPage() {
 
   // Category counts
   const categoryCounts: Record<CategoryType, number> = {
+    plans:    todos.filter(t => !t.isCompleted).length,
     wishes:   wishlist.filter(i => !i.isCompleted).length,
     shopping: shoppingLists.reduce((acc, l) => acc + l.items.filter(i => !i.isChecked).length, 0),
     dreams:   goals.filter(g => !g.isCompleted).length,
@@ -272,7 +275,7 @@ export default function TogetherPage() {
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Overview</p>
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-5 gap-1.5">
           {CATEGORY_DEFS.map(cat => (
             <motion.button
               key={cat.id}
@@ -430,7 +433,7 @@ export default function TogetherPage() {
       <AnimatePresence>
         {openCategory && openCategory !== 'shopping' && (
           <CategoryHubSheet
-            type={openCategory as 'wishes' | 'dreams' | 'moments'}
+            type={openCategory as 'wishes' | 'dreams' | 'moments' | 'plans'}
             primary={primary}
             currentUser={currentUser}
             onClose={() => setOpenCategory(null)}
@@ -558,7 +561,7 @@ export default function TogetherPage() {
 function CategoryHubSheet({
   type, primary, currentUser, onClose, onEditMoment,
 }: {
-  type: 'wishes' | 'dreams' | 'moments'
+  type: 'wishes' | 'dreams' | 'moments' | 'plans'
   primary: string
   currentUser: UserName
   onClose: () => void
@@ -567,16 +570,21 @@ function CategoryHubSheet({
   const goals          = useAppStore(s => s.goals)
   const wishlist       = useAppStore(s => s.wishlistItems)
   const events         = useAppStore(s => s.events)
+  const todos          = useAppStore(s => s.todos)
   const toggleWishlist = useAppStore(s => s.toggleWishlistItem)
   const updateGoal     = useAppStore(s => s.updateGoal)
   const updateWishlist = useAppStore(s => s.updateWishlistItem)
   const deleteGoal     = useAppStore(s => s.deleteGoal)
   const deleteWishlist = useAppStore(s => s.deleteWishlistItem)
+  const toggleTodoDo   = useAppStore(s => s.toggleTodo)
+  const updateTodoDo   = useAppStore(s => s.updateTodo)
+  const deleteTodoDo   = useAppStore(s => s.deleteTodo)
   const sendNote       = useAppStore(s => s.sendPartnerNote)
   // Add-form store actions
   const addGoalDo      = useAppStore(s => s.addGoal)
   const addWishDo      = useAppStore(s => s.addWishlistItem)
   const addEventDo     = useAppStore(s => s.addEvent)
+  const addTodoDo      = useAppStore(s => s.addTodo)
   const uploadPhoto    = useAppStore(s => s.uploadEventPhoto)
   const updateEventDo  = useAppStore(s => s.updateEvent)
 
@@ -596,7 +604,6 @@ function CategoryHubSheet({
   const [addFiles, setAddFiles]           = useState<File[]>([])
   const [addBgIdx, setAddBgIdx]           = useState<number | null>(null)
   const [addUploading, setAddUploading]   = useState(false)
-  const [addColorPopup, setAddColorPopup] = useState(false)
   const [addWishCat, setAddWishCat]       = useState<WishlistCategory>('plan')
   const [addGoalCat, setAddGoalCat]       = useState<GoalCategory>('life')
   const addPhotoRef = useRef<HTMLInputElement>(null)
@@ -606,7 +613,7 @@ function CategoryHubSheet({
     setAddColor(def.color ?? 'yellow')
     setAddTodoItems([]); setAddNewTodo('')
     setAddPhotos([]); setAddFiles([]); setAddBgIdx(null)
-    setAddWishCat('plan'); setAddGoalCat('life'); setAddColorPopup(false)
+    setAddWishCat('plan'); setAddGoalCat('life')
   }
 
   async function handleAddSave() {
@@ -615,6 +622,8 @@ function CategoryHubSheet({
       addGoalDo(addGoalCat, addTitle.trim(), addNotes.trim() || undefined, addDate || undefined, 0, addTime || undefined)
     } else if (type === 'wishes') {
       addWishDo(addTitle.trim(), addWishCat, addNotes.trim() || undefined)
+    } else if (type === 'plans') {
+      addTodoDo(addTitle.trim(), undefined, addDate || undefined, 'green', addNotes.trim() || undefined, addTime || undefined)
     } else {
       // moments
       const newId = addEventDo({
@@ -641,7 +650,7 @@ function CategoryHubSheet({
     setAddOpen(false)
   }
 
-  const addLabel = type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : 'Moment'
+  const addLabel = type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : type === 'plans' ? 'Plan' : 'Moment'
   const addActiveColor = COLOR_OPTIONS.find(c => c.value === addColor)
 
   type ListItem = { id: string; title: string; sub?: string; done: boolean }
@@ -660,6 +669,12 @@ function CategoryHubSheet({
           sub: g.notes || g.targetDate,
           done: g.isCompleted,
         }))
+      case 'plans':
+        return todos.map(t => ({
+          id: t.id, title: t.title,
+          sub: t.notes || t.date,
+          done: t.isCompleted,
+        }))
       case 'moments':
         return [...events].sort((a, b) => a.date.localeCompare(b.date)).map(e => ({
           id: e.id, title: e.title,
@@ -667,7 +682,7 @@ function CategoryHubSheet({
           done: false,
         }))
     }
-  }, [type, goals, wishlist, events])
+  }, [type, goals, wishlist, todos, events])
 
   // ── edit state ──
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -685,6 +700,7 @@ function CategoryHubSheet({
     let src: { title: string; notes?: string; date?: string; startTime?: string; targetDate?: string } | undefined
     if (type === 'wishes') src = wishlist.find(i => i.id === id)
     if (type === 'dreams') src = goals.find(g => g.id === id)
+    if (type === 'plans') src = todos.find(t => t.id === id)
     if (!src) return
     setEditTitle(src.title)
     setEditNotes(src.notes ?? '')
@@ -698,6 +714,7 @@ function CategoryHubSheet({
     const base = { title: editTitle.trim(), notes: editNotes.trim() || undefined, startTime: editTime || undefined }
     if (type === 'dreams') updateGoal(editingId,     { ...base, targetDate: editDate || undefined })
     if (type === 'wishes') updateWishlist(editingId, { ...base, date:       editDate || undefined })
+    if (type === 'plans')  updateTodoDo(editingId,   { ...base, date:       editDate || undefined })
     setEditingId(null)
   }
 
@@ -705,12 +722,14 @@ function CategoryHubSheet({
     if (!editingId) return
     if (type === 'dreams') deleteGoal(editingId)
     if (type === 'wishes') deleteWishlist(editingId)
+    if (type === 'plans')  deleteTodoDo(editingId)
     setEditingId(null)
   }
 
   function handleToggle(id: string, title: string, done: boolean) {
     if (type === 'wishes') toggleWishlist(id)
     if (type === 'dreams') updateGoal(id, { isCompleted: !done })
+    if (type === 'plans')  toggleTodoDo(id)
     if (!done) sendNote(`${USERS[currentUser].emoji} just confirmed "${title}" ✅`)
   }
 
@@ -843,10 +862,11 @@ function CategoryHubSheet({
                     value={addTitle}
                     onChange={e => setAddTitle(e.target.value)}
                     placeholder={
-                      type === 'moments' ? "What's the plan?" :
+                      type === 'moments' ? "What's the moment?" :
                       type === 'dreams' ? "What do you dream of?" :
                       type === 'wishes' ? "What do you wish for?" :
-                      "Name this moment..."
+                      type === 'plans' ? "What do you want to plan?" :
+                      "Add title..."
                     }
                     autoFocus
                     className="w-full text-lg font-semibold text-gray-800 placeholder:text-gray-300
@@ -883,48 +903,6 @@ function CategoryHubSheet({
                         </button>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Color picker (Moments only) */}
-                {type === 'moments' && (
-                  <div className="relative mb-4">
-                    <button
-                      onClick={() => setAddColorPopup(v => !v)}
-                      className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl bg-gray-50 active:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-5 h-5 rounded-full shrink-0" style={{ background: addActiveColor?.hex }} />
-                      <span className="text-sm font-medium text-gray-700 flex-1 text-left">{addActiveColor?.label}</span>
-                      <Palette size={14} className="text-gray-400" />
-                      <ChevronDown size={14} className={cn('text-gray-400 transition-transform', addColorPopup && 'rotate-180')} />
-                    </button>
-                    <AnimatePresence>
-                      {addColorPopup && (
-                        <>
-                          <div className="fixed inset-0 z-[65]" onClick={() => setAddColorPopup(false)} />
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                            transition={{ duration: 0.12 }}
-                            className="absolute left-0 right-0 top-full mt-1.5 z-[66] bg-white rounded-2xl shadow-modal border border-gray-100 p-2.5"
-                          >
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {COLOR_OPTIONS.map(opt => (
-                                <button key={opt.value}
-                                  onClick={() => { setAddColor(opt.value as EventColor); setAddColorPopup(false) }}
-                                  className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all', addColor === opt.value ? 'bg-gray-100' : 'hover:bg-gray-50')}
-                                >
-                                  <div className="w-6 h-6 rounded-full shrink-0" style={{ background: opt.hex }} />
-                                  <span className="text-sm font-medium text-gray-700 flex-1 text-left">{opt.label}</span>
-                                  {addColor === opt.value && <Check size={13} className="text-gray-400 shrink-0" strokeWidth={2.5} />}
-                                </button>
-                              ))}
-                            </div>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
                   </div>
                 )}
 
