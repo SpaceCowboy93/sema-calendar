@@ -2,15 +2,16 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useAppStore } from '@/store/useAppStore'
+import { OTHER_USER } from '@/types'
 import type { UserName } from '@/types'
 
 const LOG = (...args: unknown[]) => console.log('[Push]', ...args)
 const ERR = (...args: unknown[]) => console.error('[Push]', ...args)
 
-// default  — permission not yet requested
-// granted  — permission granted, but no PushManager subscription yet
-// subscribed — subscription exists in PushManager
-// denied  — user blocked notifications
+// default     — permission not yet requested
+// granted     — permission granted, but no PushManager subscription yet
+// subscribed  — subscription exists in PushManager
+// denied      — user blocked notifications
 // unsupported — platform has no Service Worker or PushManager at all
 export type PushStatus = 'unsupported' | 'denied' | 'default' | 'granted' | 'subscribed'
 
@@ -53,13 +54,26 @@ async function getCurrentSub(): Promise<PushSubscription | null> {
   }
 }
 
+async function fetchServerSaved(userName: string): Promise<boolean> {
+  try {
+    const res  = await fetch(`/api/push/status?userName=${encodeURIComponent(userName.toLowerCase())}`)
+    const data = await res.json()
+    LOG('serverSaved check for', userName, ':', data.hasSubscription)
+    return data.hasSubscription === true
+  } catch {
+    return false
+  }
+}
+
 export function usePushNotifications() {
   const currentUser = useAppStore(s => s.currentUser)
-  const [status,  setStatus]  = useState<PushStatus>('default')
-  const [swError, setSwError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [swReady, setSwReady] = useState(false)
+  const [status,      setStatus]      = useState<PushStatus>('default')
+  const [swError,     setSwError]     = useState<string | null>(null)
+  const [loading,     setLoading]     = useState(false)
+  const [swReady,     setSwReady]     = useState(false)
+  const [serverSaved, setServerSaved] = useState<boolean | null>(null)
 
+  // Re-run on currentUser change so switching profiles reflects correct server state
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -68,6 +82,7 @@ export function usePushNotifications() {
       LOG('serviceWorker supported:', 'serviceWorker' in navigator)
       LOG('PushManager supported:', 'PushManager' in window)
       LOG('Notification.permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
+      LOG('currentUser:', currentUser)
 
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         LOG('Push not supported on this platform')
@@ -83,8 +98,6 @@ export function usePushNotifications() {
 
       const reg = await registerSW()
       if (!reg) {
-        // SW failed to register — still show UI so the user can retry,
-        // but surface the error. Fall back to 'default' so the button is visible.
         ERR('SW registration failed — showing degraded UI')
         setSwError('Service worker failed to register. Try refreshing.')
         setStatus('default')
@@ -92,15 +105,24 @@ export function usePushNotifications() {
       }
       setSwReady(true)
 
-      // Check for an existing subscription FIRST, independent of Notification.permission
+      // Check for existing PushManager subscription first
       const sub = await getCurrentSub()
       if (sub) {
         LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
         setStatus('subscribed')
+        // Check if the server has this subscription stored under the active user
+        if (currentUser) {
+          const saved = await fetchServerSaved(currentUser)
+          setServerSaved(saved)
+          if (!saved) {
+            LOG('Server has no subscription for', currentUser, '— device may be registered under wrong user')
+          }
+        }
         return
       }
 
-      // No subscription yet — distinguish between "permission already granted" and "not yet asked"
+      // No PushManager subscription
+      setServerSaved(null)
       if (Notification.permission === 'granted') {
         LOG('Permission granted but no subscription — showing "Connect this device"')
         setStatus('granted')
@@ -109,18 +131,17 @@ export function usePushNotifications() {
         setStatus('default')
       }
     })()
-  }, [])
+  }, [currentUser])
 
+  // Sync reminders for one user (all shared items from current store state)
   const syncReminders = useCallback(async (userName: UserName) => {
     try {
       const store = useAppStore.getState()
       const items = collectDatedItems(store, userName)
-      LOG(`syncReminders — user: ${userName}, items with future fire times: ${items.length}`)
-      items.forEach(item => {
-        LOG(`  item "${item.title}" (${item.type}) — fireAts:`, item.fireAts)
-      })
+      LOG(`syncReminders — user: ${userName}, items: ${items.length}`)
+      items.forEach(item => LOG(`  "${item.title}" (${item.type}) fireAts:`, item.fireAts))
       if (items.length === 0) {
-        LOG('syncReminders — nothing to sync (no future-dated items)')
+        LOG('syncReminders — no future-dated items for', userName)
         return
       }
       const res  = await fetch('/api/push/sync-reminders', {
@@ -135,13 +156,20 @@ export function usePushNotifications() {
     }
   }, [])
 
+  // Sync reminders for BOTH users so shared events reach both
+  const syncBothUsers = useCallback(async (triggerUser: UserName) => {
+    LOG('syncBothUsers — triggered by', triggerUser)
+    const other = OTHER_USER[triggerUser]
+    await syncReminders(triggerUser)
+    await syncReminders(other)
+  }, [syncReminders])
+
   const enable = useCallback(async () => {
     if (!currentUser) {
       ERR('enable() called but currentUser is null')
       return
     }
 
-    // If SW failed, try re-registering once before giving up
     let reg: ServiceWorkerRegistration | null = null
     if (!swReady) {
       LOG('SW not ready — attempting registration before subscribe')
@@ -187,7 +215,7 @@ export function usePushNotifications() {
       LOG('  p256dh present:', !!sub.toJSON().keys?.p256dh)
       LOG('  auth present:',   !!sub.toJSON().keys?.auth)
 
-      LOG('Saving subscription to /api/push/subscribe …')
+      LOG('Saving subscription for user:', currentUser)
       const res  = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,10 +227,12 @@ export function usePushNotifications() {
       if (res.ok) {
         setStatus('subscribed')
         setSwError(null)
-        await syncReminders(currentUser)
+        setServerSaved(true)
+        await syncBothUsers(currentUser)
       } else {
         ERR('subscribe API returned error:', data)
         setSwError(data.error ?? 'Failed to save subscription.')
+        setServerSaved(false)
       }
     } catch (err) {
       ERR('enable() error:', err)
@@ -210,7 +240,53 @@ export function usePushNotifications() {
     } finally {
       setLoading(false)
     }
-  }, [swReady, currentUser, syncReminders])
+  }, [swReady, currentUser, syncBothUsers])
+
+  // Re-save the existing PushManager subscription under the active user.
+  // Use this when the device was previously registered under the wrong user.
+  const reconnect = useCallback(async () => {
+    if (!currentUser) {
+      ERR('reconnect() called but currentUser is null')
+      return
+    }
+    setLoading(true)
+    try {
+      const sub = await getCurrentSub()
+      if (!sub) {
+        LOG('reconnect() — no PushManager subscription found')
+        setSwError('No browser subscription found. Tap "Enable notifications" to set up from scratch.')
+        const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default'
+        setStatus(perm === 'granted' ? 'granted' : 'default')
+        setServerSaved(null)
+        return
+      }
+
+      LOG('reconnect() — re-saving subscription for user:', currentUser)
+      LOG('  endpoint suffix:', sub.endpoint.slice(-40))
+      const res  = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
+      })
+      const data = await res.json()
+      LOG('reconnect /api/push/subscribe response:', res.status, data)
+
+      if (res.ok) {
+        setStatus('subscribed')
+        setSwError(null)
+        setServerSaved(true)
+        await syncBothUsers(currentUser)
+      } else {
+        setSwError(data.error ?? 'Failed to save subscription.')
+        setServerSaved(false)
+      }
+    } catch (err) {
+      ERR('reconnect() error:', err)
+      setSwError(String(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [currentUser, syncBothUsers])
 
   const disable = useCallback(async () => {
     setLoading(true)
@@ -230,6 +306,7 @@ export function usePushNotifications() {
         LOG('disable() — no active subscription found')
       }
       setStatus('default')
+      setServerSaved(null)
       setSwError(null)
     } catch (err) {
       ERR('disable() error:', err)
@@ -238,7 +315,7 @@ export function usePushNotifications() {
     }
   }, [])
 
-  return { status, swError, loading, enable, disable, syncReminders }
+  return { status, swError, loading, serverSaved, enable, disable, reconnect, syncReminders }
 }
 
 /* ── Collect all dated items from store state ─────────────────────────────── */
@@ -282,6 +359,7 @@ function collectDatedItems(
   store: ReturnType<typeof useAppStore.getState>,
   userName: UserName
 ): DatedItem[] {
+  void userName // items are shared; userName is used by the caller for per-user DB rows
   const items: DatedItem[] = []
 
   store.events.forEach(e => {

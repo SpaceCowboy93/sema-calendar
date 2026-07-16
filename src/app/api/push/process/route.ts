@@ -90,8 +90,9 @@ export async function GET(req: NextRequest) {
 
   const subsByUser: Record<string, { endpoint: string; p256dh: string; auth: string }[]> = {}
   for (const s of (subs ?? [])) {
-    if (!subsByUser[s.user_name]) subsByUser[s.user_name] = []
-    subsByUser[s.user_name].push(s)
+    const key = s.user_name.toLowerCase()
+    if (!subsByUser[key]) subsByUser[key] = []
+    subsByUser[key].push(s)
   }
 
   // 3. Send notifications
@@ -100,12 +101,13 @@ export async function GET(req: NextRequest) {
 
   await Promise.all(
     reminders.map(async (r: { id: string; user_name: string; title: string; message: string; fire_at: string }) => {
-      const userSubs = subsByUser[r.user_name] ?? []
-      console.log(`[process GET] Processing reminder ${r.id} for ${r.user_name} — subscriptions: ${userSubs.length}`)
+      const normalizedUser = r.user_name.toLowerCase()
+      const userSubs = subsByUser[normalizedUser] ?? []
+      console.log(`[process GET] Processing reminder ${r.id} for ${normalizedUser} — subscriptions: ${userSubs.length}`)
 
       if (userSubs.length === 0) {
-        console.log(`[process GET]   No subscriptions for ${r.user_name} — marking sent (undeliverable)`)
-        sentIds.push(r.id)
+        console.log(`[process GET]   No subscriptions for ${normalizedUser} — skipping (will retry when device connects)`)
+        // Do NOT mark as sent — leave unsent so it fires once the user subscribes
         return
       }
 

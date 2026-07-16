@@ -20,7 +20,8 @@ function adminClient() {
 // For test: { userName: 'mateo', title: 'Test 💕', body: 'SeMa push is working!' }
 export async function POST(req: NextRequest) {
   try {
-    const { userName, title, body, url = '/together', tag = 'sema-test' } = await req.json()
+    const { userName: rawUserName, title, body, url = '/together', tag = 'sema-test' } = await req.json()
+    const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
     if (!userName || !title) {
       return NextResponse.json({ error: 'Missing userName or title' }, { status: 400 })
     }

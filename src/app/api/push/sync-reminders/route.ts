@@ -18,7 +18,8 @@ const REMINDER_LABELS: Record<number, string> = {
 // Body: { userName, items: [{ id, type, title, fireAts: string[] }] }
 export async function POST(req: NextRequest) {
   try {
-    const { userName, items } = await req.json()
+    const { userName: rawUserName, items } = await req.json()
+    const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
 
     console.log('[sync-reminders POST] userName:', userName)
     console.log('[sync-reminders POST] items received:', Array.isArray(items) ? items.length : 'NOT ARRAY')
@@ -66,22 +67,32 @@ export async function POST(req: NextRequest) {
 
     const supabase = adminClient()
 
-    // Delete unsent reminders for all items in this batch so changed times don't linger
-    const itemIds = Array.from(new Set(items.map((i: { id: string }) => i.id)))
-    console.log('[sync-reminders POST] Deleting unsent rows for item IDs:', itemIds)
-    const { error: delErr, count: delCount } = await supabase
-      .from('push_reminders')
-      .delete({ count: 'exact' })
-      .eq('couple_id', 'sema')
-      .eq('user_name', userName)
-      .in('item_id', itemIds)
-      .is('sent_at', null)
-
-    if (delErr) {
-      console.error('[sync-reminders POST] Delete error:', delErr.message, delErr.details)
-    } else {
-      console.log('[sync-reminders POST] Deleted unsent rows:', delCount ?? 'unknown')
+    // Delete unsent reminders for all items in this batch, scoped to this user and item_type
+    // so we don't touch the other user's reminder rows for the same items
+    const byType: Record<string, string[]> = {}
+    for (const item of items) {
+      const { id, type } = item as { id: string; type: string }
+      if (!byType[type]) byType[type] = []
+      byType[type].push(id)
     }
+    let totalDeleted = 0
+    for (const [itemType, ids] of Object.entries(byType)) {
+      console.log(`[sync-reminders POST] Deleting unsent rows for type=${itemType} ids:`, ids)
+      const { error: delErr, count: delCount } = await supabase
+        .from('push_reminders')
+        .delete({ count: 'exact' })
+        .eq('couple_id', 'sema')
+        .eq('user_name', userName)
+        .eq('item_type', itemType)
+        .in('item_id', ids)
+        .is('sent_at', null)
+      if (delErr) {
+        console.error(`[sync-reminders POST] Delete error (type=${itemType}):`, delErr.message, delErr.details)
+      } else {
+        totalDeleted += delCount ?? 0
+      }
+    }
+    console.log('[sync-reminders POST] Total deleted unsent rows:', totalDeleted)
 
     if (rows.length === 0) {
       console.log('[sync-reminders POST] No future rows — done')

@@ -12,7 +12,8 @@ function adminClient() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { subscription, userName } = body
+    const { subscription, userName: rawUserName } = body
+    const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
 
     console.log('[push/subscribe POST] userName:', userName)
     console.log('[push/subscribe POST] endpoint suffix:', subscription?.endpoint?.slice(-40) ?? 'MISSING')

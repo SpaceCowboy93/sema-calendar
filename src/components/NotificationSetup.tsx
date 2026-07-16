@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellOff, BellRing, ChevronDown } from 'lucide-react'
+import { Bell, BellOff, BellRing, ChevronDown, RefreshCw } from 'lucide-react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAppStore } from '@/store/useAppStore'
+import { USERS } from '@/types'
 
 function isIOS() {
   if (typeof navigator === 'undefined') return false
@@ -17,8 +18,9 @@ function isInStandaloneMode() {
 }
 
 export function NotificationSetup({ primary }: { primary: string }) {
-  const { status, swError, loading, enable, disable } = usePushNotifications()
+  const { status, swError, loading, serverSaved, enable, disable, reconnect } = usePushNotifications()
   const currentUser = useAppStore(s => s.currentUser)
+  const displayName = currentUser ? USERS[currentUser].displayName : ''
 
   const [testState, setTestState]   = useState<'idle' | 'sending' | 'ok' | 'err'>('idle')
   const [testDetail, setTestDetail] = useState('')
@@ -54,7 +56,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
       setTestState('err')
       setTestDetail(String(err))
     }
-    setTimeout(() => { setTestState('idle'); setTestDetail('') }, 6000)
+    setTimeout(() => { setTestState('idle'); setTestDetail('') }, 8000)
   }
 
   // iOS Safari not in standalone mode — push requires Home Screen install
@@ -104,7 +106,6 @@ export function NotificationSetup({ primary }: { primary: string }) {
         </div>
       )
     }
-    // Non-iOS unsupported (e.g. desktop without push support) — show nothing
     return null
   }
 
@@ -121,13 +122,17 @@ export function NotificationSetup({ primary }: { primary: string }) {
   }
 
   if (status === 'subscribed') {
+    const serverMissing = serverSaved === false
     return (
       <div className="rounded-2xl bg-emerald-50 overflow-hidden">
+        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3">
           <BellRing size={18} className="text-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-700">Notifications connected</p>
-            <p className="text-xs text-gray-400">Reminders will arrive even when SeMa is closed</p>
+            <p className="text-xs text-gray-500">
+              Active profile: <span className="font-medium text-gray-700">{displayName}</span>
+            </p>
           </div>
           <motion.button
             whileTap={{ scale: 0.93 }}
@@ -138,25 +143,67 @@ export function NotificationSetup({ primary }: { primary: string }) {
             Turn off
           </motion.button>
         </div>
+
+        {/* Diagnostics */}
+        <div className="mx-4 mb-2 flex gap-2 text-[10px] text-gray-400 flex-wrap">
+          <span>
+            Permission:{' '}
+            <span className={typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'text-emerald-500' : 'text-red-400'}>
+              {typeof Notification !== 'undefined' ? Notification.permission : '—'}
+            </span>
+          </span>
+          <span>·</span>
+          <span>
+            Server:{' '}
+            {serverSaved === null
+              ? <span className="text-gray-400">checking…</span>
+              : serverSaved
+                ? <span className="text-emerald-500">saved for {displayName}</span>
+                : <span className="text-red-400">not saved for {displayName}</span>
+            }
+          </span>
+        </div>
+
+        {/* Action buttons */}
         <div className="mx-4 mb-3 space-y-1.5">
+          {/* Reconnect — always available; highlighted if server record is missing */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={reconnect}
+            disabled={loading}
+            className={`w-full py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border ${
+              serverMissing
+                ? 'text-orange-600 bg-white border-orange-300'
+                : 'text-gray-500 bg-white border-gray-200'
+            }`}
+          >
+            {loading
+              ? <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-current inline-block" />
+              : <RefreshCw size={11} />
+            }
+            {serverMissing ? `Reconnect as ${displayName}` : 'Reconnect this device'}
+          </motion.button>
+
+          {/* Test push */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={sendTestPush}
-            disabled={testState === 'sending'}
+            disabled={testState === 'sending' || loading}
             className="w-full py-2 rounded-xl text-xs font-semibold text-emerald-600 bg-white border border-emerald-200 flex items-center justify-center gap-1.5"
           >
             {testState === 'sending' && <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-emerald-400 inline-block" />}
-            {testState === 'ok'      && '✓ '}
-            {testState === 'err'     && '✗ '}
-            {testState === 'idle'    && <Bell size={12} />}
+            {testState === 'ok'  && '✓ '}
+            {testState === 'err' && '✗ '}
+            {testState === 'idle' && <Bell size={11} />}
             {testState === 'sending' ? 'Sending…'
-              : testState === 'ok'  ? 'Delivered! Background the app to see it.'
-              : testState === 'err' ? 'Not delivered — see detail below'
+              : testState === 'ok'   ? 'Delivered! Background the app to see it.'
+              : testState === 'err'  ? 'Not delivered — see detail below'
               : 'Send test notification'}
           </motion.button>
-          {testDetail !== '' && (
+
+          {(testDetail !== '' || swError) && (
             <p className={`text-[10px] text-center px-1 ${testState === 'ok' ? 'text-emerald-500' : 'text-red-400'}`}>
-              {testDetail}
+              {testDetail || swError}
             </p>
           )}
         </div>
@@ -164,7 +211,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
     )
   }
 
-  // 'granted' — permission granted but no PushManager subscription yet
+  // 'granted' — permission granted but no PushManager subscription
   if (status === 'granted') {
     return (
       <div className="space-y-2">
@@ -186,13 +233,13 @@ export function NotificationSetup({ primary }: { primary: string }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800">Connect this device</p>
-            <p className="text-xs text-gray-400">Permission granted — tap to finish setup</p>
+            <p className="text-xs text-gray-400">
+              Permission granted — connect as <span className="font-medium">{displayName}</span>
+            </p>
           </div>
           <span className="text-gray-300 shrink-0">›</span>
         </motion.button>
-        {swError && (
-          <p className="text-[11px] text-red-400 px-1">{swError}</p>
-        )}
+        {swError && <p className="text-[11px] text-red-400 px-1">{swError}</p>}
       </div>
     )
   }
@@ -222,9 +269,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
         </div>
         <span className="text-gray-300 shrink-0">›</span>
       </motion.button>
-      {swError && (
-        <p className="text-[11px] text-red-400 px-1">{swError}</p>
-      )}
+      {swError && <p className="text-[11px] text-red-400 px-1">{swError}</p>}
     </div>
   )
 }
