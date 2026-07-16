@@ -19,10 +19,9 @@ const DEFAULT_BUDGET_ITEMS: BudgetItem[] = [
   { id: 'b3',  category: 'Transport',       emoji: '🚗', planned: 200,  actual: 0 },
   { id: 'b4',  category: 'Utilities',       emoji: '⚡', planned: 150,  actual: 0 },
   { id: 'b5',  category: 'Subscriptions',   emoji: '📱', planned: 50,   actual: 0 },
-  { id: 'b6',  category: 'Gifts',           emoji: '🎁', planned: 100,  actual: 0 },
   { id: 'b7',  category: 'Date Nights',     emoji: '🍽️', planned: 200,  actual: 0 },
   { id: 'b8',  category: 'Travel',          emoji: '✈️', planned: 300,  actual: 0 },
-  { id: 'b9',  category: 'Pets',            emoji: '🐱', planned: 100,  actual: 0 },
+  { id: 'b9',  category: 'Weed',            emoji: '🌿', planned: 100,  actual: 0 },
   { id: 'b10', category: 'Shopping',        emoji: '🛍️', planned: 200,  actual: 0 },
   { id: 'b11', category: 'Other',           emoji: '❤️', planned: 100,  actual: 0 },
 ]
@@ -123,6 +122,7 @@ interface AppState {
   addSavingsTransaction: (monthKey: string, amount: number, note?: string) => void
   deleteSavingsTransaction: (id: string) => void
   migrateFinanceData: () => void
+  migrateCategories: () => void
 
   // Page backgrounds
   pageBackgrounds: PageBackgrounds
@@ -877,6 +877,18 @@ export const useAppStore = create<AppState>()(
           createdAt: timestamp, createdBy: s.currentUser ?? 'mateo',
         }] : []
         set({ financeMonths: [month], savingsTransactions: transactions })
+      },
+
+      migrateCategories: () => {
+        const renamePets = (b: BudgetItem): BudgetItem =>
+          b.category === 'Pets' ? { ...b, category: 'Weed', emoji: '🌿' } : b
+        set(s => ({
+          budgetItems: s.budgetItems.map(renamePets),
+          financeMonths: s.financeMonths.map(m => ({
+            ...m,
+            budgetItems: m.budgetItems.map(renamePets),
+          })),
+        }))
       },
 
       // ── Page backgrounds ─────────────────────────────────────────────────────

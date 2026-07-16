@@ -108,6 +108,7 @@ export default function FinancePage() {
   const addSavingsTransaction    = useAppStore(s => s.addSavingsTransaction)
   const deleteSavingsTransaction = useAppStore(s => s.deleteSavingsTransaction)
   const migrateFinanceData = useAppStore(s => s.migrateFinanceData)
+  const migrateCategories  = useAppStore(s => s.migrateCategories)
 
   const [monthKey, setMonthKey]           = useState(currentMonthKey)
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null)
@@ -118,8 +119,9 @@ export default function FinancePage() {
   const [confirmFinalize, setConfirmFinalize] = useState(false)
   const [deleteTxId, setDeleteTxId]       = useState<string | null>(null)
 
-  // One-time migration of legacy data
+  // One-time migrations
   useEffect(() => { migrateFinanceData() }, [migrateFinanceData])
+  useEffect(() => { migrateCategories() }, [migrateCategories])
 
   const currentMonth = useMemo(
     () => financeMonths.find(m => m.key === monthKey) ?? null,
