@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Plus, Trash2, LogOut, X, Send, Camera, Pencil } from 'lucide-react'
+import { NotificationSetup } from '@/components/NotificationSetup'
 import { useRouter } from 'next/navigation'
 import {
   differenceInYears, differenceInMonths, differenceInDays,
@@ -648,6 +649,12 @@ export default function UsPage() {
             </AnimatePresence>
           </div>
         )}
+      </section>
+
+      {/* Notifications */}
+      <section className="mb-7">
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">This device</h2>
+        <NotificationSetup primary={primaryColor} />
       </section>
 
       {/* Leave a Note compose sheet */}

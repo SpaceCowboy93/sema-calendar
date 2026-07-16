@@ -9,6 +9,7 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { useNotifications } from '@/hooks/useNotifications'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useSupabaseSync()
   useNotifications()
+  usePushNotifications() // registers SW on every page load
 
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [scrolling, setScrolling]       = useState(false)
