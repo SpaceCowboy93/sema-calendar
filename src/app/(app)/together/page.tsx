@@ -6,7 +6,7 @@ import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown, ShoppingBag, Trash2 } from 'lucide-react'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, OTHER_USER, type UserName, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor } from '@/types'
+import { USERS, OTHER_USER, type UserName, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor, type ShoppingList } from '@/types'
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import {
   WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
@@ -1148,7 +1148,32 @@ function CategoryHubSheet({
   )
 }
 
-/* ── Shopping Hub Sheet ────────────────────────────────────────────────────────── */
+/* ── helpers ─────────────────────────────────────────────────────────────────── */
+const RED = '#ef4444'
+
+function listTotal(list: ShoppingList) {
+  return list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
+}
+
+function resizeImage(file: File, maxPx = 800): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const scale = Math.min(maxPx / img.width, maxPx / img.height, 1)
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.src = url
+  })
+}
+
+/* ── Shopping Hub Sheet ─────────────────────────────────────────────────────── */
 function ShoppingHubSheet({
   primary, currentUser, onClose,
 }: {
@@ -1158,36 +1183,18 @@ function ShoppingHubSheet({
 }) {
   const lists      = useAppStore(s => s.shoppingLists)
   const createList = useAppStore(s => s.createShoppingList)
+  const updateList = useAppStore(s => s.updateShoppingList)
   const deleteList = useAppStore(s => s.deleteShoppingList)
   const addItem    = useAppStore(s => s.addShoppingItem)
   const toggleItem = useAppStore(s => s.toggleShoppingItem)
   const deleteItem = useAppStore(s => s.deleteShoppingItem)
 
-  const RED = '#ef4444'
-  const [expandedId, setExpandedId]   = useState<string | null>(lists[0]?.id ?? null)
-  const [showNewList, setShowNewList] = useState(false)
-  const [newListName, setNewListName] = useState('')
-  const [newItemName, setNewItemName] = useState('')
-  const [newItemQty,  setNewItemQty]  = useState('1')
-  const [newItemPrice, setNewItemPrice] = useState('')
-  const [newItemNotes, setNewItemNotes] = useState('')
+  const [view, setView] = useState<null | 'new' | string>(null)
 
-  function handleCreateList() {
-    if (!newListName.trim()) return
-    createList(newListName.trim())
-    setNewListName('')
-    setShowNewList(false)
-  }
-
-  function handleAddItem(listId: string) {
-    if (!newItemName.trim()) return
-    addItem(listId, newItemName.trim(), parseInt(newItemQty) || 1,
-      newItemNotes.trim() || undefined,
-      newItemPrice ? parseFloat(newItemPrice) : undefined)
-    setNewItemName(''); setNewItemQty('1'); setNewItemPrice(''); setNewItemNotes('')
-  }
-
-  const totalPending = lists.reduce((a, l) => a + l.items.filter(i => !i.isChecked).length, 0)
+  const incompleteLists = lists.filter(l => !l.isCompleted)
+  const completedLists  = lists.filter(l =>  l.isCompleted)
+  const totalPending    = incompleteLists.reduce((a, l) => a + l.items.filter(i => !i.isChecked).length, 0)
+  const activeList      = typeof view === 'string' ? lists.find(l => l.id === view) ?? null : null
 
   return (
     <>
@@ -1200,9 +1207,8 @@ function ShoppingHubSheet({
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[85vh] flex flex-col"
+                   max-w-lg mx-auto max-h-[88vh] flex flex-col"
       >
-        {/* Header */}
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="drag-handle mb-3" />
           <div className="flex items-center justify-between">
@@ -1215,7 +1221,7 @@ function ShoppingHubSheet({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowNewList(true)}
+                onClick={() => setView('new')}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
                 style={{ background: RED }}
               >
@@ -1229,210 +1235,506 @@ function ShoppingHubSheet({
         </div>
         <div className="h-px bg-gray-100 mx-5 shrink-0" />
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           {lists.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex flex-col items-center justify-center py-14 text-center">
               <span className="text-5xl mb-3 opacity-30">🛍️</span>
-              <p className="text-sm text-gray-400">No shopping lists yet</p>
+              <p className="text-sm font-semibold text-gray-500 mb-1">No shopping lists yet</p>
+              <p className="text-xs text-gray-400 mb-5">Create one to plan your next trip together</p>
               <button
-                onClick={() => setShowNewList(true)}
-                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold"
+                onClick={() => setView('new')}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold"
                 style={{ background: RED }}
               >
                 <Plus size={14} /> Create a list
               </button>
             </div>
           ) : (
-            lists.map(list => {
+            [...incompleteLists, ...completedLists].map((list, idx) => {
               const checked = list.items.filter(i => i.isChecked).length
               const total   = list.items.length
               const pct     = total > 0 ? (checked / total) * 100 : 0
-              const allDone = total > 0 && checked === total
-              const isOpen  = expandedId === list.id
-
+              const cost    = listTotal(list)
               return (
-                <div key={list.id} className="bg-gray-50 rounded-2xl overflow-hidden">
-                  {/* List header */}
-                  <button
-                    onClick={() => setExpandedId(isOpen ? null : list.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                  >
-                    <ShoppingBag size={16} style={{ color: RED }} className="shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800">{list.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                <motion.button
+                  key={list.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: list.isCompleted ? 0.72 : 1, y: 0 }}
+                  transition={{ delay: idx * 0.04 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setView(list.id)}
+                  className="w-full text-left rounded-2xl overflow-hidden bg-white shadow-card"
+                >
+                  {list.coverPhoto && (
+                    <div className="w-full h-28 overflow-hidden">
+                      <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-gray-800 truncate">{list.name}</p>
+                          {list.isCompleted && (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">✓ Completed</span>
+                          )}
+                        </div>
+                        {list.storeName && <p className="text-[11px] text-gray-400 mt-0.5">📍 {list.storeName}</p>}
+                        {list.date && <p className="text-[10px] text-gray-300 mt-0.5">🗓 {list.date}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        {cost > 0 && <p className="text-sm font-bold text-gray-800">€{cost.toFixed(2)}</p>}
+                        <p className="text-[10px] text-gray-400">{total} item{total !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    {total > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full rounded-full"
-                            style={{ background: allDone ? '#10b981' : RED }}
+                            style={{ background: list.isCompleted ? '#10b981' : RED }}
                             initial={{ width: 0 }}
                             animate={{ width: `${pct}%` }}
-                            transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                            transition={{ type: 'spring', stiffness: 100, damping: 20 }}
                           />
                         </div>
                         <span className="text-[10px] text-gray-400 shrink-0">{checked}/{total}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button onClick={e => { e.stopPropagation(); deleteList(list.id) }} className="text-gray-300 active:text-red-400 p-1">
-                        <Trash2 size={13} />
-                      </button>
-                      <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                        <ChevronDown size={15} className="text-gray-400" />
-                      </motion.div>
-                    </div>
-                  </button>
-
-                  {/* Expanded items */}
-                  <AnimatePresence>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-4 pb-3 space-y-1.5">
-                          {/* Add item row */}
-                          <div className="bg-white rounded-xl p-2.5 space-y-1.5 mb-2">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={newItemName}
-                                onChange={e => setNewItemName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleAddItem(list.id)}
-                                placeholder="Add item..."
-                                className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
-                              />
-                              <input
-                                type="number"
-                                value={newItemQty}
-                                onChange={e => setNewItemQty(e.target.value)}
-                                className="w-10 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1 outline-none border border-gray-200"
-                                min="1"
-                              />
-                              <input
-                                type="number"
-                                value={newItemPrice}
-                                onChange={e => setNewItemPrice(e.target.value)}
-                                placeholder="€"
-                                className="w-14 text-xs bg-gray-50 rounded-lg px-1.5 py-1 outline-none border border-gray-200"
-                              />
-                              <button
-                                onClick={() => handleAddItem(list.id)}
-                                disabled={!newItemName.trim()}
-                                className="w-7 h-7 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
-                                style={{ background: RED }}
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                          </div>
-
-                          {allDone && total > 0 && (
-                            <motion.div
-                              initial={{ scale: 0.9, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              className="text-center py-2 rounded-xl"
-                              style={{ background: '#f0fdf4' }}
-                            >
-                              <p className="text-xs font-bold text-emerald-600">🎉 All done!</p>
-                            </motion.div>
-                          )}
-
-                          {list.items.map(item => (
-                            <motion.div
-                              key={item.id}
-                              layout
-                              className={cn(
-                                'flex items-center gap-2.5 p-2.5 rounded-xl border transition-all',
-                                item.isChecked ? 'opacity-50 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
-                              )}
-                            >
-                              <button
-                                onClick={() => toggleItem(list.id, item.id)}
-                                className={cn(
-                                  'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
-                                  item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
-                                )}
-                              >
-                                {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
-                                  {item.name}
-                                </p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
-                                  {item.price != null && <span className="text-[10px] text-gray-400">€{item.price}</span>}
-                                  {item.notes && <span className="text-[10px] text-gray-400 truncate">{item.notes}</span>}
-                                </div>
-                              </div>
-                              <button onClick={() => deleteItem(list.id, item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
-                                <X size={13} />
-                              </button>
-                            </motion.div>
-                          ))}
-
-                          {list.items.length === 0 && (
-                            <p className="text-center text-xs text-gray-400 py-3">No items yet — add one above</p>
-                          )}
-                        </div>
-                      </motion.div>
                     )}
-                  </AnimatePresence>
-                </div>
+                  </div>
+                </motion.button>
               )
             })
           )}
         </div>
       </motion.div>
 
-      {/* New list modal */}
       <AnimatePresence>
-        {showNewList && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowNewList(false)}
-              className="fixed inset-0 z-[60] bg-black/20"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-0 z-[60] flex items-center justify-center p-6"
-            >
-              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
-                <h3 className="font-bold text-gray-800 mb-1">New Shopping List ❤️</h3>
-                <p className="text-xs text-gray-400 mb-4">e.g. Groceries, IKEA, Birthday</p>
-                <input
-                  type="text"
-                  value={newListName}
-                  onChange={e => setNewListName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreateList()}
-                  placeholder="List name..."
-                  autoFocus
-                  className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none mb-4"
-                />
-                <div className="flex gap-3">
-                  <button onClick={() => setShowNewList(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
-                  <button
-                    onClick={handleCreateList}
-                    disabled={!newListName.trim()}
-                    className="flex-1 py-3 rounded-2xl text-white font-medium text-sm disabled:opacity-40"
-                    style={{ background: RED }}
-                  >
-                    Create
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
+        {view === 'new' && (
+          <ShoppingCreateSheet
+            currentUser={currentUser}
+            onClose={() => setView(null)}
+            onCreated={(id) => setView(id)}
+          />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {activeList && (
+          <ShoppingDetailSheet
+            list={activeList}
+            onUpdate={(updates) => updateList(activeList.id, updates)}
+            onDelete={() => { deleteList(activeList.id); setView(null) }}
+            onAddItem={(name, qty, notes, price) => addItem(activeList.id, name, qty, notes, price)}
+            onToggleItem={(itemId) => toggleItem(activeList.id, itemId)}
+            onDeleteItem={(itemId) => deleteItem(activeList.id, itemId)}
+            onClose={() => setView(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
+/* ── Shopping Create Sheet ──────────────────────────────────────────────────── */
+function ShoppingCreateSheet({
+  currentUser, onClose, onCreated,
+}: {
+  currentUser: UserName
+  onClose: () => void
+  onCreated: (id: string) => void
+}) {
+  const createList = useAppStore(s => s.createShoppingList)
+  const addItem    = useAppStore(s => s.addShoppingItem)
+
+  const [name,        setName]        = useState('')
+  const [storeName,   setStoreName]   = useState('')
+  const [date,        setDate]        = useState('')
+  const [time,        setTime]        = useState('')
+  const [notes,       setNotes]       = useState('')
+  const [coverPhoto,  setCoverPhoto]  = useState<string | undefined>()
+  const [photoLoading, setPhotoLoading] = useState(false)
+  const [draftItems,  setDraftItems]  = useState<{ id: string; name: string; qty: string; price: string; notes: string }[]>([])
+  const [itemName,    setItemName]    = useState('')
+  const [itemQty,     setItemQty]     = useState('1')
+  const [itemPrice,   setItemPrice]   = useState('')
+  const [itemNotes,   setItemNotes]   = useState('')
+
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    setPhotoLoading(true)
+    try { setCoverPhoto(await resizeImage(file)) } finally { setPhotoLoading(false) }
+    e.target.value = ''
+  }
+
+  function addDraftItem() {
+    if (!itemName.trim()) return
+    setDraftItems(prev => [...prev, {
+      id: Math.random().toString(36).slice(2),
+      name: itemName.trim(), qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(),
+    }])
+    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
+  }
+
+  function handleCreate() {
+    if (!name.trim()) return
+    const id = createList({ name, storeName, date, time, notes, coverPhoto })
+    draftItems.forEach(it => {
+      addItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined)
+    })
+    onCreated(id)
+  }
+
+  const draftTotal = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0)
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-[60] bg-black/20"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[92vh] flex flex-col"
+      >
+        <div className="px-5 pt-4 pb-2 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-bold text-gray-800">New Shopping List ❤️</h3>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-3">
+          <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+
+          {coverPhoto ? (
+            <div className="relative rounded-2xl overflow-hidden h-36">
+              <img src={coverPhoto} alt="" className="w-full h-full object-cover" />
+              <button
+                onClick={() => setCoverPhoto(undefined)}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => photoRef.current?.click()}
+              disabled={photoLoading}
+              className="w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-gray-400"
+            >
+              {photoLoading
+                ? <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin border-gray-300" />
+                : <><Camera size={16} /><span className="text-sm">Add cover photo</span></>
+              }
+            </button>
+          )}
+
+          <input
+            type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="List name (e.g. Groceries, IKEA) *"
+            autoFocus
+            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+          />
+          <input
+            type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
+            placeholder="Store name (e.g. Tesco, Lidl)"
+            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
+          />
+          <div className="flex gap-2">
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
+            <input type="time" value={time} onChange={e => setTime(e.target.value)}
+              className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
+          </div>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Notes (optional)" rows={2}
+            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none resize-none"
+          />
+
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Items</p>
+            <div className="bg-gray-50 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text" value={itemName} onChange={e => setItemName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addDraftItem()}
+                  placeholder="Add item…"
+                  className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100"
+                />
+                <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
+                  className="w-10 text-xs text-center bg-white rounded-xl px-1.5 py-2 outline-none border border-gray-100" />
+                <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+                  className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100" />
+                <button onClick={addDraftItem} disabled={!itemName.trim()}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+                  style={{ background: RED }}>
+                  <Plus size={14} />
+                </button>
+              </div>
+              {draftItems.map(it => (
+                <div key={it.id} className="flex items-center gap-2 px-2 py-1.5 bg-white rounded-xl border border-gray-100">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 truncate">{it.name}</p>
+                    <p className="text-[10px] text-gray-400">×{it.qty}{it.price ? ` · €${parseFloat(it.price).toFixed(2)}` : ''}</p>
+                  </div>
+                  <button onClick={() => setDraftItems(prev => prev.filter(d => d.id !== it.id))} className="text-gray-300 active:text-red-400">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+              {draftItems.length > 0 && (
+                <p className="text-right text-[11px] font-bold text-gray-500 pr-1">
+                  {draftItems.length} item{draftItems.length !== 1 ? 's' : ''}{draftTotal > 0 ? ` · €${draftTotal.toFixed(2)}` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 pb-10 pt-3 shrink-0 border-t border-gray-100">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleCreate}
+            disabled={!name.trim()}
+            className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: RED }}
+          >
+            <ShoppingBag size={16} />
+            Create Shopping List
+          </motion.button>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+/* ── Shopping Detail Sheet ──────────────────────────────────────────────────── */
+function ShoppingDetailSheet({
+  list, onUpdate, onDelete, onAddItem, onToggleItem, onDeleteItem, onClose,
+}: {
+  list: ShoppingList
+  onUpdate: (updates: Partial<ShoppingList>) => void
+  onDelete: () => void
+  onAddItem: (name: string, qty: number, notes?: string, price?: number) => void
+  onToggleItem: (itemId: string) => void
+  onDeleteItem: (itemId: string) => void
+  onClose: () => void
+}) {
+  const [itemName,  setItemName]  = useState('')
+  const [itemQty,   setItemQty]   = useState('1')
+  const [itemPrice, setItemPrice] = useState('')
+  const [itemNotes, setItemNotes] = useState('')
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  const checked = list.items.filter(i => i.isChecked).length
+  const total   = list.items.length
+  const pct     = total > 0 ? (checked / total) * 100 : 0
+  const cost    = listTotal(list)
+
+  function handleAddItem() {
+    if (!itemName.trim()) return
+    onAddItem(itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined)
+    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
+  }
+
+  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    onUpdate({ coverPhoto: await resizeImage(file) })
+    e.target.value = ''
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-[60] bg-black/20"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto max-h-[92vh] flex flex-col"
+      >
+        <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+
+        {list.coverPhoto ? (
+          <div className="relative rounded-t-[2rem] overflow-hidden h-36 shrink-0">
+            <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <button onClick={onClose}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+              <X size={16} />
+            </button>
+            <button onClick={() => photoRef.current?.click()}
+              className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+              <Camera size={14} />
+            </button>
+            <div className="absolute bottom-3 left-4 right-4">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="font-bold text-white text-base">{list.name}</p>
+                  {list.storeName && <p className="text-white/70 text-xs">📍 {list.storeName}</p>}
+                </div>
+                {cost > 0 && <p className="text-white font-bold text-lg">€{cost.toFixed(2)}</p>}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 pt-4 pb-2 shrink-0">
+            <div className="drag-handle mb-3" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-bold text-gray-800">{list.name}</h3>
+                  {list.isCompleted && (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">✓ Completed</span>
+                  )}
+                </div>
+                {list.storeName && <p className="text-xs text-gray-400 mt-0.5">📍 {list.storeName}</p>}
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => photoRef.current?.click()} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                  <Camera size={14} />
+                </button>
+                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="px-5 py-3 shrink-0 border-b border-gray-100">
+          <div className="flex items-center gap-3 mb-1.5">
+            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: list.isCompleted ? '#10b981' : RED }}
+                animate={{ width: `${pct}%` }}
+                transition={{ type: 'spring', stiffness: 100, damping: 18 }}
+              />
+            </div>
+            <span className="text-xs font-bold shrink-0" style={{ color: list.isCompleted ? '#10b981' : '#9ca3af' }}>
+              {checked}/{total}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">{total} item{total !== 1 ? 's' : ''}</p>
+            {cost > 0 && (
+              <motion.p key={cost.toFixed(2)} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+                className="text-sm font-bold text-gray-800">
+                €{cost.toFixed(2)} total
+              </motion.p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {list.isCompleted && (
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              className="text-center py-3 rounded-2xl"
+              style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0' }}
+            >
+              <p className="text-sm font-bold text-emerald-600">🎉 All done! Great shopping trip.</p>
+              {list.completedAt && (
+                <p className="text-[10px] text-emerald-400 mt-0.5">
+                  Completed {new Date(list.completedAt).toLocaleDateString()}
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          <div className="bg-gray-50 rounded-2xl p-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="text" value={itemName} onChange={e => setItemName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddItem()}
+                placeholder="Add item…"
+                className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100"
+              />
+              <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
+                className="w-10 text-xs text-center bg-white rounded-xl px-1.5 py-2 outline-none border border-gray-100" />
+              <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+                className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100" />
+              <button onClick={handleAddItem} disabled={!itemName.trim()}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+                style={{ background: RED }}>
+                <Plus size={14} />
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {list.items.map(item => (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors',
+                  item.isChecked ? 'opacity-55 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
+                )}
+              >
+                <button
+                  onClick={() => onToggleItem(item.id)}
+                  className={cn(
+                    'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                    item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
+                  )}
+                >
+                  {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
+                    {item.name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
+                    {item.price != null && item.price > 0 && (
+                      <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
+                    )}
+                    {item.quantity > 1 && item.price != null && item.price > 0 && (
+                      <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
+                    )}
+                    {item.notes && <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>}
+                  </div>
+                </div>
+                <button onClick={() => onDeleteItem(item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
+                  <X size={13} />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {list.items.length === 0 && (
+            <p className="text-center text-xs text-gray-400 py-6">No items yet — add one above</p>
+          )}
+        </div>
+
+        <div className="px-5 pb-10 pt-3 shrink-0 border-t border-gray-100">
+          <button
+            onClick={onDelete}
+            className="w-full py-3 rounded-2xl text-red-400 text-sm font-medium flex items-center justify-center gap-2 bg-red-50"
+          >
+            <Trash2 size={14} /> Delete list
+          </button>
+        </div>
+      </motion.div>
     </>
   )
 }

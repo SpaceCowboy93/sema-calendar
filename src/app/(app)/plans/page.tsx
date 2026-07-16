@@ -4,11 +4,11 @@ import { useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, Camera, Wallet,
-  TrendingUp, TrendingDown, Target, Pencil, Trash2,
+  TrendingUp, TrendingDown, Target, Trash2,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { cn, getTodayString, formatDate } from '@/lib/utils'
-import type { BudgetItem, SavingsGoal } from '@/types'
+import { cn } from '@/lib/utils'
+import type { BudgetItem } from '@/types'
 
 const CURRENCY = '€'
 
@@ -47,14 +47,9 @@ export default function FinancePage() {
   const updateBudgetItem = useAppStore(s => s.updateBudgetItem)
   const addBudgetItem    = useAppStore(s => s.addBudgetItem)
   const deleteBudgetItem = useAppStore(s => s.deleteBudgetItem)
-  const addSavingsGoal   = useAppStore(s => s.addSavingsGoal)
-  const updateSavingsGoal = useAppStore(s => s.updateSavingsGoal)
-  const deleteSavingsGoal = useAppStore(s => s.deleteSavingsGoal)
-  const addToSavings     = useAppStore(s => s.addToSavings)
+  const shoppingLists    = useAppStore(s => s.shoppingLists)
 
   const [editingBudget, setEditingBudget]   = useState<BudgetItem | null>(null)
-  const [editingGoal, setEditingGoal]       = useState<SavingsGoal | null>(null)
-  const [addGoalOpen, setAddGoalOpen]       = useState(false)
   const [addBudgetOpen, setAddBudgetOpen]   = useState(false)
   const [incomeEditing, setIncomeEditing]   = useState(false)
   const [incomeInput, setIncomeInput]       = useState(String(monthlyIncome))
@@ -63,7 +58,12 @@ export default function FinancePage() {
   const totalExpenses = useMemo(() => budgetItems.reduce((a, b) => a + b.actual, 0), [budgetItems])
   const totalPlanned  = useMemo(() => budgetItems.reduce((a, b) => a + b.planned, 0), [budgetItems])
   const remaining     = monthlyIncome - totalExpenses
-  const totalSaved    = useMemo(() => savingsGoals.reduce((a, g) => a + g.savedAmount, 0), [savingsGoals])
+  const totalSaved         = useMemo(() => savingsGoals.reduce((a, g) => a + g.savedAmount, 0), [savingsGoals])
+  const completedLists     = useMemo(() => shoppingLists.filter(l => l.isCompleted), [shoppingLists])
+  const totalShoppingSpent = useMemo(
+    () => completedLists.reduce((s, l) => s + l.items.reduce((a, i) => a + (i.price ?? 0) * i.quantity, 0), 0),
+    [completedLists],
+  )
 
   async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -177,7 +177,7 @@ export default function FinancePage() {
               <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: '#f59e0b20' }}>
                 <Target size={14} color="#f59e0b" />
               </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goals Saved</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Savings</span>
             </div>
             <p className="text-xl font-bold" style={{ color: '#f59e0b' }}>{fmt(totalSaved)}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">{savingsGoals.length} goal{savingsGoals.length !== 1 ? 's' : ''}</p>
@@ -252,107 +252,48 @@ export default function FinancePage() {
           </div>
         </div>
 
-        {/* ── Savings Goals ── */}
-        <div className="px-4 mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">Our Goals ✨</h2>
-            <button
-              onClick={() => setAddGoalOpen(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: '#f59e0b15', color: '#f59e0b' }}
-            >
-              <Plus size={11} /> Goal
-            </button>
-          </div>
-
-          {savingsGoals.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-white rounded-2xl shadow-card py-10 text-center"
-            >
-              <p className="text-3xl mb-2">🎯</p>
-              <p className="text-sm font-semibold text-gray-500 mb-1">No goals yet</p>
-              <p className="text-xs text-gray-400 mb-4">Japan trip? New car? Dream together.</p>
-              <button
-                onClick={() => setAddGoalOpen(true)}
-                className="flex items-center gap-1.5 mx-auto px-5 py-2.5 rounded-2xl text-white text-sm font-semibold"
-                style={{ background: '#f59e0b' }}
-              >
-                <Plus size={14} /> Add First Goal
-              </button>
-            </motion.div>
-          ) : (
-            <div className="space-y-3">
-              {savingsGoals.map((goal, idx) => {
-                const pct     = goal.targetAmount > 0 ? Math.min((goal.savedAmount / goal.targetAmount) * 100, 100) : 0
-                const done    = pct >= 100
+        {/* ── Shopping History ── */}
+        {completedLists.length > 0 && (
+          <div className="px-4 mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-700">Shopping History 🛍️</h2>
+              {totalShoppingSpent > 0 && (
+                <span className="text-[11px] font-bold" style={{ color: '#ef4444' }}>{fmt(totalShoppingSpent)} total</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {completedLists.map((list, idx) => {
+                const cost = list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
                 return (
                   <motion.div
-                    key={goal.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
+                    key={list.id}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="bg-white rounded-2xl shadow-card p-4 relative overflow-hidden"
+                    transition={{ delay: idx * 0.03 }}
+                    className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
                   >
-                    {done && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="absolute top-3 right-3 text-xl"
-                      >
-                        🎉
-                      </motion.div>
+                    {list.coverPhoto ? (
+                      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+                        <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0">🛒</div>
                     )}
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className="text-2xl shrink-0">{goal.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-800">{goal.title}</p>
-                        {goal.notes && <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{goal.notes}</p>}
-                        {goal.deadline && (
-                          <p className="text-[10px] text-gray-400 mt-0.5">🗓 {formatDate(goal.deadline, 'MMM d, yyyy')}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => setEditingGoal(goal)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 active:bg-gray-100 shrink-0"
-                      >
-                        <Pencil size={12} />
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-700 truncate">{list.name}</p>
+                      <p className="text-[10px] text-gray-400">
+                        {list.storeName ? `📍 ${list.storeName} · ` : ''}
+                        {list.items.length} item{list.items.length !== 1 ? 's' : ''}
+                        {list.completedAt ? ` · ${new Date(list.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                      </p>
                     </div>
-
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full"
-                          style={{ background: done ? '#10b981' : '#f59e0b' }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ type: 'spring', stiffness: 80, damping: 20, delay: idx * 0.05 + 0.1 }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold shrink-0" style={{ color: done ? '#10b981' : '#f59e0b' }}>
-                        {Math.round(pct)}%
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="text-[11px] text-gray-500">
-                        <span className="font-bold text-gray-700">{fmt(goal.savedAmount)}</span>
-                        <span className="text-gray-400"> of {fmt(goal.targetAmount)}</span>
-                      </div>
-                      {!done && (
-                        <AddToSavingsRow goalId={goal.id} onAdd={addToSavings} />
-                      )}
-                    </div>
+                    {cost > 0 && <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(cost)}</p>}
                   </motion.div>
                 )
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
 
@@ -416,51 +357,6 @@ export default function FinancePage() {
         )}
       </AnimatePresence>
 
-      {/* ── Savings goal edit/add sheet ── */}
-      <AnimatePresence>
-        {(addGoalOpen || editingGoal) && (
-          <GoalSheet
-            goal={editingGoal}
-            onSave={(data) => {
-              if (editingGoal) updateSavingsGoal(editingGoal.id, data)
-              else addSavingsGoal(data as Parameters<typeof addSavingsGoal>[0])
-              setEditingGoal(null); setAddGoalOpen(false)
-            }}
-            onDelete={editingGoal ? () => { deleteSavingsGoal(editingGoal.id); setEditingGoal(null) } : undefined}
-            onClose={() => { setEditingGoal(null); setAddGoalOpen(false) }}
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-/* ── Add-to-savings inline row ───────────────────────────────────────────────── */
-function AddToSavingsRow({ goalId, onAdd }: { goalId: string; onAdd: (id: string, n: number) => void }) {
-  const [val, setVal] = useState('')
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex items-center gap-1 bg-gray-50 rounded-xl px-2 py-1">
-        <span className="text-[10px] text-gray-400">{CURRENCY}</span>
-        <input
-          type="number"
-          value={val}
-          onChange={e => setVal(e.target.value)}
-          placeholder="0"
-          className="w-14 text-xs text-gray-700 bg-transparent outline-none"
-        />
-      </div>
-      <button
-        onClick={() => {
-          const n = parseFloat(val)
-          if (n > 0) { onAdd(goalId, n); setVal('') }
-        }}
-        disabled={!val || parseFloat(val) <= 0}
-        className="px-2.5 py-1 rounded-xl text-[10px] font-bold text-white disabled:opacity-40"
-        style={{ background: '#f59e0b' }}
-      >
-        + Add
-      </button>
     </div>
   )
 }
@@ -625,138 +521,3 @@ function AddBudgetSheet({
   )
 }
 
-/* ── Savings Goal Sheet (add + edit) ─────────────────────────────────────────── */
-const GOAL_EMOJIS = ['✈️', '🏠', '🚗', '💍', '🎓', '💻', '🏖️', '🎁', '🌍', '💰', '🎉', '🐾']
-
-function GoalSheet({
-  goal, onSave, onDelete, onClose,
-}: {
-  goal: SavingsGoal | null
-  onSave: (data: Partial<SavingsGoal>) => void
-  onDelete?: () => void
-  onClose: () => void
-}) {
-  const [title,    setTitle]    = useState(goal?.title    ?? '')
-  const [emoji,    setEmoji]    = useState(goal?.emoji    ?? '🎯')
-  const [target,   setTarget]   = useState(String(goal?.targetAmount  ?? ''))
-  const [saved,    setSaved]    = useState(String(goal?.savedAmount   ?? ''))
-  const [deadline, setDeadline] = useState(goal?.deadline ?? '')
-  const [notes,    setNotes]    = useState(goal?.notes    ?? '')
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  const isEdit = !!goal
-
-  function save() {
-    if (!title.trim()) return
-    onSave({
-      title: title.trim(),
-      emoji,
-      targetAmount: parseFloat(target) || 0,
-      savedAmount:  parseFloat(saved)  || 0,
-      deadline: deadline || undefined,
-      notes: notes.trim() || undefined,
-    })
-  }
-
-  return (
-    <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
-      >
-        <div className="px-5 pt-4 pb-10">
-          <div className="drag-handle mb-5" />
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-gray-800">{isEdit ? 'Edit Goal' : 'New Savings Goal'} ✨</h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* Emoji picker */}
-          <div className="mb-4">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Icon</p>
-            <div className="flex flex-wrap gap-2">
-              {GOAL_EMOJIS.map(e => (
-                <button
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className={cn('w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all',
-                    emoji === e ? 'ring-2 scale-110' : 'bg-gray-50')}
-                  style={emoji === e ? { background: '#fef3c7', outline: '2px solid #f59e0b' } : {}}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 mb-5">
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Goal Name</p>
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} autoFocus
-                placeholder="e.g. Japan Trip"
-                className="w-full text-sm font-semibold text-gray-800 bg-transparent outline-none" />
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Target</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-400">{CURRENCY}</span>
-                  <input type="number" value={target} onChange={e => setTarget(e.target.value)}
-                    placeholder="5000"
-                    className="flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none" />
-                </div>
-              </div>
-              <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Saved so far</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-400">{CURRENCY}</span>
-                  <input type="number" value={saved} onChange={e => setSaved(e.target.value)}
-                    placeholder="0"
-                    className="flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none" />
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Deadline (optional)</p>
-              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-                className="w-full text-sm text-gray-700 bg-transparent outline-none" />
-            </div>
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes (optional)</p>
-              <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                placeholder="What's this goal for?"
-                rows={2}
-                className="w-full text-sm text-gray-700 bg-transparent outline-none resize-none placeholder:text-gray-300" />
-            </div>
-          </div>
-
-          <button onClick={save} disabled={!title.trim()}
-            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
-            style={{ background: '#f59e0b' }}
-          >
-            {isEdit ? 'Save Changes' : 'Create Goal'} ✨
-          </button>
-
-          {isEdit && onDelete && (
-            !confirmDelete ? (
-              <button onClick={() => setConfirmDelete(true)}
-                className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
-                <Trash2 size={13} /> Delete Goal
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmDelete(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium">Cancel</button>
-                <button onClick={onDelete} className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium">Delete</button>
-              </div>
-            )
-          )}
-        </div>
-      </motion.div>
-    </>
-  )
-}

@@ -29,7 +29,7 @@ export default function ShoppingPage() {
 
   function handleCreateList() {
     if (!newListName.trim()) return
-    createList(newListName.trim())
+    createList({ name: newListName.trim() })
     setNewListName('')
     setShowCreate(false)
   }
