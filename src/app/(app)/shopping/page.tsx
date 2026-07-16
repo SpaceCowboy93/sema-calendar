@@ -180,6 +180,13 @@ export default function ShoppingPage() {
                               >
                                 {item.isChecked && <Check size={12} color="white" strokeWidth={3} />}
                               </button>
+                              {item.photo && (
+                                <img
+                                  src={item.photo}
+                                  alt=""
+                                  className={cn('w-10 h-10 rounded-xl object-cover shrink-0', item.isChecked && 'opacity-50')}
+                                />
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
                                   {item.name}

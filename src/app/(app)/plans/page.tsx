@@ -9,6 +9,7 @@ import {
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
+import { PhotoGallery } from '@/components/ui/PhotoGallery'
 
 const CURRENCY = '€'
 
@@ -791,7 +792,6 @@ function FinanceCategoryEditorSheet({
   const [uploading,   setUploading]   = useState(false)
   const [addingItem,  setAddingItem]  = useState(false)
   const [editingItem, setEditingItem] = useState<FinanceCategoryItem | null>(null)
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   const [confirmDel,  setConfirmDel]  = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -882,38 +882,13 @@ function FinanceCategoryEditorSheet({
             {/* Photos */}
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Photos</p>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {photos.map((url, idx) => (
-                  <div key={url} className="relative shrink-0">
-                    <button
-                      onClick={() => setLightboxIdx(idx)}
-                      className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 block"
-                    >
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                    </button>
-                    <button
-                      onClick={() => setPhotos(p => p.filter(u => u !== url))}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow"
-                    >
-                      <X size={10} color="white" />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={uploading}
-                  className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shrink-0 active:bg-gray-100 disabled:opacity-60"
-                >
-                  {uploading ? (
-                    <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-400 rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Camera size={16} className="text-gray-400" />
-                      <span className="text-[9px] text-gray-400 mt-0.5">Add</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <PhotoGallery
+                photos={photos}
+                size="sm"
+                onRemove={idx => setPhotos(p => p.filter((_, i) => i !== idx))}
+                onAddClick={() => photoInputRef.current?.click()}
+                uploading={uploading}
+              />
             </div>
 
             {/* Planned Budget */}
@@ -1060,11 +1035,6 @@ function FinanceCategoryEditorSheet({
         </div>
       </motion.div>
 
-      <AnimatePresence>
-        {lightboxIdx !== null && (
-          <PhotoLightbox photos={photos} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} />
-        )}
-      </AnimatePresence>
     </>
   )
 }
@@ -1209,56 +1179,6 @@ function ItemForm({
           </button>
         </div>
       </div>
-    </motion.div>
-  )
-}
-
-/* ── Photo Lightbox ──────────────────────────────────────────────────────────── */
-function PhotoLightbox({ photos, initialIdx, onClose }: {
-  photos: string[]
-  initialIdx: number
-  onClose: () => void
-}) {
-  const [idx, setIdx] = useState(initialIdx)
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <button
-        onClick={onClose}
-        className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-      >
-        <X size={20} />
-      </button>
-      {idx > 0 && (
-        <button
-          onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
-          className="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-        >
-          <ChevronLeft size={20} />
-        </button>
-      )}
-      {idx < photos.length - 1 && (
-        <button
-          onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
-          className="absolute right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-        >
-          <ChevronRight size={20} />
-        </button>
-      )}
-      <img
-        src={photos[idx]}
-        alt=""
-        className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
-        onClick={e => e.stopPropagation()}
-      />
-      {photos.length > 1 && (
-        <p className="absolute bottom-5 text-white/70 text-sm">{idx + 1} / {photos.length}</p>
-      )}
     </motion.div>
   )
 }

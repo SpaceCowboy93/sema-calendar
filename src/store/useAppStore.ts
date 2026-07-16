@@ -95,7 +95,7 @@ interface AppState {
   createShoppingList: (data: ShoppingListInput) => string
   updateShoppingList: (id: string, updates: Partial<ShoppingList>) => void
   deleteShoppingList: (id: string) => void
-  addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number) => void
+  addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number, photo?: string) => void
   updateShoppingItem: (listId: string, itemId: string, updates: Partial<ShoppingItem>) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
@@ -697,7 +697,7 @@ export const useAppStore = create<AppState>()(
           ),
         })),
 
-      addShoppingItem: (listId, name, quantity = 1, notes, price) => {
+      addShoppingItem: (listId, name, quantity = 1, notes, price, photo) => {
         const { currentUser } = get()
         if (!currentUser) return
         const newItem: ShoppingItem = {
@@ -705,6 +705,7 @@ export const useAppStore = create<AppState>()(
           createdAt: new Date().toISOString(),
           notes: notes?.trim() || undefined,
           price: price ?? undefined,
+          photo: photo ?? undefined,
         }
         set(s => ({
           shoppingLists: s.shoppingLists.map(l =>

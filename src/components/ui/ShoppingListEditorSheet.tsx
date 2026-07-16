@@ -6,6 +6,7 @@ import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import type { ShoppingList, ShoppingItem } from '@/types'
 import { generateId, cn } from '@/lib/utils'
+import { PhotoGallery } from '@/components/ui/PhotoGallery'
 
 const RED = '#ef4444'
 
@@ -40,7 +41,7 @@ export function effectivePhotos(list: Pick<ShoppingList, 'photos' | 'coverPhoto'
 }
 
 /* ── Draft item (create mode) ─────────────────────────────────────────────── */
-type DraftItem = { id: string; name: string; qty: string; price: string; notes: string }
+type DraftItem = { id: string; name: string; qty: string; price: string; notes: string; photo?: string }
 
 /* ── Props ────────────────────────────────────────────────────────────────── */
 interface Props {
@@ -81,6 +82,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   const [itemQty,   setItemQty]   = useState('1')
   const [itemPrice, setItemPrice] = useState('')
   const [itemNotes, setItemNotes] = useState('')
+  const [itemPhoto, setItemPhoto] = useState<string | undefined>(undefined)
+  const itemPhotoRef = useRef<HTMLInputElement>(null)
 
   /* ── Edit mode: inline item editing ──────────────────────────────────── */
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -88,6 +91,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   const [editQty,       setEditQty]       = useState('1')
   const [editPrice,     setEditPrice]     = useState('')
   const [editNotes,     setEditNotes]     = useState('')
+  const [editPhoto,     setEditPhoto]     = useState<string | undefined>(undefined)
+  const editPhotoRef = useRef<HTMLInputElement>(null)
 
   const [saving,      setSaving]      = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -106,19 +111,26 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
 
   function removePhoto(i: number) { setPhotos(prev => prev.filter((_, idx) => idx !== i)) }
 
+  /* ── Item photo helpers ───────────────────────────────────────────────── */
+  async function handleItemPhotoPick(e: React.ChangeEvent<HTMLInputElement>, setter: (v: string | undefined) => void) {
+    const file = e.target.files?.[0]; if (!file) return
+    try { setter(await resizeImage(file, 600)) } catch { /* ignore */ }
+    e.target.value = ''
+  }
+
   /* ── Add item ─────────────────────────────────────────────────────────── */
   const handleAddItem = useCallback(() => {
     if (!itemName.trim()) return
     if (mode === 'create') {
       setDraftItems(prev => [...prev, {
         id: generateId(), name: itemName.trim(),
-        qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(),
+        qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(), photo: itemPhoto,
       }])
     } else if (list) {
-      addStoreItem(list.id, itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined)
+      addStoreItem(list.id, itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
     }
-    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
-  }, [mode, list, itemName, itemQty, itemPrice, itemNotes, addStoreItem])
+    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes(''); setItemPhoto(undefined)
+  }, [mode, list, itemName, itemQty, itemPrice, itemNotes, itemPhoto, addStoreItem])
 
   /* ── Item inline editing (edit mode) ─────────────────────────────────── */
   function startEditItem(item: ShoppingItem) {
@@ -127,6 +139,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     setEditQty(String(item.quantity))
     setEditPrice(item.price != null ? String(item.price) : '')
     setEditNotes(item.notes ?? '')
+    setEditPhoto(item.photo)
   }
 
   function saveItemEdit() {
@@ -136,8 +149,10 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
       quantity: parseInt(editQty) || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim() || undefined,
+      photo:    editPhoto,
     })
     setEditingItemId(null)
+    setEditPhoto(undefined)
   }
 
   function confirmDeleteItem(itemId: string) {
@@ -164,7 +179,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           coverPhoto: validPhotos[0] || undefined,
         })
         for (const it of draftItems) {
-          addStoreItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined)
+          addStoreItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
         }
         onSave(id)
       } else if (list) {
@@ -194,45 +209,17 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   const formContent = (
     <div className="space-y-3 pb-6">
       <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+      <input ref={itemPhotoRef} type="file" accept="image/*" className="hidden" onChange={e => handleItemPhotoPick(e, setItemPhoto)} />
+      <input ref={editPhotoRef} type="file" accept="image/*" className="hidden" onChange={e => handleItemPhotoPick(e, setEditPhoto)} />
 
       {/* Photos */}
-      {photos.filter(p => p).length > 0 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {photos.filter(p => p).map((p, i) => (
-            <div key={i} className="relative shrink-0 w-28 h-24 rounded-2xl overflow-hidden">
-              <img src={p} alt="" className="w-full h-full object-cover" />
-              <button
-                onClick={() => removePhoto(i)}
-                className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-xs"
-              >×</button>
-              {i === 0 && (
-                <span className="absolute bottom-1.5 left-1.5 text-[8px] px-1.5 py-0.5 rounded bg-black/50 text-white font-bold">Cover</span>
-              )}
-            </div>
-          ))}
-          <button
-            onClick={() => photoRef.current?.click()}
-            disabled={photoLoading}
-            className="shrink-0 w-28 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 gap-1 bg-gray-50"
-          >
-            {photoLoading
-              ? <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin border-gray-300" />
-              : <><Camera size={16} /><span className="text-[10px]">Add photo</span></>
-            }
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => photoRef.current?.click()}
-          disabled={photoLoading}
-          className="w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-gray-400 bg-gray-50"
-        >
-          {photoLoading
-            ? <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin border-gray-300" />
-            : <><Camera size={16} /><span className="text-sm">Add photos</span></>
-          }
-        </button>
-      )}
+      <PhotoGallery
+        photos={photos}
+        size="md"
+        onRemove={removePhoto}
+        onAddClick={() => photoRef.current?.click()}
+        uploading={photoLoading}
+      />
 
       {/* List metadata */}
       <input
@@ -273,6 +260,25 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         <div className="bg-gray-50 rounded-2xl p-3 space-y-2">
           {/* Add-item row */}
           <div className="flex items-center gap-1.5">
+            {/* Item photo thumbnail / camera */}
+            {itemPhoto ? (
+              <div className="relative shrink-0">
+                <img src={itemPhoto} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                <button
+                  onClick={() => setItemPhoto(undefined)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center"
+                >
+                  <X size={8} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => itemPhotoRef.current?.click()}
+                className="w-8 h-8 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-300 shrink-0 bg-white"
+              >
+                <Camera size={13} />
+              </button>
+            )}
             <input
               type="text" value={itemName} onChange={e => setItemName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddItem()}
@@ -302,6 +308,9 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                   exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.13 }}
                   className="flex items-center gap-2 px-2.5 py-2 bg-white rounded-xl border border-gray-100"
                 >
+                  {it.photo && (
+                    <img src={it.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700 truncate">{it.name}</p>
                     <p className="text-[10px] text-gray-400">
@@ -335,7 +344,26 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                   {editingItemId === item.id ? (
                     /* Inline edit form */
                     <div className="bg-white rounded-xl border-2 p-2.5 space-y-2" style={{ borderColor: RED + '40' }}>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 items-center">
+                        {/* Edit item photo */}
+                        {editPhoto ? (
+                          <div className="relative shrink-0">
+                            <img src={editPhoto} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            <button
+                              onClick={() => setEditPhoto(undefined)}
+                              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center"
+                            >
+                              <X size={8} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => editPhotoRef.current?.click()}
+                            className="w-8 h-8 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-300 shrink-0 bg-gray-50"
+                          >
+                            <Camera size={13} />
+                          </button>
+                        )}
                         <input
                           type="text" value={editName} onChange={e => setEditName(e.target.value)}
                           autoFocus
@@ -383,6 +411,9 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                       'flex items-center gap-2 px-2.5 py-2 bg-white rounded-xl border border-gray-100 transition-opacity',
                       item.isChecked && 'opacity-50'
                     )}>
+                      {item.photo && (
+                        <img src={item.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-700')}>
                           {item.name}

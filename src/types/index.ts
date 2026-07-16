@@ -160,6 +160,7 @@ export interface ShoppingItem {
   notes?: string
   price?: number
   link?: string
+  photo?: string  // base64 data URL
 }
 
 export interface FinanceCategoryItem {
