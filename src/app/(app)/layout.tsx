@@ -10,7 +10,7 @@ import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
 import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
-import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
+import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -86,7 +86,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <PartnerNoteNotification />
 
-      <QuickAddSheet
+      <FullCreateSheet
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
         primary={primary}

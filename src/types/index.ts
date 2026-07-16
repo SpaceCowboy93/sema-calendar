@@ -57,6 +57,8 @@ export interface SharedTodo {
   startTime?: string     // HH:MM (optional)
   color?: EventColor
   linkedEventId?: string // ID of the linked CalendarEvent (if any)
+  photos?: string[]
+  backgroundPhoto?: string
 }
 
 export type MoodType = 'happy' | 'relaxed' | 'tired' | 'sad' | 'stressed'
@@ -89,6 +91,8 @@ export interface WishlistItem {
   createdBy: UserName
   createdAt: string
   photos?: string[]      // Supabase Storage public URLs
+  backgroundPhoto?: string
+  checklist?: string[]
 }
 
 export interface PageBackgrounds {
@@ -133,6 +137,8 @@ export interface Goal {
   createdAt: string
   linkedEventId?: string     // ID of the linked CalendarEvent (if targetDate is set)
   photos?: string[]          // Supabase Storage public URLs
+  backgroundPhoto?: string
+  checklist?: string[]
 }
 
 export interface PartnerNote {

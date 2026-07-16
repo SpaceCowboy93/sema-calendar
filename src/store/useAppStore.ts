@@ -42,7 +42,8 @@ interface AppState {
 
   // Todos
   todos: SharedTodo[]
-  addTodo: (title: string, items?: string[], date?: string, color?: EventColor, notes?: string, startTime?: string) => void
+  addTodo: (title: string, items?: string[], date?: string, color?: EventColor, notes?: string, startTime?: string) => string
+  uploadTodoPhoto: (todoId: string, file: File) => Promise<void>
   updateTodo: (id: string, updates: Partial<SharedTodo>) => void
   toggleTodo: (id: string) => void
   deleteTodo: (id: string) => void
@@ -60,7 +61,7 @@ interface AppState {
 
   // Wishlist
   wishlistItems: WishlistItem[]
-  addWishlistItem: (title: string, category: WishlistCategory, notes?: string) => void
+  addWishlistItem: (title: string, category: WishlistCategory, notes?: string) => string
   toggleWishlistItem: (id: string) => void
   updateWishlistItem: (id: string, updates: Partial<import('@/types').WishlistItem>) => void
   deleteWishlistItem: (id: string) => void
@@ -79,7 +80,7 @@ interface AppState {
 
   // Goals
   goals: Goal[]
-  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string) => void
+  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string) => string
   updateGoal: (id: string, updates: Partial<Goal>) => void
   deleteGoal: (id: string) => void
   incrementGoalProgress: (id: string) => void
@@ -217,7 +218,7 @@ export const useAppStore = create<AppState>()(
 
       addTodo: (title, items, date, color, notes, startTime) => {
         const { currentUser } = get()
-        if (!currentUser) return
+        if (!currentUser) return ''
         const now    = new Date().toISOString()
         const todoId = generateId()
         const validItems = items?.filter(i => i.trim())
@@ -257,6 +258,17 @@ export const useAppStore = create<AppState>()(
         } else {
           set(s => ({ todos: [...s.todos, newTodo] }))
         }
+        return todoId
+      },
+
+      uploadTodoPhoto: async (todoId, file) => {
+        const url = await get().uploadPhoto(`todos/${todoId}`, file)
+        if (!url) return
+        set(s => ({
+          todos: s.todos.map(t =>
+            t.id === todoId ? { ...t, photos: [...(t.photos ?? []), url] } : t
+          ),
+        }))
       },
 
       updateTodo: (id, updates) =>
@@ -366,12 +378,13 @@ export const useAppStore = create<AppState>()(
 
       addWishlistItem: (title, category, notes) => {
         const { currentUser } = get()
-        if (!currentUser) return
+        if (!currentUser) return ''
+        const id = generateId()
         set(s => ({
           wishlistItems: [
             ...s.wishlistItems,
             {
-              id: generateId(),
+              id,
               title,
               category,
               notes,
@@ -381,6 +394,7 @@ export const useAppStore = create<AppState>()(
             },
           ],
         }))
+        return id
       },
 
       toggleWishlistItem: id =>
@@ -453,7 +467,7 @@ export const useAppStore = create<AppState>()(
 
       addGoal: (categoryId, title, notes, targetDate, progressTarget = 0, startTime) => {
         const { currentUser } = get()
-        if (!currentUser) return
+        if (!currentUser) return ''
         const now    = new Date().toISOString()
         const goalId = generateId()
 
@@ -485,12 +499,13 @@ export const useAppStore = create<AppState>()(
             linkedGoalId: goalId,
           }
           set(s => ({
-            goals:  [...s.goals, newGoal],
+            goals:  [...s.goals,  newGoal],
             events: [...s.events, newEvent],
           }))
         } else {
           set(s => ({ goals: [...s.goals, newGoal] }))
         }
+        return goalId
       },
 
       updateGoal: (id, updates) => {
