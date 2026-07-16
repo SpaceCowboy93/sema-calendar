@@ -13,6 +13,7 @@ import {
   getTodayString, cn, EVENT_COLOR_CLASS, COLOR_HEX, generateId,
 } from '@/lib/utils'
 import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
+import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 
 const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
   ['travel',     { emoji: '✈️', label: 'Travel'     }],
@@ -415,12 +416,20 @@ export default function TogetherPage() {
 
         </div>
 
-      {/* ── EventModal ── */}
+      {/* ── EventModal — edit existing calendar event only ── */}
       <EventModal
-        isOpen={modalOpen}
+        isOpen={modalOpen && !!editingEvent}
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
         date={selectedDate}
         event={editingEvent}
+      />
+
+      {/* ── FullCreateSheet — create new items with category picker ── */}
+      <FullCreateSheet
+        open={modalOpen && !editingEvent}
+        onClose={() => setModalOpen(false)}
+        primary={primary}
+        initialDate={selectedDate}
       />
 
       <QuickAddSheet

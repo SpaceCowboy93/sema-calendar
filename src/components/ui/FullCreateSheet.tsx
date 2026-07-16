@@ -78,10 +78,11 @@ interface Props {
   open: boolean
   onClose: () => void
   primary: string
+  initialDate?: string
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
-export function FullCreateSheet({ open, onClose, primary }: Props) {
+export function FullCreateSheet({ open, onClose, primary, initialDate }: Props) {
   const currentUser       = useAppStore(s => s.currentUser)!
   const addEvent          = useAppStore(s => s.addEvent)
   const updateEvent       = useAppStore(s => s.updateEvent)
@@ -121,6 +122,11 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
     else      document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [open])
+
+  // Pre-populate date when opened from a specific date context (e.g. calendar)
+  useEffect(() => {
+    if (open && initialDate) setDate(initialDate)
+  }, [open, initialDate])
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime('')

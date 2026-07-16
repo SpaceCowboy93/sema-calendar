@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, F
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
+import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { type CalendarEvent, type SharedTodo, USERS, OTHER_USER } from '@/types'
 import { getCalendarDays, toDateString, formatTime, getTodayString, cn, EVENT_COLOR_CLASS, MOOD_CONFIG } from '@/lib/utils'
 
@@ -314,12 +315,20 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* EventModal */}
+      {/* EventModal — edit existing calendar events only */}
       <EventModal
-        isOpen={modalOpen}
+        isOpen={modalOpen && !!editingEvent}
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
         date={selectedDate}
         event={editingEvent}
+      />
+
+      {/* FullCreateSheet — new items with category picker */}
+      <FullCreateSheet
+        open={modalOpen && !editingEvent}
+        onClose={() => setModalOpen(false)}
+        primary={primaryColor}
+        initialDate={selectedDate}
       />
 
       {/* Category Hub Modal */}
