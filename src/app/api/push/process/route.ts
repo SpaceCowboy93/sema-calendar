@@ -68,7 +68,8 @@ export async function GET(req: NextRequest) {
   await Promise.all(
     reminders.map(async (r: { id: string; user_name: string; title: string; message: string }) => {
       const userSubs = subsByUser[r.user_name] ?? []
-      let allOk = userSubs.length > 0
+      // No subscriptions = nothing to deliver; mark sent so it doesn't accumulate
+      let allOk = true
 
       await Promise.all(
         userSubs.map(async sub => {

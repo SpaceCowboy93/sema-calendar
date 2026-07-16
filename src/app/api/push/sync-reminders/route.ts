@@ -52,12 +52,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const supabase = adminClient()
+
+    // Delete unsent reminders for all items in this batch so changed times don't linger
+    const itemIds = Array.from(new Set(items.map((i: { id: string }) => i.id)))
+    await supabase
+      .from('push_reminders')
+      .delete()
+      .eq('couple_id', 'sema')
+      .eq('user_name', userName)
+      .in('item_id', itemIds)
+      .is('sent_at', null)
+
     if (rows.length === 0) return NextResponse.json({ ok: true, upserted: 0 })
 
-    const supabase = adminClient()
     const { error } = await supabase
       .from('push_reminders')
-      .upsert(rows, { onConflict: 'couple_id,user_name,item_id,fire_at', ignoreDuplicates: false })
+      .insert(rows)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, upserted: rows.length })
