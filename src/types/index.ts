@@ -162,6 +162,17 @@ export interface ShoppingItem {
   link?: string
 }
 
+export interface FinanceCategoryItem {
+  id: string
+  name: string
+  quantity: number
+  unitPrice: number
+  note?: string
+  isPaid?: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface BudgetItem {
   id: string
   category: string
@@ -169,6 +180,11 @@ export interface BudgetItem {
   planned: number
   actual: number
   note?: string
+  // Extended (all optional — backward-compat)
+  photos?: string[]
+  items?: FinanceCategoryItem[]
+  actualSpendingMode?: 'items' | 'manual'
+  manualActualSpending?: number
 }
 
 export interface SavingsGoal {

@@ -4,11 +4,11 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, Camera, ChevronLeft, ChevronRight,
-  TrendingUp, TrendingDown, Wallet, Trash2, Sparkles,
+  TrendingUp, TrendingDown, Wallet, Trash2, Sparkles, Pencil,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { cn } from '@/lib/utils'
-import type { BudgetItem, FinanceMonth, FinanceMonthReport } from '@/types'
+import { cn, generateId } from '@/lib/utils'
+import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
 
 const CURRENCY = '€'
 
@@ -573,7 +573,7 @@ export default function FinancePage() {
       {/* ── Budget edit sheet ── */}
       <AnimatePresence>
         {editingBudget && currentMonth && (
-          <BudgetEditSheet
+          <FinanceCategoryEditorSheet
             item={editingBudget}
             onSave={updates => {
               updateFinanceMonth(monthKey, {
@@ -595,6 +595,7 @@ export default function FinancePage() {
       </AnimatePresence>
 
       {/* ── Add budget category sheet ── */}
+
       <AnimatePresence>
         {addBudgetOpen && currentMonth && (
           <AddBudgetSheet
@@ -760,8 +761,8 @@ function ReportCard({ report }: { report: FinanceMonthReport }) {
   )
 }
 
-/* ── Budget Edit Sheet ───────────────────────────────────────────────────────── */
-function BudgetEditSheet({
+/* ── Finance Category Editor Sheet ──────────────────────────────────────────── */
+function FinanceCategoryEditorSheet({
   item, onSave, onDelete, onClose,
 }: {
   item: BudgetItem
@@ -769,18 +770,84 @@ function BudgetEditSheet({
   onDelete: () => void
   onClose: () => void
 }) {
-  const [planned, setPlanned] = useState(String(item.planned))
-  const [actual,  setActual]  = useState(String(item.actual))
-  const [note,    setNote]    = useState(item.note ?? '')
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const uploadPhoto = useAppStore(s => s.uploadPhoto)
+
+  // Determine initial mode: preserve stored mode, fall back to 'manual' when there's
+  // existing actual data but no items (so we don't silently reset it to €0).
+  const initMode: 'items' | 'manual' =
+    item.actualSpendingMode ??
+    ((item.items && item.items.length > 0) ? 'items' : item.actual > 0 ? 'manual' : 'items')
+
+  const [planned,     setPlanned]     = useState(String(item.planned))
+  const [note,        setNote]        = useState(item.note ?? '')
+  const [photos,      setPhotos]      = useState<string[]>(item.photos ?? [])
+  const [catItems,    setCatItems]    = useState<FinanceCategoryItem[]>(item.items ?? [])
+  const [actualMode,  setActualMode]  = useState<'items' | 'manual'>(initMode)
+  const [manualInput, setManualInput] = useState<string>(
+    item.actualSpendingMode === 'manual' && item.manualActualSpending != null
+      ? String(item.manualActualSpending)
+      : item.actual > 0 ? String(item.actual) : ''
+  )
+  const [uploading,   setUploading]   = useState(false)
+  const [addingItem,  setAddingItem]  = useState(false)
+  const [editingItem, setEditingItem] = useState<FinanceCategoryItem | null>(null)
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  const [confirmDel,  setConfirmDel]  = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
+  const itemTotal = useMemo(
+    () => catItems.reduce((a, i) => a + i.quantity * i.unitPrice, 0),
+    [catItems],
+  )
+  const manualVal      = parseFloat(manualInput.replace(',', '.')) || 0
+  const effectiveActual = actualMode === 'items' ? itemTotal : manualVal
+  const diff            = actualMode === 'manual' ? manualVal - itemTotal : 0
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploading(true)
+    const url = await uploadPhoto(`finance-categories/${item.id}`, file)
+    if (url) setPhotos(p => [...p, url])
+    setUploading(false)
+  }
+
+  function switchToManual() {
+    setActualMode('manual')
+    if (!manualInput || manualInput === '0') setManualInput(String(itemTotal))
+  }
+
+  function addCatItem(data: Omit<FinanceCategoryItem, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = new Date().toISOString()
+    setCatItems(p => [...p, { ...data, id: generateId(), createdAt: now, updatedAt: now }])
+    setAddingItem(false)
+  }
+
+  function updateCatItem(id: string, data: Partial<FinanceCategoryItem>) {
+    const now = new Date().toISOString()
+    setCatItems(p => p.map(i => i.id === id ? { ...i, ...data, updatedAt: now } : i))
+    setEditingItem(null)
+  }
+
+  function deleteCatItem(id: string) {
+    setCatItems(p => p.filter(i => i.id !== id))
+    setEditingItem(null)
+  }
 
   function save() {
     onSave({
-      planned: parseFloat(planned) || 0,
-      actual:  parseFloat(actual)  || 0,
-      note:    note.trim() || undefined,
+      planned:              parseFloat(planned.replace(',', '.')) || 0,
+      actual:               effectiveActual,
+      note:                 note.trim() || undefined,
+      photos:               photos.length > 0 ? photos : undefined,
+      items:                catItems.length > 0 ? catItems : undefined,
+      actualSpendingMode:   actualMode,
+      manualActualSpending: actualMode === 'manual' ? manualVal : undefined,
     })
   }
+
+  const showItemForm = addingItem || editingItem !== null
 
   return (
     <>
@@ -790,19 +857,66 @@ function BudgetEditSheet({
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+        style={{ maxHeight: '90vh' }}
       >
-        <div className="px-5 pt-4 pb-10">
-          <div className="drag-handle mb-5" />
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{item.emoji}</span>
-              <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
+        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+        <div className="flex flex-col" style={{ maxHeight: '90vh' }}>
+
+          {/* Fixed header */}
+          <div className="px-5 pt-4 pb-3 shrink-0">
+            <div className="drag-handle mb-4" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{item.emoji}</span>
+                <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
+              </div>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                <X size={16} />
+              </button>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-              <X size={16} />
-            </button>
           </div>
-          <div className="space-y-3 mb-5">
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-5 pb-2 space-y-3">
+
+            {/* Photos */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Photos</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {photos.map((url, idx) => (
+                  <div key={url} className="relative shrink-0">
+                    <button
+                      onClick={() => setLightboxIdx(idx)}
+                      className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 block"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                    <button
+                      onClick={() => setPhotos(p => p.filter(u => u !== url))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow"
+                    >
+                      <X size={10} color="white" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shrink-0 active:bg-gray-100 disabled:opacity-60"
+                >
+                  {uploading ? (
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-400 rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Camera size={16} className="text-gray-400" />
+                      <span className="text-[9px] text-gray-400 mt-0.5">Add</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Planned Budget */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Planned Budget</p>
               <div className="flex items-center gap-1">
@@ -811,14 +925,109 @@ function BudgetEditSheet({
                   className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
               </div>
             </div>
+
+            {/* Actual Spending */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Actual Spending</p>
-              <div className="flex items-center gap-1">
-                <span className="text-gray-400 font-semibold">{CURRENCY}</span>
-                <input type="number" value={actual} onChange={e => setActual(e.target.value)}
-                  className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actual Spending</p>
+                <div className="flex bg-white rounded-xl p-0.5 shadow-sm border border-gray-100">
+                  <button
+                    onClick={() => setActualMode('items')}
+                    className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
+                      actualMode === 'items' ? 'bg-blue-500 text-white' : 'text-gray-400')}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    onClick={switchToManual}
+                    className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
+                      actualMode === 'manual' ? 'bg-orange-500 text-white' : 'text-gray-400')}
+                  >
+                    Manual
+                  </button>
+                </div>
               </div>
+              <p className="text-[11px] text-gray-500 mb-2">
+                Calculated from items: <span className="font-semibold text-gray-700">{fmt(itemTotal)}</span>
+              </p>
+              {actualMode === 'items' ? (
+                <p className="text-lg font-bold text-gray-800">{fmt(itemTotal)}</p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-gray-400 font-semibold">{CURRENCY}</span>
+                    <input
+                      type="number"
+                      value={manualInput}
+                      onChange={e => setManualInput(e.target.value)}
+                      placeholder="0"
+                      className="flex-1 text-base font-semibold text-orange-600 bg-transparent outline-none"
+                    />
+                  </div>
+                  {diff !== 0 && (
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-[10px] text-orange-400">
+                        {diff > 0 ? 'Exceeds' : 'Below'} item total by {fmt(Math.abs(diff))}
+                      </p>
+                      <button
+                        onClick={() => setManualInput(String(itemTotal))}
+                        className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full"
+                      >
+                        Reset to item total
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+
+            {/* Expense Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Expense Items{catItems.length > 0 ? ` (${catItems.length})` : ''}
+                </p>
+                {!showItemForm && (
+                  <button
+                    onClick={() => { setAddingItem(true); setEditingItem(null) }}
+                    className="flex items-center gap-1 text-[11px] font-bold text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full"
+                  >
+                    <Plus size={10} /> Add item
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                {catItems.map(ci => (
+                  editingItem?.id === ci.id ? (
+                    <ItemForm
+                      key={ci.id}
+                      item={ci}
+                      onSave={data => updateCatItem(ci.id, data)}
+                      onCancel={() => setEditingItem(null)}
+                      onDelete={() => deleteCatItem(ci.id)}
+                    />
+                  ) : (
+                    <ItemRow
+                      key={ci.id}
+                      item={ci}
+                      onEdit={() => { setEditingItem(ci); setAddingItem(false) }}
+                    />
+                  )
+                ))}
+                {addingItem && (
+                  <ItemForm onSave={addCatItem} onCancel={() => setAddingItem(false)} />
+                )}
+              </div>
+              {catItems.length > 1 && (
+                <div className="mt-2 flex justify-end">
+                  <p className="text-xs text-gray-400">
+                    Items total: <span className="font-bold text-gray-700">{fmt(itemTotal)}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Note */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Note (optional)</p>
               <input type="text" value={note} onChange={e => setNote(e.target.value)}
@@ -826,26 +1035,231 @@ function BudgetEditSheet({
                 className="w-full text-sm text-gray-700 bg-transparent outline-none" />
             </div>
           </div>
-          <button onClick={save}
-            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
-            style={{ background: '#10b981' }}
-          >
-            Save Changes
-          </button>
-          {!confirmDelete ? (
-            <button onClick={() => setConfirmDelete(true)}
-              className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
-              <Trash2 size={13} /> Remove Category
+
+          {/* Fixed footer */}
+          <div className="px-5 pt-3 pb-10 border-t border-gray-100 shrink-0">
+            <button
+              onClick={save}
+              className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
+              style={{ background: '#10b981' }}
+            >
+              Save · {fmt(effectiveActual)} actual
             </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium">Cancel</button>
-              <button onClick={onDelete} className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium">Delete</button>
-            </div>
-          )}
+            {!confirmDel ? (
+              <button onClick={() => setConfirmDel(true)}
+                className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
+                <Trash2 size={13} /> Remove Category
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDel(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium">Cancel</button>
+                <button onClick={onDelete} className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium">Delete</button>
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {lightboxIdx !== null && (
+          <PhotoLightbox photos={photos} initialIdx={lightboxIdx} onClose={() => setLightboxIdx(null)} />
+        )}
+      </AnimatePresence>
     </>
+  )
+}
+
+/* ── Item Row ─────────────────────────────────────────────────────────────────── */
+function ItemRow({ item, onEdit }: { item: FinanceCategoryItem; onEdit: () => void }) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl px-3 py-2.5 flex items-center gap-3 border border-gray-100"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          {item.isPaid && (
+            <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 rounded-full">PAID</span>
+          )}
+          <p className="text-sm font-medium text-gray-700 truncate">{item.name}</p>
+        </div>
+        <p className="text-[10px] text-gray-400">
+          {item.quantity} × {fmt(item.unitPrice)}
+          {item.note ? ` · ${item.note}` : ''}
+        </p>
+      </div>
+      <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(item.quantity * item.unitPrice)}</p>
+      <button
+        onClick={onEdit}
+        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 active:bg-gray-100 shrink-0"
+      >
+        <Pencil size={12} />
+      </button>
+    </motion.div>
+  )
+}
+
+/* ── Item Form ────────────────────────────────────────────────────────────────── */
+function ItemForm({
+  item, onSave, onCancel, onDelete,
+}: {
+  item?: FinanceCategoryItem
+  onSave: (data: Omit<FinanceCategoryItem, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onCancel: () => void
+  onDelete?: () => void
+}) {
+  const [name,      setName]      = useState(item?.name ?? '')
+  const [quantity,  setQuantity]  = useState(String(item?.quantity ?? 1))
+  const [unitPrice, setUnitPrice] = useState(item?.unitPrice != null ? String(item.unitPrice) : '')
+  const [note,      setNote]      = useState(item?.note ?? '')
+  const [isPaid,    setIsPaid]    = useState(item?.isPaid ?? false)
+
+  const lineTotal = (parseFloat(quantity) || 0) * (parseFloat(unitPrice.replace(',', '.')) || 0)
+  const canSave   = name.trim().length > 0
+
+  function save() {
+    if (!canSave) return
+    onSave({
+      name:      name.trim(),
+      quantity:  parseFloat(quantity) || 1,
+      unitPrice: parseFloat(unitPrice.replace(',', '.')) || 0,
+      note:      note.trim() || undefined,
+      isPaid,
+    })
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-blue-50 rounded-2xl p-3 space-y-2"
+    >
+      <input
+        type="text"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        placeholder="Item name"
+        autoFocus
+        onKeyDown={e => e.key === 'Enter' && save()}
+        className="w-full text-sm font-semibold text-gray-800 bg-white/80 rounded-xl px-3 py-2 outline-none"
+      />
+      <div className="flex gap-2">
+        <div className="bg-white/80 rounded-xl px-3 py-2 w-24 flex items-center gap-1">
+          <span className="text-[10px] text-gray-400 shrink-0">Qty</span>
+          <input
+            type="number"
+            value={quantity}
+            onChange={e => setQuantity(e.target.value)}
+            min="0"
+            className="w-0 flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none"
+          />
+        </div>
+        <div className="flex-1 bg-white/80 rounded-xl px-3 py-2 flex items-center gap-1">
+          <span className="text-gray-400 text-sm shrink-0">{CURRENCY}</span>
+          <input
+            type="number"
+            value={unitPrice}
+            onChange={e => setUnitPrice(e.target.value)}
+            placeholder="Unit price"
+            className="flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none"
+          />
+        </div>
+        {lineTotal > 0 && (
+          <div className="bg-white/80 rounded-xl px-3 py-2 flex items-center shrink-0">
+            <span className="text-sm font-bold text-blue-600">{fmt(lineTotal)}</span>
+          </div>
+        )}
+      </div>
+      <input
+        type="text"
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        placeholder="Note (optional)"
+        className="w-full text-xs text-gray-600 bg-white/80 rounded-xl px-3 py-2 outline-none"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => setIsPaid(p => !p)}
+          className={cn(
+            'text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all',
+            isPaid ? 'bg-green-100 text-green-700' : 'bg-white/80 text-gray-500',
+          )}
+        >
+          {isPaid ? '✓ Paid' : 'Mark as paid'}
+        </button>
+        <div className="flex gap-1.5">
+          <button onClick={onCancel}
+            className="px-3 py-1.5 rounded-xl bg-white/80 text-gray-600 text-[11px] font-medium">
+            Cancel
+          </button>
+          {onDelete && (
+            <button onClick={onDelete}
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/80 text-red-400">
+              <Trash2 size={13} />
+            </button>
+          )}
+          <button
+            onClick={save}
+            disabled={!canSave}
+            className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-[11px] font-semibold disabled:opacity-40"
+          >
+            {item ? 'Update' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+/* ── Photo Lightbox ──────────────────────────────────────────────────────────── */
+function PhotoLightbox({ photos, initialIdx, onClose }: {
+  photos: string[]
+  initialIdx: number
+  onClose: () => void
+}) {
+  const [idx, setIdx] = useState(initialIdx)
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
+      >
+        <X size={20} />
+      </button>
+      {idx > 0 && (
+        <button
+          onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
+          className="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
+      {idx < photos.length - 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
+          className="absolute right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
+        >
+          <ChevronRight size={20} />
+        </button>
+      )}
+      <img
+        src={photos[idx]}
+        alt=""
+        className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
+        onClick={e => e.stopPropagation()}
+      />
+      {photos.length > 1 && (
+        <p className="absolute bottom-5 text-white/70 text-sm">{idx + 1} / {photos.length}</p>
+      )}
+    </motion.div>
   )
 }
 
