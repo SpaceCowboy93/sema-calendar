@@ -3,15 +3,16 @@
 import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown, ShoppingBag, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Palette, ChevronDown, ShoppingBag, Trash2, Pencil } from 'lucide-react'
 import { QuickAddSheet } from '@/components/ui/QuickAddSheet'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, OTHER_USER, type UserName, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor, type ShoppingList } from '@/types'
+import { USERS, OTHER_USER, type UserName, type CalendarEvent, type WishlistCategory, type GoalCategory, type EventTodo, type EventColor, type ShoppingList, type ShoppingItem } from '@/types'
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import {
   WISHLIST_CATEGORY_CONFIG, getCalendarDays, toDateString, formatTime,
   getTodayString, cn, EVENT_COLOR_CLASS, COLOR_HEX, generateId,
 } from '@/lib/utils'
+import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
 
 const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
   ['travel',     { emoji: '✈️', label: 'Travel'     }],
@@ -1181,13 +1182,14 @@ function ShoppingHubSheet({
   currentUser: UserName
   onClose: () => void
 }) {
-  const lists      = useAppStore(s => s.shoppingLists)
-  const createList = useAppStore(s => s.createShoppingList)
-  const updateList = useAppStore(s => s.updateShoppingList)
-  const deleteList = useAppStore(s => s.deleteShoppingList)
-  const addItem    = useAppStore(s => s.addShoppingItem)
-  const toggleItem = useAppStore(s => s.toggleShoppingItem)
-  const deleteItem = useAppStore(s => s.deleteShoppingItem)
+  const lists       = useAppStore(s => s.shoppingLists)
+  const createList  = useAppStore(s => s.createShoppingList)
+  const updateList  = useAppStore(s => s.updateShoppingList)
+  const deleteList  = useAppStore(s => s.deleteShoppingList)
+  const addItem     = useAppStore(s => s.addShoppingItem)
+  const toggleItem  = useAppStore(s => s.toggleShoppingItem)
+  const deleteItem  = useAppStore(s => s.deleteShoppingItem)
+  const updateItem  = useAppStore(s => s.updateShoppingItem)
 
   const [view, setView] = useState<null | 'new' | string>(null)
 
@@ -1266,9 +1268,9 @@ function ShoppingHubSheet({
                   onClick={() => setView(list.id)}
                   className="w-full text-left rounded-2xl overflow-hidden bg-white shadow-card"
                 >
-                  {list.coverPhoto && (
+                  {effectivePhotos(list)[0] && (
                     <div className="w-full h-28 overflow-hidden">
-                      <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+                      <img src={effectivePhotos(list)[0]} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
                   <div className="px-4 py-3">
@@ -1312,10 +1314,10 @@ function ShoppingHubSheet({
 
       <AnimatePresence>
         {view === 'new' && (
-          <ShoppingCreateSheet
-            currentUser={currentUser}
+          <ShoppingListEditorSheet
+            mode="create"
+            onSave={(id) => setView(id)}
             onClose={() => setView(null)}
-            onCreated={(id) => setView(id)}
           />
         )}
       </AnimatePresence>
@@ -1329,6 +1331,7 @@ function ShoppingHubSheet({
             onAddItem={(name, qty, notes, price) => addItem(activeList.id, name, qty, notes, price)}
             onToggleItem={(itemId) => toggleItem(activeList.id, itemId)}
             onDeleteItem={(itemId) => deleteItem(activeList.id, itemId)}
+            onUpdateItem={(itemId, updates) => updateItem(activeList.id, itemId, updates)}
             onClose={() => setView(null)}
           />
         )}
@@ -1337,190 +1340,9 @@ function ShoppingHubSheet({
   )
 }
 
-/* ── Shopping Create Sheet ──────────────────────────────────────────────────── */
-function ShoppingCreateSheet({
-  currentUser, onClose, onCreated,
-}: {
-  currentUser: UserName
-  onClose: () => void
-  onCreated: (id: string) => void
-}) {
-  const createList = useAppStore(s => s.createShoppingList)
-  const addItem    = useAppStore(s => s.addShoppingItem)
-
-  const [name,        setName]        = useState('')
-  const [storeName,   setStoreName]   = useState('')
-  const [date,        setDate]        = useState('')
-  const [time,        setTime]        = useState('')
-  const [notes,       setNotes]       = useState('')
-  const [coverPhoto,  setCoverPhoto]  = useState<string | undefined>()
-  const [photoLoading, setPhotoLoading] = useState(false)
-  const [draftItems,  setDraftItems]  = useState<{ id: string; name: string; qty: string; price: string; notes: string }[]>([])
-  const [itemName,    setItemName]    = useState('')
-  const [itemQty,     setItemQty]     = useState('1')
-  const [itemPrice,   setItemPrice]   = useState('')
-  const [itemNotes,   setItemNotes]   = useState('')
-
-  const photoRef = useRef<HTMLInputElement>(null)
-
-  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return
-    setPhotoLoading(true)
-    try { setCoverPhoto(await resizeImage(file)) } finally { setPhotoLoading(false) }
-    e.target.value = ''
-  }
-
-  function addDraftItem() {
-    if (!itemName.trim()) return
-    setDraftItems(prev => [...prev, {
-      id: Math.random().toString(36).slice(2),
-      name: itemName.trim(), qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(),
-    }])
-    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
-  }
-
-  function handleCreate() {
-    if (!name.trim()) return
-    const id = createList({ name, storeName, date, time, notes, coverPhoto })
-    draftItems.forEach(it => {
-      addItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined)
-    })
-    onCreated(id)
-  }
-
-  const draftTotal = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0)
-
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/20"
-      />
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[92vh] flex flex-col"
-      >
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <div className="drag-handle mb-3" />
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-gray-800">New Shopping List ❤️</h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-3">
-          <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
-
-          {coverPhoto ? (
-            <div className="relative rounded-2xl overflow-hidden h-36">
-              <img src={coverPhoto} alt="" className="w-full h-full object-cover" />
-              <button
-                onClick={() => setCoverPhoto(undefined)}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => photoRef.current?.click()}
-              disabled={photoLoading}
-              className="w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-gray-400"
-            >
-              {photoLoading
-                ? <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin border-gray-300" />
-                : <><Camera size={16} /><span className="text-sm">Add cover photo</span></>
-              }
-            </button>
-          )}
-
-          <input
-            type="text" value={name} onChange={e => setName(e.target.value)}
-            placeholder="List name (e.g. Groceries, IKEA) *"
-            autoFocus
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-          />
-          <input
-            type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
-            placeholder="Store name (e.g. Tesco, Lidl)"
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-          />
-          <div className="flex gap-2">
-            <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
-            <input type="time" value={time} onChange={e => setTime(e.target.value)}
-              className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
-          </div>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Notes (optional)" rows={2}
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none resize-none"
-          />
-
-          <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Items</p>
-            <div className="bg-gray-50 rounded-2xl p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text" value={itemName} onChange={e => setItemName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addDraftItem()}
-                  placeholder="Add item…"
-                  className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100"
-                />
-                <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
-                  className="w-10 text-xs text-center bg-white rounded-xl px-1.5 py-2 outline-none border border-gray-100" />
-                <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
-                  className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100" />
-                <button onClick={addDraftItem} disabled={!itemName.trim()}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
-                  style={{ background: RED }}>
-                  <Plus size={14} />
-                </button>
-              </div>
-              {draftItems.map(it => (
-                <div key={it.id} className="flex items-center gap-2 px-2 py-1.5 bg-white rounded-xl border border-gray-100">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 truncate">{it.name}</p>
-                    <p className="text-[10px] text-gray-400">×{it.qty}{it.price ? ` · €${parseFloat(it.price).toFixed(2)}` : ''}</p>
-                  </div>
-                  <button onClick={() => setDraftItems(prev => prev.filter(d => d.id !== it.id))} className="text-gray-300 active:text-red-400">
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-              {draftItems.length > 0 && (
-                <p className="text-right text-[11px] font-bold text-gray-500 pr-1">
-                  {draftItems.length} item{draftItems.length !== 1 ? 's' : ''}{draftTotal > 0 ? ` · €${draftTotal.toFixed(2)}` : ''}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="px-5 pb-10 pt-3 shrink-0 border-t border-gray-100">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={handleCreate}
-            disabled={!name.trim()}
-            className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: RED }}
-          >
-            <ShoppingBag size={16} />
-            Create Shopping List
-          </motion.button>
-        </div>
-      </motion.div>
-    </>
-  )
-}
-
 /* ── Shopping Detail Sheet ──────────────────────────────────────────────────── */
 function ShoppingDetailSheet({
-  list, onUpdate, onDelete, onAddItem, onToggleItem, onDeleteItem, onClose,
+  list, onUpdate, onDelete, onAddItem, onToggleItem, onDeleteItem, onUpdateItem, onClose,
 }: {
   list: ShoppingList
   onUpdate: (updates: Partial<ShoppingList>) => void
@@ -1528,6 +1350,7 @@ function ShoppingDetailSheet({
   onAddItem: (name: string, qty: number, notes?: string, price?: number) => void
   onToggleItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
+  onUpdateItem: (itemId: string, updates: Partial<ShoppingItem>) => void
   onClose: () => void
 }) {
   const [itemName,  setItemName]  = useState('')
@@ -1536,10 +1359,19 @@ function ShoppingDetailSheet({
   const [itemNotes, setItemNotes] = useState('')
   const photoRef = useRef<HTMLInputElement>(null)
 
+  /* inline item editing */
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editName,  setEditName]  = useState('')
+  const [editQty,   setEditQty]   = useState('1')
+  const [editPrice, setEditPrice] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+
   const checked = list.items.filter(i => i.isChecked).length
   const total   = list.items.length
   const pct     = total > 0 ? (checked / total) * 100 : 0
   const cost    = listTotal(list)
+  const photos  = effectivePhotos(list)
+  const coverUrl = photos[0]
 
   function handleAddItem() {
     if (!itemName.trim()) return
@@ -1547,9 +1379,29 @@ function ShoppingDetailSheet({
     setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
   }
 
+  function startEditItem(item: ShoppingItem) {
+    setEditingItemId(item.id)
+    setEditName(item.name)
+    setEditQty(String(item.quantity))
+    setEditPrice(item.price != null ? String(item.price) : '')
+    setEditNotes(item.notes ?? '')
+  }
+
+  function saveItemEdit() {
+    if (!editingItemId || !editName.trim()) return
+    onUpdateItem(editingItemId, {
+      name:     editName.trim(),
+      quantity: parseInt(editQty) || 1,
+      price:    parseFloat(editPrice) || undefined,
+      notes:    editNotes.trim() || undefined,
+    })
+    setEditingItemId(null)
+  }
+
   async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
-    onUpdate({ coverPhoto: await resizeImage(file) })
+    const resized = await resizeImage(file)
+    onUpdate({ photos: [...photos, resized], coverPhoto: photos[0] || resized })
     e.target.value = ''
   }
 
@@ -1568,9 +1420,9 @@ function ShoppingDetailSheet({
       >
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
 
-        {list.coverPhoto ? (
+        {coverUrl ? (
           <div className="relative rounded-t-[2rem] overflow-hidden h-36 shrink-0">
-            <img src={list.coverPhoto} alt="" className="w-full h-full object-cover" />
+            <img src={coverUrl} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <button onClick={onClose}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
@@ -1612,6 +1464,20 @@ function ShoppingDetailSheet({
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Multiple photos gallery (if more than one) */}
+        {photos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto px-4 py-2 shrink-0">
+            {photos.map((p, i) => (
+              <div key={i} className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden">
+                <img src={p} alt="" className="w-full h-full object-cover" />
+                {i === 0 && (
+                  <span className="absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0.5 rounded bg-black/50 text-white font-bold leading-none">Cover</span>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1685,38 +1551,78 @@ function ShoppingDetailSheet({
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.15 }}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors',
-                  item.isChecked ? 'opacity-55 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
-                )}
               >
-                <button
-                  onClick={() => onToggleItem(item.id)}
-                  className={cn(
-                    'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
-                    item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
-                  )}
-                >
-                  {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
-                    {item.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
-                    {item.price != null && item.price > 0 && (
-                      <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
-                    )}
-                    {item.quantity > 1 && item.price != null && item.price > 0 && (
-                      <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
-                    )}
-                    {item.notes && <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>}
+                {editingItemId === item.id ? (
+                  /* Inline edit form */
+                  <div className="bg-white rounded-2xl border-2 p-2.5 space-y-2" style={{ borderColor: RED + '40' }}>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                        autoFocus
+                        className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-1.5 outline-none min-w-0"
+                      />
+                      <input type="number" value={editQty} onChange={e => setEditQty(e.target.value)} min="1"
+                        className="w-12 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-1.5 outline-none shrink-0" />
+                      <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="€"
+                        className="w-16 text-xs bg-gray-50 rounded-xl px-2 py-1.5 outline-none shrink-0" />
+                    </div>
+                    <input
+                      type="text" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Note (optional)"
+                      className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-1.5 outline-none"
+                    />
+                    <div className="flex gap-1.5">
+                      <button onClick={saveItemEdit} disabled={!editName.trim()}
+                        className="flex-1 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold disabled:opacity-40">
+                        Save
+                      </button>
+                      <button onClick={() => setEditingItemId(null)}
+                        className="flex-1 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold">
+                        Cancel
+                      </button>
+                      <button onClick={() => { onDeleteItem(item.id); setEditingItemId(null) }}
+                        className="w-8 py-1.5 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <button onClick={() => onDeleteItem(item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
-                  <X size={13} />
-                </button>
+                ) : (
+                  /* Display row */
+                  <div className={cn(
+                    'flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors',
+                    item.isChecked ? 'opacity-55 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
+                  )}>
+                    <button
+                      onClick={() => onToggleItem(item.id)}
+                      className={cn(
+                        'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                        item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
+                      )}
+                    >
+                      {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
+                        {item.price != null && item.price > 0 && (
+                          <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
+                        )}
+                        {item.quantity > 1 && item.price != null && item.price > 0 && (
+                          <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
+                        )}
+                        {item.notes && <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => startEditItem(item)} className="text-gray-300 active:text-blue-400 p-1 shrink-0">
+                      <Pencil size={12} />
+                    </button>
+                    <button onClick={() => onDeleteItem(item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>

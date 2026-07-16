@@ -6,9 +6,10 @@ import { X, Clock, FileText, Plus, Check, Palette, Camera, ChevronDown } from 'l
 import { useAppStore } from '@/store/useAppStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
 import { generateId, cn } from '@/lib/utils'
+import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
-type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note'
+type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
 
 const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Purple' },
@@ -27,7 +28,9 @@ type TypeConfig = {
   showDate: boolean
   showChecklist: boolean
   showPhotos: boolean
-  noteMode: boolean // true = single textarea content, no extras
+  noteMode: boolean  // true = single textarea content, no extras
+  shopMode?: boolean // true = render ShoppingListEditorSheet instead of generic form
+  chipHex?: string   // override chip color (e.g. shopping red)
 }
 
 const TYPE_CONFIG: Record<CreateType, TypeConfig> = {
@@ -59,7 +62,14 @@ const TYPE_CONFIG: Record<CreateType, TypeConfig> = {
     emoji: '💌', label: 'Note',
     placeholder: 'Write something from the heart...',
     defaultColor: 'seval', saveLabel: 'Send with love',
-    showColor: false, showDate: false, showChecklist: false, showPhotos: false, noteMode: true,
+    showColor: false, showDate: false, showChecklist: false, showPhotos: false, noteMode: true, shopMode: false, chipHex: undefined,
+  },
+  shopping: {
+    emoji: '🛒', label: 'Shopping',
+    placeholder: '',
+    defaultColor: 'green', saveLabel: '',
+    showColor: false, showDate: false, showChecklist: false, showPhotos: false,
+    noteMode: false, shopMode: true, chipHex: '#ef4444',
   },
 }
 
@@ -316,6 +326,7 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
                 {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
                   const tc = TYPE_CONFIG[t]
                   const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
+                  const chipHex = tc.chipHex ?? col?.hex ?? primary
                   return (
                     <motion.button
                       key={t}
@@ -323,7 +334,7 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
                       onClick={() => switchType(t)}
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
                       style={type === t
-                        ? { background: col?.hex ?? primary, color: 'white' }
+                        ? { background: chipHex, color: 'white' }
                         : { background: '#f3f4f6', color: '#6b7280' }
                       }
                     >
@@ -358,6 +369,16 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
                     transition={{ duration: 0.15 }}
                     className="space-y-4"
                   >
+                    {/* Shopping list mode — render dedicated editor, no generic form */}
+                    {cfg.shopMode ? (
+                      <ShoppingListEditorSheet
+                        mode="create"
+                        onSave={close}
+                        onClose={close}
+                        standalone={false}
+                      />
+                    ) : (
+                    <>
                     {/* Title */}
                     <div className="mb-2">
                       {cfg.noteMode ? (
@@ -621,6 +642,8 @@ export function FullCreateSheet({ open, onClose, primary }: Props) {
                         <><Plus size={16} /> {cfg.saveLabel}</>
                       )}
                     </motion.button>
+                    </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

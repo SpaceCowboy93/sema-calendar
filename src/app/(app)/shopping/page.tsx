@@ -2,48 +2,32 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
+import { Plus, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import { cn } from '@/lib/utils'
 import { useSyncStatus, triggerPull } from '@/hooks/useSupabaseSync'
+import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
 
 export default function ShoppingPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
   const lists           = useAppStore(s => s.shoppingLists)
-  const createList      = useAppStore(s => s.createShoppingList)
   const deleteList      = useAppStore(s => s.deleteShoppingList)
-  const addItem         = useAppStore(s => s.addShoppingItem)
   const toggleItem      = useAppStore(s => s.toggleShoppingItem)
-  const deleteItem      = useAppStore(s => s.deleteShoppingItem)
 
   const isSeval  = currentUser === 'seval'
   const primary  = isSeval ? '#8b5cf6' : '#14b8a6'
   const { status: syncStatus } = useSyncStatus()
 
-  const [openListId, setOpenListId]   = useState<string | null>(null)
-  const [newListName, setNewListName] = useState('')
-  const [showCreate, setShowCreate]   = useState(false)
-  const [newItemName, setNewItemName] = useState('')
-  const [newItemQty, setNewItemQty]   = useState('1')
+  const [openListId,  setOpenListId]  = useState<string | null>(null)
+  const [showCreate,  setShowCreate]  = useState(false)
+  const [editListId,  setEditListId]  = useState<string | null>(null)
 
-  function handleCreateList() {
-    if (!newListName.trim()) return
-    createList({ name: newListName.trim() })
-    setNewListName('')
-    setShowCreate(false)
-  }
-
-  function handleAddItem(listId: string) {
-    if (!newItemName.trim()) return
-    addItem(listId, newItemName.trim(), parseInt(newItemQty) || 1)
-    setNewItemName('')
-    setNewItemQty('1')
-  }
+  const editList = editListId ? lists.find(l => l.id === editListId) ?? null : null
 
   return (
     <div className="min-h-screen bg-gray-50 pt-14 pb-32">
-<div
+      <div
         className="px-5 pb-4"
         style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
       >
@@ -82,52 +66,26 @@ export default function ShoppingPage() {
         </div>
       </div>
 
-      {/* Create list modal */}
+      {/* Create list sheet */}
       <AnimatePresence>
         {showCreate && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowCreate(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
-            >
-              <div className="px-5 pt-4 pb-10">
-                <div className="drag-handle mb-4" />
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-base font-bold text-gray-800">New shopping list</h3>
-                  <button onClick={() => setShowCreate(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                    <X size={16} />
-                  </button>
-                </div>
-                <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-5">
-                  <input
-                    type="text"
-                    value={newListName}
-                    onChange={e => setNewListName(e.target.value)}
-                    placeholder="e.g. Weekly groceries"
-                    autoFocus
-                    onKeyDown={e => e.key === 'Enter' && handleCreateList()}
-                    className="w-full text-sm text-gray-800 bg-transparent outline-none"
-                  />
-                </div>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleCreateList}
-                  disabled={!newListName.trim()}
-                  className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-                  style={{ background: primary }}
-                >
-                  Create list
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
+          <ShoppingListEditorSheet
+            mode="create"
+            onSave={(id) => { setShowCreate(false); setOpenListId(id) }}
+            onClose={() => setShowCreate(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Edit list sheet */}
+      <AnimatePresence>
+        {editList && (
+          <ShoppingListEditorSheet
+            mode="edit"
+            list={editList}
+            onSave={() => setEditListId(null)}
+            onClose={() => setEditListId(null)}
+          />
         )}
       </AnimatePresence>
 
@@ -140,10 +98,11 @@ export default function ShoppingPage() {
           </div>
         ) : (
           lists.map(list => {
-            const checked = list.items.filter(i => i.isChecked).length
-            const total   = list.items.length
-            const allDone = total > 0 && checked === total
-            const isOpen  = openListId === list.id
+            const checkedCount = list.items.filter(i => i.isChecked).length
+            const total        = list.items.length
+            const allDone      = total > 0 && checkedCount === total
+            const isOpen       = openListId === list.id
+            const cover        = effectivePhotos(list)[0]
 
             return (
               <motion.div
@@ -151,6 +110,13 @@ export default function ShoppingPage() {
                 layout
                 className="bg-white rounded-3xl shadow-card overflow-hidden"
               >
+                {/* Cover photo */}
+                {cover && (
+                  <div className="w-full h-24 overflow-hidden">
+                    <img src={cover} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+
                 {/* Header */}
                 <div
                   className="px-4 py-3.5 flex items-center gap-3 cursor-pointer"
@@ -160,9 +126,16 @@ export default function ShoppingPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 text-sm">{list.name}</p>
                     <p className="text-xs text-gray-400">
-                      {checked}/{total} items{allDone && total > 0 ? ' · all done!' : ''}
+                      {checkedCount}/{total} items{allDone && total > 0 ? ' · all done!' : ''}
+                      {list.storeName ? ` · ${list.storeName}` : ''}
                     </p>
                   </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); setEditListId(list.id) }}
+                    className="text-gray-300 active:text-blue-400 p-1 shrink-0 text-xs font-medium"
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={e => { e.stopPropagation(); deleteList(list.id) }}
                     className="text-gray-300 active:text-red-400 p-1 shrink-0"
@@ -185,36 +158,9 @@ export default function ShoppingPage() {
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-2">
-                        {/* Add item row */}
-                        <div className="bg-gray-50 rounded-2xl px-3 py-2 flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={newItemName}
-                            onChange={e => setNewItemName(e.target.value)}
-                            placeholder="Add item..."
-                            onKeyDown={e => e.key === 'Enter' && handleAddItem(list.id)}
-                            className="flex-1 text-sm text-gray-700 bg-transparent outline-none min-w-0"
-                          />
-                          <input
-                            type="number"
-                            value={newItemQty}
-                            onChange={e => setNewItemQty(e.target.value)}
-                            min="1"
-                            className="w-12 text-sm text-gray-600 bg-white rounded-xl px-2 py-1.5 outline-none border border-gray-200 text-center shrink-0"
-                          />
-                          <button
-                            onClick={() => handleAddItem(list.id)}
-                            disabled={!newItemName.trim()}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 disabled:opacity-40"
-                            style={{ background: primary }}
-                          >
-                            <Plus size={15} />
-                          </button>
-                        </div>
-
                         {/* Items list */}
                         {list.items.length === 0 ? (
-                          <p className="text-center text-xs text-gray-400 py-3">No items yet</p>
+                          <p className="text-center text-xs text-gray-400 py-3">No items — tap Edit to add</p>
                         ) : (
                           list.items.map(item => (
                             <motion.div
@@ -238,21 +184,22 @@ export default function ShoppingPage() {
                                 <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
                                   {item.name}
                                 </p>
-                                {item.quantity > 1 && (
-                                  <p className="text-[10px] text-gray-400">×{item.quantity}</p>
-                                )}
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
+                                  {item.price != null && item.price > 0 && (
+                                    <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
+                                  )}
+                                  {item.quantity > 1 && item.price != null && item.price > 0 && (
+                                    <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
+                                  )}
+                                  {item.notes && <span className="text-[10px] text-gray-400 italic">{item.notes}</span>}
+                                </div>
                                 {item.isChecked && item.checkedBy && (
-                                  <p className="text-[10px] text-emerald-500">
+                                  <p className="text-[10px] text-emerald-500 mt-0.5">
                                     by {USERS[item.checkedBy].emoji} {USERS[item.checkedBy].displayName}
                                   </p>
                                 )}
                               </div>
-                              <button
-                                onClick={() => deleteItem(list.id, item.id)}
-                                className="text-gray-300 active:text-red-400 p-1 shrink-0"
-                              >
-                                <X size={14} />
-                              </button>
                             </motion.div>
                           ))
                         )}
@@ -266,6 +213,13 @@ export default function ShoppingPage() {
                             <p className="text-sm font-bold text-emerald-600">All done! Great job!</p>
                           </motion.div>
                         )}
+
+                        <button
+                          onClick={() => setEditListId(list.id)}
+                          className="w-full py-2 rounded-2xl text-xs font-semibold text-gray-400 bg-gray-50 active:bg-gray-100"
+                        >
+                          + Add or edit items
+                        </button>
                       </div>
                     </motion.div>
                   )}

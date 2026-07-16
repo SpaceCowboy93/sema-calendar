@@ -96,6 +96,7 @@ interface AppState {
   updateShoppingList: (id: string, updates: Partial<ShoppingList>) => void
   deleteShoppingList: (id: string) => void
   addShoppingItem: (listId: string, name: string, quantity?: number, notes?: string, price?: number) => void
+  updateShoppingItem: (listId: string, itemId: string, updates: Partial<ShoppingItem>) => void
   toggleShoppingItem: (listId: string, itemId: string) => void
   deleteShoppingItem: (listId: string, itemId: string) => void
 
@@ -654,6 +655,7 @@ export const useAppStore = create<AppState>()(
               time:       data.time || undefined,
               notes:      data.notes?.trim() || undefined,
               coverPhoto: data.coverPhoto || undefined,
+              photos:     data.photos?.length ? data.photos : undefined,
               isCompleted: false,
             },
           ],
@@ -670,6 +672,19 @@ export const useAppStore = create<AppState>()(
 
       deleteShoppingList: id =>
         set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
+
+      updateShoppingItem: (listId, itemId, updates) =>
+        set(s => ({
+          shoppingLists: s.shoppingLists.map(l =>
+            l.id === listId
+              ? {
+                  ...l,
+                  items: l.items.map(i => i.id === itemId ? { ...i, ...updates } : i),
+                  updatedAt: new Date().toISOString(),
+                }
+              : l
+          ),
+        })),
 
       addShoppingItem: (listId, name, quantity = 1, notes, price) => {
         const { currentUser } = get()

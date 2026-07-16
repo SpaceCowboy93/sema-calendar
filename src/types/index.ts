@@ -195,7 +195,8 @@ export interface ShoppingList {
   date?: string        // YYYY-MM-DD
   time?: string        // HH:MM
   notes?: string
-  coverPhoto?: string  // base64 data URL
+  coverPhoto?: string  // base64 data URL (legacy single photo — kept for compat)
+  photos?: string[]    // multiple base64 data URLs; photos[0] is the cover
   isCompleted?: boolean
   completedAt?: string
 }
@@ -206,7 +207,8 @@ export type ShoppingListInput = {
   date?: string
   time?: string
   notes?: string
-  coverPhoto?: string
+  coverPhoto?: string  // kept for compat
+  photos?: string[]    // preferred for new lists
 }
 
 export interface Memory {
