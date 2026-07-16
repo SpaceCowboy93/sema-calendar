@@ -20,14 +20,17 @@ export function NotificationSetup({ primary }: { primary: string }) {
   const { status, loading, enable, disable } = usePushNotifications()
   const currentUser = useAppStore(s => s.currentUser)
 
-  const [testState, setTestState] = useState<'idle' | 'sending' | 'ok' | 'err'>('idle')
+  const [testState, setTestState]   = useState<'idle' | 'sending' | 'ok' | 'err'>('idle')
+  const [testDetail, setTestDetail] = useState('')
   const [showIOSHelp, setShowIOSHelp] = useState(false)
 
   async function sendTestPush() {
     if (!currentUser) return
     setTestState('sending')
+    setTestDetail('')
+    console.log('[Push] Sending test push for user:', currentUser)
     try {
-      const res = await fetch('/api/push/send', {
+      const res  = await fetch('/api/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -38,11 +41,20 @@ export function NotificationSetup({ primary }: { primary: string }) {
         }),
       })
       const data = await res.json()
-      setTestState(data.ok && data.sent > 0 ? 'ok' : 'err')
-    } catch {
+      console.log('[Push] /api/push/send response:', res.status, data)
+      if (data.ok && data.sent > 0) {
+        setTestState('ok')
+        setTestDetail(`Delivered to ${data.sent} device${data.sent !== 1 ? 's' : ''}`)
+      } else {
+        setTestState('err')
+        setTestDetail(data.error ?? data.message ?? `sent=${data.sent ?? 0}`)
+      }
+    } catch (err) {
+      console.error('[Push] sendTestPush fetch error:', err)
       setTestState('err')
+      setTestDetail(String(err))
     }
-    setTimeout(() => setTestState('idle'), 4000)
+    setTimeout(() => { setTestState('idle'); setTestDetail('') }, 6000)
   }
 
   if (status === 'unsupported') {
@@ -127,7 +139,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
             Turn off
           </motion.button>
         </div>
-        <div className="mx-4 mb-3">
+        <div className="mx-4 mb-3 space-y-1.5">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={sendTestPush}
@@ -139,10 +151,15 @@ export function NotificationSetup({ primary }: { primary: string }) {
             {testState === 'err'     && '✗ '}
             {testState === 'idle'    && '🔔 '}
             {testState === 'sending' ? 'Sending…'
-              : testState === 'ok'  ? 'Delivered! Close the app to see it.'
-              : testState === 'err' ? 'Not delivered — check console'
+              : testState === 'ok'  ? 'Delivered! Background the app to see it.'
+              : testState === 'err' ? 'Not delivered — see detail below'
               : 'Send test notification'}
           </motion.button>
+          {testDetail !== '' && (
+            <p className={`text-[10px] text-center px-1 ${testState === 'ok' ? 'text-emerald-500' : 'text-red-400'}`}>
+              {testDetail}
+            </p>
+          )}
         </div>
       </div>
     )
