@@ -773,35 +773,20 @@ function FinanceCategoryEditorSheet({
 }) {
   const uploadPhoto = useAppStore(s => s.uploadPhoto)
 
-  // Determine initial mode: preserve stored mode, fall back to 'manual' when there's
-  // existing actual data but no items (so we don't silently reset it to €0).
-  const initMode: 'items' | 'manual' =
-    item.actualSpendingMode ??
-    ((item.items && item.items.length > 0) ? 'items' : item.actual > 0 ? 'manual' : 'items')
-
   const [planned,     setPlanned]     = useState(String(item.planned))
+  const [actual,      setActual]      = useState(item.actual > 0 ? String(item.actual) : '')
   const [note,        setNote]        = useState(item.note ?? '')
   const [photos,      setPhotos]      = useState<string[]>(item.photos ?? [])
   const [catItems,    setCatItems]    = useState<FinanceCategoryItem[]>(item.items ?? [])
-  const [actualMode,  setActualMode]  = useState<'items' | 'manual'>(initMode)
-  const [manualInput, setManualInput] = useState<string>(
-    item.actualSpendingMode === 'manual' && item.manualActualSpending != null
-      ? String(item.manualActualSpending)
-      : item.actual > 0 ? String(item.actual) : ''
-  )
   const [uploading,   setUploading]   = useState(false)
-  const [addingItem,  setAddingItem]  = useState(false)
   const [editingItem, setEditingItem] = useState<FinanceCategoryItem | null>(null)
   const [confirmDel,  setConfirmDel]  = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
-  const itemTotal = useMemo(
-    () => catItems.reduce((a, i) => a + i.quantity * i.unitPrice, 0),
-    [catItems],
-  )
-  const manualVal      = parseFloat(manualInput.replace(',', '.')) || 0
-  const effectiveActual = actualMode === 'items' ? itemTotal : manualVal
-  const diff            = actualMode === 'manual' ? manualVal - itemTotal : 0
+  // Always-visible add-item row state
+  const [newName,  setNewName]  = useState('')
+  const [newQty,   setNewQty]   = useState('1')
+  const [newPrice, setNewPrice] = useState('')
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -813,15 +798,16 @@ function FinanceCategoryEditorSheet({
     setUploading(false)
   }
 
-  function switchToManual() {
-    setActualMode('manual')
-    if (!manualInput || manualInput === '0') setManualInput(String(itemTotal))
-  }
-
-  function addCatItem(data: Omit<FinanceCategoryItem, 'id' | 'createdAt' | 'updatedAt'>) {
+  function addCatItem() {
+    if (!newName.trim()) return
     const now = new Date().toISOString()
-    setCatItems(p => [...p, { ...data, id: generateId(), createdAt: now, updatedAt: now }])
-    setAddingItem(false)
+    setCatItems(p => [...p, {
+      id: generateId(), createdAt: now, updatedAt: now,
+      name: newName.trim(),
+      quantity: parseFloat(newQty) || 1,
+      unitPrice: parseFloat(newPrice.replace(',', '.')) || 0,
+    }])
+    setNewName(''); setNewQty('1'); setNewPrice('')
   }
 
   function updateCatItem(id: string, data: Partial<FinanceCategoryItem>) {
@@ -837,17 +823,13 @@ function FinanceCategoryEditorSheet({
 
   function save() {
     onSave({
-      planned:              parseFloat(planned.replace(',', '.')) || 0,
-      actual:               effectiveActual,
-      note:                 note.trim() || undefined,
-      photos:               photos.length > 0 ? photos : undefined,
-      items:                catItems.length > 0 ? catItems : undefined,
-      actualSpendingMode:   actualMode,
-      manualActualSpending: actualMode === 'manual' ? manualVal : undefined,
+      planned: parseFloat(planned.replace(',', '.')) || 0,
+      actual:  parseFloat(actual.replace(',', '.')) || 0,
+      note:    note.trim() || undefined,
+      photos:  photos.length > 0 ? photos : undefined,
+      items:   catItems.length > 0 ? catItems : undefined,
     })
   }
-
-  const showItemForm = addingItem || editingItem !== null
 
   return (
     <>
@@ -868,10 +850,7 @@ function FinanceCategoryEditorSheet({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{item.emoji}</span>
-                <div>
-                  <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
-                  <span className="text-[9px] font-bold text-blue-400 bg-blue-50 px-1.5 py-0.5 rounded-full">Photos &amp; Items</span>
-                </div>
+                <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
               </div>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                 <X size={16} />
@@ -894,57 +873,13 @@ function FinanceCategoryEditorSheet({
 
             {/* Actual Spending */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actual Spending</p>
-                <div className="flex bg-white rounded-xl p-0.5 shadow-sm border border-gray-100">
-                  <button
-                    onClick={() => setActualMode('items')}
-                    className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
-                      actualMode === 'items' ? 'bg-blue-500 text-white' : 'text-gray-400')}
-                  >
-                    Auto
-                  </button>
-                  <button
-                    onClick={switchToManual}
-                    className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all',
-                      actualMode === 'manual' ? 'bg-orange-500 text-white' : 'text-gray-400')}
-                  >
-                    Manual
-                  </button>
-                </div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Actual Spending</p>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-400 font-semibold">{CURRENCY}</span>
+                <input type="number" value={actual} onChange={e => setActual(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
               </div>
-              <p className="text-[11px] text-gray-500 mb-2">
-                Calculated from items: <span className="font-semibold text-gray-700">{fmt(itemTotal)}</span>
-              </p>
-              {actualMode === 'items' ? (
-                <p className="text-lg font-bold text-gray-800">{fmt(itemTotal)}</p>
-              ) : (
-                <>
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-gray-400 font-semibold">{CURRENCY}</span>
-                    <input
-                      type="number"
-                      value={manualInput}
-                      onChange={e => setManualInput(e.target.value)}
-                      placeholder="0"
-                      className="flex-1 text-base font-semibold text-orange-600 bg-transparent outline-none"
-                    />
-                  </div>
-                  {diff !== 0 && (
-                    <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-[10px] text-orange-400">
-                        {diff > 0 ? 'Exceeds' : 'Below'} item total by {fmt(Math.abs(diff))}
-                      </p>
-                      <button
-                        onClick={() => setManualInput(String(itemTotal))}
-                        className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full"
-                      >
-                        Reset to item total
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
 
             {/* Note */}
@@ -969,19 +904,37 @@ function FinanceCategoryEditorSheet({
 
             {/* Expense Items */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Expense Items{catItems.length > 0 ? ` (${catItems.length})` : ''}
-                </p>
-                {!showItemForm && (
-                  <button
-                    onClick={() => { setAddingItem(true); setEditingItem(null) }}
-                    className="flex items-center gap-1 text-[11px] font-bold text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full"
-                  >
-                    <Plus size={10} /> Add item
-                  </button>
-                )}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                Expense Items{catItems.length > 0 ? ` (${catItems.length})` : ''}
+              </p>
+
+              {/* Always-visible add row */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCatItem()}
+                  placeholder="Item name…"
+                  className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2 outline-none border border-gray-100 min-w-0"
+                />
+                <input
+                  type="number" value={newQty} onChange={e => setNewQty(e.target.value)} min="1"
+                  className="w-10 text-xs text-center bg-gray-50 rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0"
+                />
+                <input
+                  type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} placeholder="€"
+                  className="w-14 text-xs bg-gray-50 rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0"
+                />
+                <button
+                  onClick={addCatItem} disabled={!newName.trim()}
+                  className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+                >
+                  <Plus size={14} />
+                </button>
               </div>
+
+              {/* Existing items */}
               <div className="space-y-2">
                 {catItems.map(ci => (
                   editingItem?.id === ci.id ? (
@@ -996,21 +949,11 @@ function FinanceCategoryEditorSheet({
                     <ItemRow
                       key={ci.id}
                       item={ci}
-                      onEdit={() => { setEditingItem(ci); setAddingItem(false) }}
+                      onEdit={() => setEditingItem(ci)}
                     />
                   )
                 ))}
-                {addingItem && (
-                  <ItemForm onSave={addCatItem} onCancel={() => setAddingItem(false)} />
-                )}
               </div>
-              {catItems.length > 1 && (
-                <div className="mt-2 flex justify-end">
-                  <p className="text-xs text-gray-400">
-                    Items total: <span className="font-bold text-gray-700">{fmt(itemTotal)}</span>
-                  </p>
-                </div>
-              )}
             </div>
 
           </div>
@@ -1022,7 +965,7 @@ function FinanceCategoryEditorSheet({
               className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
               style={{ background: '#10b981' }}
             >
-              Save · {fmt(effectiveActual)} actual
+              Save Changes
             </button>
             {!confirmDel ? (
               <button onClick={() => setConfirmDel(true)}
