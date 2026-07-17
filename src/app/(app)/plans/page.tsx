@@ -868,7 +868,10 @@ function FinanceCategoryEditorSheet({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{item.emoji}</span>
-                <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
+                <div>
+                  <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
+                  <span className="text-[9px] font-bold text-blue-400 bg-blue-50 px-1.5 py-0.5 rounded-full">Photos &amp; Items</span>
+                </div>
               </div>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                 <X size={16} />
