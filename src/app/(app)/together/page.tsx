@@ -1178,7 +1178,8 @@ function ShoppingHubSheet({
   const deleteItem  = useAppStore(s => s.deleteShoppingItem)
   const updateItem  = useAppStore(s => s.updateShoppingItem)
 
-  const [view, setView] = useState<null | 'new' | string>(null)
+  const [view, setView]               = useState<null | 'new' | string>(null)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   const incompleteLists = lists.filter(l => !l.isCompleted)
   const completedLists  = lists.filter(l =>  l.isCompleted)
@@ -1256,7 +1257,10 @@ function ShoppingHubSheet({
                   className="w-full text-left rounded-2xl overflow-hidden bg-white shadow-card"
                 >
                   {effectivePhotos(list)[0] && (
-                    <div className="w-full h-28 overflow-hidden">
+                    <div
+                      className="w-full h-28 overflow-hidden cursor-pointer"
+                      onClick={e => { e.stopPropagation(); setLightboxSrc(effectivePhotos(list)[0]) }}
+                    >
                       <img src={effectivePhotos(list)[0]} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
@@ -1323,6 +1327,27 @@ function ShoppingHubSheet({
           />
         )}
       </AnimatePresence>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <img
+            src={lightboxSrc}
+            alt=""
+            className="max-w-full max-h-full object-contain px-4"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </>
   )
 }

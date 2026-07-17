@@ -755,6 +755,11 @@ export default function UsPage() {
 
   // Memory sheet state
   const [memorySheet, setMemorySheet] = useState<Memory | 'new' | null>(null)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+
+  // Swipe detection for Memory Highlights horizontal scroll
+  const highlightDragX      = useRef(0)
+  const highlightScrolling  = useRef(false)
 
   // Countdown state
   const [selectedCountdown, setSelectedCountdown] = useState<Countdown | null>(null)
@@ -1004,7 +1009,12 @@ export default function UsPage() {
                           className="w-full bg-white rounded-2xl shadow-card overflow-hidden text-left"
                         >
                           {memory.photos && memory.photos.length > 0 && (
-                            <img src={memory.photos[0]} alt="" className="w-full h-36 object-cover" />
+                            <img
+                              src={memory.photos[0]}
+                              alt=""
+                              className="w-full h-36 object-cover cursor-pointer"
+                              onClick={e => { e.stopPropagation(); setLightboxSrc(memory.photos![0]) }}
+                            />
                           )}
                           <div className="p-3">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1051,13 +1061,16 @@ export default function UsPage() {
         {memoriesWithPhotos.length > 0 && (
           <section>
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">⭐ Memory Highlights</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5">
+            <div
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5"
+              onPointerDown={e => { highlightDragX.current = e.clientX; highlightScrolling.current = false }}
+              onPointerMove={e => { if (Math.abs(e.clientX - highlightDragX.current) > 6) highlightScrolling.current = true }}
+            >
               {memoriesWithPhotos.map(m => (
-                <motion.button
+                <button
                   key={m.id}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setMemorySheet(m)}
-                  className="shrink-0 relative rounded-2xl overflow-hidden text-left"
+                  onClick={() => { if (!highlightScrolling.current) setLightboxSrc(m.photos![0]) }}
+                  className="shrink-0 relative rounded-2xl overflow-hidden text-left active:opacity-90"
                   style={{ width: 140, height: 180 }}
                 >
                   <img src={m.photos![0]} alt="" className="w-full h-full object-cover" />
@@ -1068,7 +1081,8 @@ export default function UsPage() {
                       {format(parseISO(m.date + 'T12:00:00'), 'MMM d, yyyy')}
                     </p>
                   </div>
-                </motion.button>
+                  {/* Edit access via Timeline */}
+                </button>
               ))}
             </div>
           </section>
@@ -1355,6 +1369,27 @@ export default function UsPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <img
+            src={lightboxSrc}
+            alt=""
+            className="max-w-full max-h-full object-contain px-4"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
     </div>
   )

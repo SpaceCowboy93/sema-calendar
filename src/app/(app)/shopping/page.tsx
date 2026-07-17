@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
+import { Plus, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw, X } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ export default function ShoppingPage() {
   const [openListId,  setOpenListId]  = useState<string | null>(null)
   const [showCreate,  setShowCreate]  = useState(false)
   const [editListId,  setEditListId]  = useState<string | null>(null)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   const editList = editListId ? lists.find(l => l.id === editListId) ?? null : null
 
@@ -112,7 +113,10 @@ export default function ShoppingPage() {
               >
                 {/* Cover photo */}
                 {cover && (
-                  <div className="w-full h-24 overflow-hidden">
+                  <div
+                    className="w-full h-24 overflow-hidden cursor-pointer"
+                    onClick={() => setLightboxSrc(cover)}
+                  >
                     <img src={cover} alt="" className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -236,6 +240,27 @@ export default function ShoppingPage() {
           })
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <img
+            src={lightboxSrc}
+            alt=""
+            className="max-w-full max-h-full object-contain px-4"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
