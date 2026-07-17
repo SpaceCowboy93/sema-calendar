@@ -950,6 +950,7 @@ function FinanceCategoryEditorSheet({
                       key={ci.id}
                       item={ci}
                       onEdit={() => setEditingItem(ci)}
+                      onDelete={() => deleteCatItem(ci.id)}
                     />
                   )
                 ))}
@@ -987,7 +988,7 @@ function FinanceCategoryEditorSheet({
 }
 
 /* ── Item Row ─────────────────────────────────────────────────────────────────── */
-function ItemRow({ item, onEdit }: { item: FinanceCategoryItem; onEdit: () => void }) {
+function ItemRow({ item, onEdit, onDelete }: { item: FinanceCategoryItem; onEdit: () => void; onDelete: () => void }) {
   return (
     <motion.div
       layout
@@ -1013,6 +1014,12 @@ function ItemRow({ item, onEdit }: { item: FinanceCategoryItem; onEdit: () => vo
         className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 active:bg-gray-100 shrink-0"
       >
         <Pencil size={12} />
+      </button>
+      <button
+        onClick={onDelete}
+        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-red-300 active:bg-red-50 shrink-0"
+      >
+        <Trash2 size={12} />
       </button>
     </motion.div>
   )
