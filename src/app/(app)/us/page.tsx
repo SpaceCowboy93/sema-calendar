@@ -773,6 +773,9 @@ export default function UsPage() {
   const [newCdDate,  setNewCdDate]  = useState('')
   const [newCdEmoji, setNewCdEmoji] = useState('💕')
 
+  // Upcoming dates show-more state
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
+
   // Computed
   const futureCountdowns = countdowns
     .filter(c => c.date >= todayStr)
@@ -790,8 +793,20 @@ export default function UsPage() {
         seen.add(e.id); return true
       })
       .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 5)
   }, [events, todayStr])
+
+  // Combined upcoming items (countdowns + events) sorted by date
+  const allUpcomingItems = useMemo(() => {
+    type CdItem = typeof futureCountdowns[0] & { _kind: 'countdown' }
+    type EvItem = typeof upcomingEvents[0]   & { _kind: 'event' }
+    const cds: CdItem[] = futureCountdowns.map(c => ({ ...c, _kind: 'countdown' as const }))
+    const evs: EvItem[] = upcomingEvents.map(e => ({ ...e, _kind: 'event' as const }))
+    return [...cds, ...evs].sort((a, b) => a.date.localeCompare(b.date))
+  }, [futureCountdowns, upcomingEvents])
+
+  const UPCOMING_LIMIT = 5
+  const visibleUpcoming = showAllUpcoming ? allUpcomingItems : allUpcomingItems.slice(0, UPCOMING_LIMIT)
+  const hasMoreUpcoming = allUpcomingItems.length > UPCOMING_LIMIT
 
   const sortedMemories = useMemo(
     () => [...memories].sort((a, b) => b.date.localeCompare(a.date)),
@@ -912,59 +927,151 @@ export default function UsPage() {
         </section>
 
         {/* ── 3. Upcoming Important Dates ── */}
-        {(futureCountdowns.length > 0 || upcomingEvents.length > 0) && (
+        {allUpcomingItems.length > 0 && (
           <section>
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📅 Upcoming Important Dates</h2>
             <div className="space-y-2">
-              {futureCountdowns.map(c => {
-                const days = differenceInCalendarDays(parseISO(c.date), today)
-                return (
-                  <motion.button
-                    key={c.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedCountdown(c)}
-                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3.5 flex items-center gap-3 text-left"
-                  >
-                    <span className="text-2xl shrink-0">{c.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
-                      <p className="text-xs text-gray-400">{format(parseISO(c.date), 'MMM d, yyyy')}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-bold" style={{ color: primary }}>
-                        {days === 0 ? 'Today!' : days}
-                      </p>
-                      {days > 0 && <p className="text-[10px] text-gray-400">days left</p>}
-                    </div>
-                  </motion.button>
-                )
-              })}
-              {upcomingEvents.map(ev => {
-                const days = differenceInCalendarDays(parseISO(ev.date), today)
-                return (
-                  <div
-                    key={ev.id}
-                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
-                  >
-                    <div className="shrink-0 text-center w-10">
-                      {days === 0
-                        ? <span className="text-xl">🎉</span>
-                        : <><p className="text-base font-bold text-gray-700">{days}</p><p className="text-[9px] text-gray-400">days</p></>
-                      }
-                    </div>
-                    <div className="w-px h-8 bg-gray-100 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
-                      <p className="text-xs text-gray-400">{format(parseISO(ev.date), 'EEE, MMM d')}</p>
-                    </div>
-                  </div>
-                )
-              })}
+              <AnimatePresence initial={false}>
+                {visibleUpcoming.map(item => {
+                  const days = differenceInCalendarDays(parseISO(item.date), today)
+                  if (item._kind === 'countdown') {
+                    return (
+                      <motion.button
+                        key={`cd-${item.id}`}
+                        layout
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.22 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedCountdown(item)}
+                        className="w-full bg-white rounded-2xl shadow-card px-4 py-3.5 flex items-center gap-3 text-left overflow-hidden"
+                      >
+                        <span className="text-2xl shrink-0">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 text-sm truncate">{item.title}</p>
+                          <p className="text-xs text-gray-400">{format(parseISO(item.date), 'MMM d, yyyy')}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-lg font-bold" style={{ color: primary }}>
+                            {days === 0 ? 'Today!' : days}
+                          </p>
+                          {days > 0 && <p className="text-[10px] text-gray-400">days left</p>}
+                        </div>
+                      </motion.button>
+                    )
+                  }
+                  return (
+                    <motion.div
+                      key={`ev-${item.id}`}
+                      layout
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22 }}
+                      className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 overflow-hidden"
+                    >
+                      <div className="shrink-0 text-center w-10">
+                        {days === 0
+                          ? <span className="text-xl">🎉</span>
+                          : <><p className="text-base font-bold text-gray-700">{days}</p><p className="text-[9px] text-gray-400">days</p></>
+                        }
+                      </div>
+                      <div className="w-px h-8 bg-gray-100 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                        <p className="text-xs text-gray-400">{format(parseISO(item.date), 'EEE, MMM d')}</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+
+              {hasMoreUpcoming && (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowAllUpcoming(v => !v)}
+                  className="w-full py-2.5 rounded-2xl text-xs font-semibold text-gray-400 bg-white shadow-card active:bg-gray-50"
+                >
+                  {showAllUpcoming
+                    ? `Show less`
+                    : `Show ${allUpcomingItems.length - UPCOMING_LIMIT} more`}
+                </motion.button>
+              )}
             </div>
           </section>
         )}
 
-        {/* ── 4. Timeline ── */}
+        {/* ── 4. Milestones & Anniversaries ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">🎉 Milestones & Anniversaries</h2>
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setAddCdOpen(true)}
+              className="flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 text-white"
+              style={{ background: primary }}
+            >
+              <Plus size={12} strokeWidth={2.5} /> Add
+            </motion.button>
+          </div>
+
+          {pastCountdowns.length === 0 ? (
+            <button
+              onClick={() => setAddCdOpen(true)}
+              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center"
+            >
+              <span className="text-3xl block mb-2">🎉</span>
+              <p className="text-sm text-gray-400">Add your first milestone or anniversary</p>
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {pastCountdowns.map(c => {
+                const days   = differenceInCalendarDays(today, parseISO(c.date))
+                const years  = Math.floor(days / 365)
+                const months = Math.floor(days / 30)
+                const label  = years >= 1
+                  ? `${years} year${years > 1 ? 's' : ''} together`
+                  : months >= 1
+                  ? `${months} month${months > 1 ? 's' : ''} together`
+                  : `${days} day${days !== 1 ? 's' : ''} together`
+
+                return (
+                  <motion.button
+                    key={c.id}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedCountdown(c)}
+                    className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
+                    style={{ background: `${primary}0d`, border: `1.5px solid ${primary}25` }}
+                  >
+                    <div
+                      className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
+                      style={{ background: `radial-gradient(circle at right, ${primary}, transparent)` }}
+                    />
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                      style={{ background: `${primary}18` }}
+                    >
+                      {c.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
+                      <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label} 💕</p>
+                      {c.romanticMessage && (
+                        <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">
+                          &ldquo;{c.romanticMessage}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-gray-300 text-base shrink-0">›</span>
+                  </motion.button>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── 5. Timeline ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">📖 Timeline</h2>
@@ -1062,7 +1169,7 @@ export default function UsPage() {
           )}
         </section>
 
-        {/* ── 5. Memory Highlights ── */}
+        {/* ── 6. Memory Highlights ── */}
         {memoriesWithPhotos.length > 0 && (
           <section>
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">⭐ Memory Highlights</h2>
@@ -1086,15 +1193,14 @@ export default function UsPage() {
                       {format(parseISO(m.date + 'T12:00:00'), 'MMM d, yyyy')}
                     </p>
                   </div>
-                  {/* Edit access via Timeline */}
                 </button>
               ))}
             </div>
           </section>
         )}
 
-        {/* ── 6. Relationship Stats ── */}
-        <section>
+        {/* ── 7. Relationship Stats ── */}
+        <section className="pb-8">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Relationship Stats</h2>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-2xl shadow-card p-4 text-center">
@@ -1115,75 +1221,6 @@ export default function UsPage() {
               <p className="text-[10px] text-gray-400 mt-1">🛏️ boom boom</p>
             </motion.button>
           </div>
-        </section>
-
-        {/* ── 7. Milestones & Anniversaries ── */}
-        <section className="pb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">🎉 Milestones & Anniversaries</h2>
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={() => setAddCdOpen(true)}
-              className="flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 text-white"
-              style={{ background: primary }}
-            >
-              <Plus size={12} strokeWidth={2.5} /> Add
-            </motion.button>
-          </div>
-
-          {pastCountdowns.length === 0 ? (
-            <button
-              onClick={() => setAddCdOpen(true)}
-              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center"
-            >
-              <span className="text-3xl block mb-2">🎉</span>
-              <p className="text-sm text-gray-400">Add your first milestone or anniversary</p>
-            </button>
-          ) : (
-            <div className="space-y-2">
-              {pastCountdowns.map(c => {
-                const days   = differenceInCalendarDays(today, parseISO(c.date))
-                const years  = Math.floor(days / 365)
-                const months = Math.floor(days / 30)
-                const label  = years >= 1
-                  ? `${years} year${years > 1 ? 's' : ''} together`
-                  : months >= 1
-                  ? `${months} month${months > 1 ? 's' : ''} together`
-                  : `${days} day${days !== 1 ? 's' : ''} together`
-
-                return (
-                  <motion.button
-                    key={c.id}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setSelectedCountdown(c)}
-                    className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
-                    style={{ background: `${primary}0d`, border: `1.5px solid ${primary}25` }}
-                  >
-                    <div
-                      className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
-                      style={{ background: `radial-gradient(circle at right, ${primary}, transparent)` }}
-                    />
-                    <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
-                      style={{ background: `${primary}18` }}
-                    >
-                      {c.emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
-                      <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label} 💕</p>
-                      {c.romanticMessage && (
-                        <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">
-                          &ldquo;{c.romanticMessage}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-gray-300 text-base shrink-0">›</span>
-                  </motion.button>
-                )
-              })}
-            </div>
-          )}
         </section>
 
       </div>
