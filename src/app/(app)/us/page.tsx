@@ -10,6 +10,7 @@ import {
 import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
+import { useLightboxStore } from '@/store/useLightboxStore'
 import {
   USERS, OTHER_USER,
   type Memory, type Countdown, type MoodType, type UserName,
@@ -219,6 +220,7 @@ function MemorySheet({
   onSave: (data: Partial<Memory>) => void
   onDelete?: () => void
 }) {
+  const openLightbox = useLightboxStore(s => s.open)
   const [title,      setTitle]      = useState(memory?.title ?? '')
   const [date,       setDate]       = useState(memory?.date ?? getTodayString())
   const [notes,      setNotes]      = useState(memory?.notes ?? '')
@@ -424,7 +426,8 @@ function MemorySheet({
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {photos.map((src, i) => (
                   <div key={i} className="relative shrink-0">
-                    <img src={src} alt="" className="w-24 h-24 object-cover rounded-2xl" />
+                    <img src={src} alt="" className="w-24 h-24 object-cover rounded-2xl cursor-pointer"
+                      onClick={() => openLightbox(photos, i)} />
                     <button
                       onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
@@ -483,6 +486,7 @@ function AnniversarySheet({
 }) {
   const updateCountdown = useAppStore(s => s.updateCountdown)
   const uploadPhoto     = useAppStore(s => s.uploadPhoto)
+  const openLightbox    = useLightboxStore(s => s.open)
 
   const [title,     setTitle]     = useState(countdown.title)
   const [date,      setDate]      = useState(countdown.date)
@@ -677,7 +681,8 @@ function AnniversarySheet({
             {photos.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {photos.map((src, i) => (
-                  <img key={i} src={src} alt="" className="w-24 h-24 object-cover rounded-2xl shrink-0" />
+                  <img key={i} src={src} alt="" className="w-24 h-24 object-cover rounded-2xl shrink-0 cursor-pointer"
+                    onClick={() => openLightbox(photos, i)} />
                 ))}
               </div>
             )}
@@ -755,7 +760,7 @@ export default function UsPage() {
 
   // Memory sheet state
   const [memorySheet, setMemorySheet] = useState<Memory | 'new' | null>(null)
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const openLightbox = useLightboxStore(s => s.open)
 
   // Swipe detection for Memory Highlights horizontal scroll
   const highlightDragX      = useRef(0)
@@ -1013,7 +1018,7 @@ export default function UsPage() {
                               src={memory.photos[0]}
                               alt=""
                               className="w-full h-36 object-cover cursor-pointer"
-                              onClick={e => { e.stopPropagation(); setLightboxSrc(memory.photos![0]) }}
+                              onClick={e => { e.stopPropagation(); openLightbox(memory.photos!) }}
                             />
                           )}
                           <div className="p-3">
@@ -1069,7 +1074,7 @@ export default function UsPage() {
               {memoriesWithPhotos.map(m => (
                 <button
                   key={m.id}
-                  onClick={() => { if (!highlightScrolling.current) setLightboxSrc(m.photos![0]) }}
+                  onClick={() => { if (!highlightScrolling.current) openLightbox(m.photos!) }}
                   className="shrink-0 relative rounded-2xl overflow-hidden text-left active:opacity-90"
                   style={{ width: 140, height: 180 }}
                 >
@@ -1369,27 +1374,6 @@ export default function UsPage() {
           </>
         )}
       </AnimatePresence>
-
-      {/* Lightbox */}
-      {lightboxSrc && (
-        <div
-          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
-          onClick={() => setLightboxSrc(null)}
-        >
-          <img
-            src={lightboxSrc}
-            alt=""
-            className="max-w-full max-h-full object-contain px-4"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightboxSrc(null)}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white"
-          >
-            <X size={18} />
-          </button>
-        </div>
-      )}
 
     </div>
   )

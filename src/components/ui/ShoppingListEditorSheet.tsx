@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { useLightboxStore } from '@/store/useLightboxStore'
 import type { ShoppingList, ShoppingItem } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
@@ -60,6 +61,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   const addStoreItem    = useAppStore(s => s.addShoppingItem)
   const updateStoreItem = useAppStore(s => s.updateShoppingItem)
   const deleteStoreItem = useAppStore(s => s.deleteShoppingItem)
+  const openLightbox    = useLightboxStore(s => s.open)
 
   /* ── Metadata state ───────────────────────────────────────────────────── */
   const [name,      setName]      = useState(list?.name ?? '')
@@ -263,7 +265,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
             {/* Item photo thumbnail / camera */}
             {itemPhoto ? (
               <div className="relative shrink-0">
-                <img src={itemPhoto} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                <img src={itemPhoto} alt="" className="w-8 h-8 rounded-lg object-cover cursor-pointer"
+                  onClick={() => openLightbox([itemPhoto])} />
                 <button
                   onClick={() => setItemPhoto(undefined)}
                   className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center"
@@ -309,7 +312,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                   className="flex items-center gap-2 px-2.5 py-2 bg-white rounded-xl border border-gray-100"
                 >
                   {it.photo && (
-                    <img src={it.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                    <img src={it.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 cursor-pointer"
+                      onClick={() => openLightbox([it.photo!])} />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700 truncate">{it.name}</p>
@@ -348,7 +352,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                         {/* Edit item photo */}
                         {editPhoto ? (
                           <div className="relative shrink-0">
-                            <img src={editPhoto} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            <img src={editPhoto} alt="" className="w-8 h-8 rounded-lg object-cover cursor-pointer"
+                              onClick={() => openLightbox([editPhoto])} />
                             <button
                               onClick={() => setEditPhoto(undefined)}
                               className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center"
@@ -412,7 +417,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                       item.isChecked && 'opacity-50'
                     )}>
                       {item.photo && (
-                        <img src={item.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                        <img src={item.photo} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 cursor-pointer"
+                          onClick={() => openLightbox([item.photo!])} />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-700')}>

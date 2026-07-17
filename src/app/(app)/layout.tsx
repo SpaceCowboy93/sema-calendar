@@ -11,6 +11,7 @@ import { useSupabaseSync } from '@/hooks/useSupabaseSync'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
+import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -85,6 +86,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </motion.button>
 
       <PartnerNoteNotification />
+
+      <GlobalImageLightbox />
 
       <FullCreateSheet
         open={quickAddOpen}

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { useLightboxStore } from '@/store/useLightboxStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
@@ -84,6 +85,7 @@ interface Props {
 /* ── Component ──────────────────────────────────────────────────────────── */
 export function FullCreateSheet({ open, onClose, primary, initialDate }: Props) {
   const currentUser       = useAppStore(s => s.currentUser)!
+  const openLightbox      = useLightboxStore(s => s.open)
   const addEvent          = useAppStore(s => s.addEvent)
   const updateEvent       = useAppStore(s => s.updateEvent)
   const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
@@ -519,7 +521,8 @@ export function FullCreateSheet({ open, onClose, primary, initialDate }: Props) 
                               <div className="flex gap-2 flex-wrap mb-3">
                                 {photos.map((url, i) => (
                                   <div key={i} className="relative w-20 h-20">
-                                    <img src={url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                                    <img src={url} alt="" className="w-full h-full rounded-2xl object-cover cursor-pointer"
+                                      onClick={() => openLightbox(photos, i)} />
                                     <button
                                       onClick={() => removePhoto(i)}
                                       className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { useLightboxStore } from '@/store/useLightboxStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
 
@@ -44,7 +45,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [uploading, setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [bgPhotoIdx, setBgPhotoIdx]   = useState<number | null>(null)
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  const openLightbox = useLightboxStore(s => s.open)
 
   const photoInputRef = useRef<HTMLInputElement>(null)
   const isEdit = !!event
@@ -74,7 +75,6 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       setPendingFiles([])
       setBgPhotoIdx(null)
     }
-    setLightboxIdx(null)
     setShowDelete(false)
     setNewTodo('')
     setSaving(false)
@@ -316,7 +316,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                     {photos.map((url, i) => (
                       <div key={i} className="relative w-20 h-20">
                         {/* Tap to open lightbox */}
-                        <button className="w-full h-full" onClick={() => setLightboxIdx(i)}>
+                        <button className="w-full h-full" onClick={() => openLightbox(photos, i)}>
                           <img src={url} alt="" className="w-full h-full rounded-2xl object-cover" />
                         </button>
                         {/* Remove */}
@@ -437,63 +437,6 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </motion.div>
             )}
           </AnimatePresence>
-        {/* Lightbox */}
-        <AnimatePresence>
-          {lightboxIdx !== null && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setLightboxIdx(null)}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur-md"
-            >
-              <motion.div
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.85, opacity: 0 }}
-                transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-                onClick={e => e.stopPropagation()}
-                className="relative max-w-[90vw] max-h-[85vh]"
-              >
-                <img
-                  src={photos[lightboxIdx]}
-                  alt=""
-                  className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
-                />
-                {/* Close */}
-                <button
-                  onClick={() => setLightboxIdx(null)}
-                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm
-                             text-white flex items-center justify-center"
-                >
-                  <X size={16} />
-                </button>
-                {/* Prev / Next */}
-                {photos.length > 1 && (
-                  <>
-                    <button
-                      onClick={e => { e.stopPropagation(); setLightboxIdx(l => l !== null ? Math.max(0, l - 1) : 0) }}
-                      disabled={lightboxIdx === 0}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50
-                                 backdrop-blur-sm text-white flex items-center justify-center text-xl
-                                 font-light disabled:opacity-30"
-                    >‹</button>
-                    <button
-                      onClick={e => { e.stopPropagation(); setLightboxIdx(l => l !== null ? Math.min(photos.length - 1, l + 1) : 0) }}
-                      disabled={lightboxIdx === photos.length - 1}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50
-                                 backdrop-blur-sm text-white flex items-center justify-center text-xl
-                                 font-light disabled:opacity-30"
-                    >›</button>
-                  </>
-                )}
-                <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-white/50">
-                  {lightboxIdx + 1} / {photos.length}
-                </p>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
         </>
       )}
     </AnimatePresence>

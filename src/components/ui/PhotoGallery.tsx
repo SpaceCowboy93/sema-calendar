@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Camera, X } from 'lucide-react'
+import { useLightboxStore } from '@/store/useLightboxStore'
 
 interface Props {
   photos: string[]
@@ -22,7 +21,7 @@ export function PhotoGallery({
   size = 'md',
   coverLabel = 'Cover',
 }: Props) {
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  const openLightbox = useLightboxStore(s => s.open)
 
   const thumbW = size === 'sm' ? 'w-16 h-16' : 'w-28 h-24'
   const addW   = size === 'sm' ? 'w-16 h-16' : 'w-28 h-24'
@@ -37,7 +36,7 @@ export function PhotoGallery({
           {validPhotos.map((url, idx) => (
             <div key={idx} className={`relative shrink-0 ${thumbW} rounded-2xl overflow-hidden`}>
               <button
-                onClick={() => setLightboxIdx(idx)}
+                onClick={() => openLightbox(validPhotos, idx)}
                 className="w-full h-full block"
               >
                 <img src={url} alt="" className="w-full h-full object-cover" />
@@ -95,53 +94,6 @@ export function PhotoGallery({
         </button>
       )}
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxIdx !== null && validPhotos.length > 0 && (
-          <motion.div
-            key="lightbox"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
-            onClick={() => setLightboxIdx(null)}
-          >
-            <button
-              onClick={() => setLightboxIdx(null)}
-              className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-            >
-              <X size={20} />
-            </button>
-            {lightboxIdx > 0 && (
-              <button
-                onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i ?? 1) - 1) }}
-                className="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-              >
-                <ChevronLeft size={20} />
-              </button>
-            )}
-            {lightboxIdx < validPhotos.length - 1 && (
-              <button
-                onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i ?? 0) + 1) }}
-                className="absolute right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
-              >
-                <ChevronRight size={20} />
-              </button>
-            )}
-            <img
-              src={validPhotos[lightboxIdx]}
-              alt=""
-              className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
-              onClick={e => e.stopPropagation()}
-            />
-            {validPhotos.length > 1 && (
-              <p className="absolute bottom-5 text-white/70 text-sm">
-                {lightboxIdx + 1} / {validPhotos.length}
-              </p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   )
 }
