@@ -1,21 +1,36 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Plus, Trash2, LogOut, X, Send, Camera, Pencil } from 'lucide-react'
-import { NotificationSetup } from '@/components/NotificationSetup'
-import { useRouter } from 'next/navigation'
 import {
-  differenceInYears, differenceInMonths, differenceInDays,
+  format, parseISO,
+  differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
+import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, OTHER_USER, type UserName, type MoodType } from '@/types'
-import { MOOD_CONFIG, getDaysUntil, formatDate, cn } from '@/lib/utils'
+import {
+  USERS, OTHER_USER,
+  type Memory, type Countdown, type MoodType, type UserName,
+} from '@/types'
+import { MOOD_CONFIG, getTodayString, cn } from '@/lib/utils'
 
-/* ── Relationship hero ───────────────────────────────────────────────────── */
+/* ── Constants ─────────────────────────────────────────────────────────────── */
 const RELATIONSHIP_START = new Date('2025-03-05T21:00:00')
+const EMOJI_OPTIONS = ['💕', '💍', '🎂', '🌟', '🎉', '✈️', '🌸', '🌊', '🏖️', '🎊', '🎄', '🎭']
+const ANNIVERSARY_SUGGESTIONS = [
+  { emoji: '🌹', text: 'Plan a dinner reservation' },
+  { emoji: '💐', text: 'Buy flowers' },
+  { emoji: '🎁', text: 'Prepare a small gift' },
+  { emoji: '💌', text: 'Write a love letter' },
+  { emoji: '📸', text: 'Choose a favourite photo together' },
+  { emoji: '🕯️', text: 'Set the mood with candles' },
+  { emoji: '🍾', text: 'Open something special to drink' },
+  { emoji: '📖', text: 'Write a memory from this day' },
+]
 
+/* ── Helpers ───────────────────────────────────────────────────────────────── */
 function calcDuration() {
   const now    = new Date()
   const years  = differenceInYears(now, RELATIONSHIP_START)
@@ -30,6 +45,28 @@ function calcDuration() {
   return { years, months, days, hours, mins, secs }
 }
 
+async function resizeImage(file: File): Promise<string> {
+  return new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        const max   = 800
+        const scale = Math.min(1, max / Math.max(img.width, img.height))
+        const w     = Math.round(img.width * scale)
+        const h     = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+/* ── FloatingHeart ─────────────────────────────────────────────────────────── */
 function FloatingHeart({ x, delay, primary }: { x: number; delay: number; primary: string }) {
   return (
     <motion.span
@@ -44,16 +81,16 @@ function FloatingHeart({ x, delay, primary }: { x: number; delay: number; primar
   )
 }
 
+/* ── RelationshipHero ──────────────────────────────────────────────────────── */
 function RelationshipHero({ primary }: { primary: string }) {
   const prefersReduced = useReducedMotion()
-  const [mounted,  setMounted]  = useState(false)
-  const [dur,      setDur]      = useState(calcDuration)
-  const [hearts,   setHearts]   = useState<{ id: number; x: number; delay: number }[]>([])
-  const [pulse,    setPulse]    = useState(false)
+  const [mounted, setMounted]  = useState(false)
+  const [dur,     setDur]      = useState(calcDuration)
+  const [hearts,  setHearts]   = useState<{ id: number; x: number; delay: number }[]>([])
+  const [pulse,   setPulse]    = useState(false)
   const heartId = useRef(0)
 
   useEffect(() => { setMounted(true) }, [])
-
   useEffect(() => {
     const id = setInterval(() => setDur(calcDuration()), 1000)
     return () => clearInterval(id)
@@ -64,9 +101,7 @@ function RelationshipHero({ primary }: { primary: string }) {
     setPulse(true)
     setTimeout(() => setPulse(false), 600)
     const newHearts = Array.from({ length: 5 }, (_, i) => ({
-      id: heartId.current++,
-      x: 15 + i * 17,
-      delay: i * 0.08,
+      id: heartId.current++, x: 15 + i * 17, delay: i * 0.08,
     }))
     setHearts(h => [...h, ...newHearts])
     setTimeout(() => setHearts(h => h.slice(5)), 1800)
@@ -74,12 +109,10 @@ function RelationshipHero({ primary }: { primary: string }) {
 
   const pad = (n: number) => String(n).padStart(2, '0')
 
-  if (!mounted) {
-    return (
-      <div className="rounded-3xl h-44 mb-6 animate-pulse"
-        style={{ background: `${primary}08`, border: `1px solid ${primary}15` }} />
-    )
-  }
+  if (!mounted) return (
+    <div className="rounded-3xl h-44 mb-2 animate-pulse"
+      style={{ background: `${primary}08`, border: `1px solid ${primary}15` }} />
+  )
 
   return (
     <motion.div
@@ -87,21 +120,18 @@ function RelationshipHero({ primary }: { primary: string }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
       onClick={handleTap}
-      className="relative overflow-hidden rounded-3xl mb-6 cursor-pointer select-none"
+      className="relative overflow-hidden rounded-3xl cursor-pointer select-none"
       style={{
         background: `linear-gradient(145deg, ${primary}10 0%, ${primary}04 60%, transparent 100%)`,
         border: `1px solid ${primary}20`,
         boxShadow: `0 2px 24px ${primary}12`,
       }}
     >
-      {/* Soft glow orb */}
       <div
         className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 pointer-events-none"
         style={{ background: `radial-gradient(circle, ${primary}, transparent 70%)` }}
       />
-
       <div className="px-5 pt-5 pb-4 relative z-10">
-        {/* Names + intro */}
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: `${primary}90` }}>
             Seval &amp; Mateo
@@ -115,14 +145,11 @@ function RelationshipHero({ primary }: { primary: string }) {
             ♾️
           </motion.span>
         </div>
-
         <p className="text-[11px] text-gray-400 mb-0.5">Our story began</p>
         <p className="text-base font-bold text-gray-800 mb-1">March 5, 2025 · 9:00 PM</p>
         <p className="text-[11px] text-gray-400 italic mb-4 leading-snug">
           Every second since then has been part of us.
         </p>
-
-        {/* Main counter — years / months / days */}
         <div className="flex items-end gap-3 mb-3">
           {[
             { value: dur.years,  label: dur.years  === 1 ? 'year'  : 'years'  },
@@ -130,10 +157,7 @@ function RelationshipHero({ primary }: { primary: string }) {
             { value: dur.days,   label: dur.days   === 1 ? 'day'   : 'days'   },
           ].map(({ value, label }) => (
             <div key={label} className="flex-1 text-center">
-              <div
-                className="rounded-2xl py-3"
-                style={{ background: `${primary}12` }}
-              >
+              <div className="rounded-2xl py-3" style={{ background: `${primary}12` }}>
                 <motion.p
                   key={value}
                   initial={prefersReduced ? {} : { opacity: 0, y: -4 }}
@@ -149,8 +173,6 @@ function RelationshipHero({ primary }: { primary: string }) {
             </div>
           ))}
         </div>
-
-        {/* Secondary counter — h / m / s */}
         <div
           className="flex items-center justify-center gap-0.5 rounded-2xl py-2 px-4"
           style={{ background: `${primary}08` }}
@@ -177,8 +199,6 @@ function RelationshipHero({ primary }: { primary: string }) {
           ))}
         </div>
       </div>
-
-      {/* Floating hearts on tap */}
       <AnimatePresence>
         {hearts.map(h => (
           <FloatingHeart key={h.id} x={h.x} delay={h.delay} primary={primary} />
@@ -188,275 +208,983 @@ function RelationshipHero({ primary }: { primary: string }) {
   )
 }
 
+/* ── MemorySheet ───────────────────────────────────────────────────────────── */
+function MemorySheet({
+  memory, categories, primary, onClose, onSave, onDelete,
+}: {
+  memory: Memory | null
+  categories: string[]
+  primary: string
+  onClose: () => void
+  onSave: (data: Partial<Memory>) => void
+  onDelete?: () => void
+}) {
+  const [title,      setTitle]      = useState(memory?.title ?? '')
+  const [date,       setDate]       = useState(memory?.date ?? getTodayString())
+  const [notes,      setNotes]      = useState(memory?.notes ?? '')
+  const [category,   setCategory]   = useState(memory?.category ?? '')
+  const [newCat,     setNewCat]     = useState('')
+  const [addingCat,  setAddingCat]  = useState(false)
+  const [checklist,  setChecklist]  = useState<string[]>(memory?.checklist ?? [])
+  const [newItem,    setNewItem]    = useState('')
+  const [photos,     setPhotos]     = useState<string[]>(memory?.photos ?? [])
+  const [processing, setProcessing] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const photoRef = useRef<HTMLInputElement>(null)
+  const isEdit   = !!memory
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setProcessing(true)
+    const base64 = await resizeImage(file)
+    setPhotos(p => [...p, base64])
+    setProcessing(false)
+  }
+
+  function addCheckItem() {
+    if (!newItem.trim()) return
+    setChecklist(c => [...c, newItem.trim()])
+    setNewItem('')
+  }
+
+  function handleSave() {
+    if (!title.trim() || !date) return
+    onSave({
+      title:     title.trim(),
+      date,
+      notes:     notes.trim() || undefined,
+      photos:    photos.length   ? photos    : undefined,
+      category:  category.trim() || undefined,
+      checklist: checklist.length ? checklist : undefined,
+    })
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 360 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+      >
+        <div className="px-5 pt-4 pb-12">
+          <div className="drag-handle mb-4" />
+
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-bold text-gray-800">
+              {isEdit ? 'Edit Memory' : 'New Memory'}
+            </h3>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Title */}
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="What happened?"
+              autoFocus={!isEdit}
+              className="w-full text-sm text-gray-800 bg-transparent outline-none"
+            />
+          </div>
+
+          {/* Date */}
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="w-full text-sm text-gray-700 bg-transparent outline-none"
+            />
+          </div>
+
+          {/* Category */}
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Category</p>
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(category === cat ? '' : cat)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                    category === cat ? 'text-white' : 'bg-gray-100 text-gray-600'
+                  )}
+                  style={category === cat ? { background: primary } : {}}
+                >
+                  {cat}
+                </button>
+              ))}
+              {addingCat ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    value={newCat}
+                    onChange={e => setNewCat(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newCat.trim()) {
+                        setCategory(newCat.trim()); setNewCat(''); setAddingCat(false)
+                      }
+                      if (e.key === 'Escape') { setNewCat(''); setAddingCat(false) }
+                    }}
+                    placeholder="New category…"
+                    autoFocus
+                    className="text-xs bg-gray-50 rounded-full px-3 py-1.5 outline-none w-32 border"
+                    style={{ borderColor: `${primary}40` }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newCat.trim()) { setCategory(newCat.trim()); setNewCat('') }
+                      setAddingCat(false)
+                    }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs"
+                    style={{ background: primary }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingCat(true)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-400 flex items-center gap-1"
+                >
+                  <Plus size={10} /> New
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Tell the story…"
+              rows={3}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none"
+            />
+          </div>
+
+          {/* Checklist */}
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Checklist</p>
+            {checklist.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100">
+                <div className="w-4 h-4 rounded-full border-2 shrink-0" style={{ borderColor: primary }} />
+                <span className="flex-1 text-sm text-gray-700">{item}</span>
+                <button onClick={() => setChecklist(c => c.filter((_, idx) => idx !== i))} className="text-gray-300 active:text-red-400">
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCheckItem() } }}
+                placeholder="Add item…"
+                className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-3 py-2 outline-none"
+              />
+              <button
+                onClick={addCheckItem}
+                disabled={!newItem.trim()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-30 text-white"
+                style={{ background: primary }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Photos */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
+              <button
+                onClick={() => photoRef.current?.click()}
+                disabled={processing}
+                className="flex items-center gap-1 text-xs font-semibold disabled:opacity-40"
+                style={{ color: primary }}
+              >
+                <Camera size={12} /> {processing ? 'Processing…' : 'Add photo'}
+              </button>
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            {photos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {photos.map((src, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img src={src} alt="" className="w-24 h-24 object-cover rounded-2xl" />
+                    <button
+                      onClick={() => setPhotos(p => p.filter((_, idx) => idx !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            {isEdit && onDelete && (
+              confirmDel ? (
+                <button
+                  onClick={onDelete}
+                  className="px-4 h-12 flex items-center justify-center rounded-2xl bg-red-500 text-white text-xs font-semibold shrink-0"
+                >
+                  Confirm?
+                </button>
+              ) : (
+                <button
+                  onClick={() => setConfirmDel(true)}
+                  className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )
+            )}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSave}
+              disabled={!title.trim() || !date}
+              className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+              style={{ background: primary }}
+            >
+              {isEdit ? 'Save Changes' : 'Add Memory'}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+/* ── AnniversarySheet ──────────────────────────────────────────────────────── */
+function AnniversarySheet({
+  countdown, primary, onClose, onDelete,
+}: {
+  countdown: Countdown
+  primary: string
+  onClose: () => void
+  onDelete: () => void
+}) {
+  const updateCountdown = useAppStore(s => s.updateCountdown)
+  const uploadPhoto     = useAppStore(s => s.uploadPhoto)
+
+  const [title,     setTitle]     = useState(countdown.title)
+  const [date,      setDate]      = useState(countdown.date)
+  const [notes,     setNotes]     = useState(countdown.notes ?? '')
+  const [checklist, setChecklist] = useState<string[]>(countdown.checklist ?? [])
+  const [newItem,   setNewItem]   = useState('')
+  const [romantic,  setRomantic]  = useState(countdown.romanticMessage ?? '')
+  const [photos,    setPhotos]    = useState<string[]>(countdown.photos ?? [])
+  const [uploading, setUploading] = useState(false)
+  const [dirty,     setDirty]     = useState(false)
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  function mark() { setDirty(true) }
+
+  function addCheckItem(text: string) {
+    if (!text.trim()) return
+    setChecklist(c => [...c, text.trim()])
+    setNewItem('')
+    mark()
+  }
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    const url = await uploadPhoto(`anniversaries/${countdown.id}`, file)
+    if (url) setPhotos(p => [...p, url])
+    setUploading(false)
+    mark()
+  }
+
+  function handleSave() {
+    updateCountdown(countdown.id, {
+      title:          title.trim() || countdown.title,
+      date,
+      notes:          notes || undefined,
+      checklist:      checklist.length ? checklist : undefined,
+      photos:         photos.length    ? photos    : undefined,
+      romanticMessage: romantic || undefined,
+    })
+    onClose()
+  }
+
+  const daysSince = differenceInCalendarDays(new Date(), parseISO(countdown.date))
+  const isFuture  = daysSince < 0
+  const absDays   = Math.abs(daysSince)
+  const ageLabel  = isFuture
+    ? (absDays === 0 ? 'Today!' : `in ${absDays} day${absDays !== 1 ? 's' : ''}`)
+    : (() => {
+        const years  = Math.floor(absDays / 365)
+        const months = Math.floor(absDays / 30)
+        return years >= 1
+          ? `${years} year${years > 1 ? 's' : ''} ago`
+          : months >= 1
+          ? `${months} month${months > 1 ? 's' : ''} ago`
+          : `${absDays} day${absDays !== 1 ? 's' : ''} ago`
+      })()
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={dirty ? handleSave : onClose}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+      />
+      <motion.div
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 360 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+      >
+        <div className="px-5 pt-4 pb-12">
+          <div className="drag-handle mb-4" />
+
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                style={{ background: `${primary}15` }}
+              >
+                {countdown.emoji}
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ageLabel}</p>
+                <input
+                  value={title}
+                  onChange={e => { setTitle(e.target.value); mark() }}
+                  className="text-base font-bold text-gray-800 bg-transparent outline-none w-full"
+                />
+              </div>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+            <input
+              type="date" value={date}
+              onChange={e => { setDate(e.target.value); mark() }}
+              className="w-full text-sm text-gray-700 bg-transparent outline-none"
+            />
+          </div>
+
+          <div className="rounded-2xl px-4 py-3 mb-3" style={{ background: `${primary}06` }}>
+            <p className="text-[10px] font-bold mb-1" style={{ color: primary }}>💌 A message to remember</p>
+            <textarea
+              value={romantic}
+              onChange={e => { setRomantic(e.target.value); mark() }}
+              placeholder="Write something beautiful about this memory..."
+              rows={2}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none leading-relaxed"
+            />
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
+            <textarea
+              value={notes}
+              onChange={e => { setNotes(e.target.value); mark() }}
+              placeholder="Details, feelings, memories..."
+              rows={2}
+              className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none"
+            />
+          </div>
+
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Things to prepare</p>
+            {checklist.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100">
+                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" style={{ borderColor: primary }}>
+                  <Check size={9} style={{ color: primary }} />
+                </div>
+                <span className="flex-1 text-sm text-gray-700">{item}</span>
+                <button onClick={() => { setChecklist(c => c.filter((_, idx) => idx !== i)); mark() }} className="text-gray-300 active:text-red-400">
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCheckItem(newItem) } }}
+                placeholder="Add something to prepare..."
+                className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-3 py-2 outline-none"
+              />
+              <button
+                onClick={() => addCheckItem(newItem)}
+                disabled={!newItem.trim()}
+                className="w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-30"
+                style={{ background: primary }}
+              >
+                <Plus size={16} className="text-white" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Suggestions 💡</p>
+            <div className="flex flex-wrap gap-2">
+              {ANNIVERSARY_SUGGESTIONS.map((s, i) => {
+                const already = checklist.includes(s.text)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { if (!already) addCheckItem(s.text) }}
+                    className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium', already ? 'opacity-40' : 'active:opacity-80')}
+                    style={{ background: `${primary}10`, color: already ? primary : '#6b7280', border: `1px solid ${primary}20` }}
+                  >
+                    {s.emoji} {s.text} {already && <Check size={10} />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
+              <button
+                onClick={() => photoRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-1 text-xs font-semibold disabled:opacity-40"
+                style={{ color: primary }}
+              >
+                <Camera size={12} /> {uploading ? 'Uploading…' : 'Add photo'}
+              </button>
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            {photos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {photos.map((src, i) => (
+                  <img key={i} src={src} alt="" className="w-24 h-24 object-cover rounded-2xl shrink-0" />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={onDelete}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0 active:opacity-80"
+            >
+              <Trash2 size={16} />
+            </button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSave}
+              className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold"
+              style={{ background: primary }}
+            >
+              Save
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+/* ── Mood types ────────────────────────────────────────────────────────────── */
 const MOOD_TYPES = Object.entries(MOOD_CONFIG) as [
   keyof typeof MOOD_CONFIG,
   { emoji: string; label: string }
 ][]
 
+/* ── Page ──────────────────────────────────────────────────────────────────── */
 export default function UsPage() {
-  const router = useRouter()
-  const currentUser = useAppStore(s => s.currentUser)!
+  const router          = useRouter()
+  const currentUser     = useAppStore(s => s.currentUser)!
   const setCurrentUser  = useAppStore(s => s.setCurrentUser)
-  const getMood     = useAppStore(s => s.getMoodForUser)
-  const setMood     = useAppStore(s => s.setMood)
-  const countdowns       = useAppStore(s => s.countdowns)
-  const addCountdown     = useAppStore(s => s.addCountdown)
-  const deleteCountdown  = useAppStore(s => s.deleteCountdown)
-  const sendPartnerNote  = useAppStore(s => s.sendPartnerNote)
-
-  const pageBg       = useAppStore(s => s.pageBackgrounds.us)
-  const uploadPageBg = useAppStore(s => s.uploadPageBackground)
-  const setPageBg    = useAppStore(s => s.setPageBackground)
-  const bgInputRef   = useRef<HTMLInputElement>(null)
-
-  async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) await uploadPageBg('us', file)
-    e.target.value = ''
-  }
+  const getMood         = useAppStore(s => s.getMoodForUser)
+  const setMood         = useAppStore(s => s.setMood)
+  const countdowns      = useAppStore(s => s.countdowns)
+  const addCountdown    = useAppStore(s => s.addCountdown)
+  const deleteCountdown = useAppStore(s => s.deleteCountdown)
+  const memories        = useAppStore(s => s.memories)
+  const addMemory       = useAppStore(s => s.addMemory)
+  const updateMemory    = useAppStore(s => s.updateMemory)
+  const deleteMemory    = useAppStore(s => s.deleteMemory)
+  const events          = useAppStore(s => s.events)
+  const boomBoomCount   = useAppStore(s => s.boomBoomCount)
+  const incrementBoomBoom = useAppStore(s => s.incrementBoomBoom)
 
   const partnerUser = OTHER_USER[currentUser]
-  const myMood      = getMood(currentUser)
-  const partnerMood = getMood(partnerUser)
+  const isSeval     = currentUser === 'seval'
+  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+  const today       = new Date()
+  const todayStr    = getTodayString()
 
-  const isSeval      = currentUser === 'seval'
-  const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
-  const lightBg      = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
-
-  const [showNoteForm,      setShowNoteForm]      = useState(false)
-  const [noteContent,       setNoteContent]       = useState('')
-  const [noteSent,          setNoteSent]          = useState(false)
-  const [showCountdownForm, setShowCountdownForm] = useState(false)
-  const [cdTitle, setCdTitle] = useState('')
-  const [cdDate, setCdDate]   = useState('')
-  const [cdEmoji, setCdEmoji] = useState('🎉')
-
-  // Emotion popup
-  const [moodPopup, setMoodPopup]       = useState(false)
-  const [pendingMood, setPendingMood]   = useState<MoodType | null>(null)
-  const [moodMessage, setMoodMessage]   = useState('')
-  const [moodVisible, setMoodVisible]   = useState(false)
+  // Mood state
+  const myMood = getMood(currentUser)
+  const [moodVisible, setMoodVisible] = useState(false)
+  const [moodPopup,   setMoodPopup]   = useState(false)
+  const [pendingMood, setPendingMood] = useState<MoodType | null>(null)
+  const [moodMessage, setMoodMessage] = useState('')
 
   function openMoodPopup(mood: MoodType) {
     setPendingMood(mood)
     setMoodMessage(myMood?.note ?? '')
     setMoodPopup(true)
   }
-
   function saveMood() {
     if (!pendingMood) return
     setMood(pendingMood, moodMessage.trim() || undefined)
-    setMoodPopup(false)
-    setMoodVisible(false)
-    setPendingMood(null)
-    setMoodMessage('')
+    setMoodPopup(false); setMoodVisible(false); setPendingMood(null); setMoodMessage('')
   }
 
-  function handleSendNote() {
-    if (!noteContent.trim()) return
-    sendPartnerNote(noteContent.trim())
-    setNoteContent('')
-    setNoteSent(true)
-    setTimeout(() => {
-      setNoteSent(false)
-      setShowNoteForm(false)
-    }, 1600)
-  }
+  // Memory sheet state
+  const [memorySheet, setMemorySheet] = useState<Memory | 'new' | null>(null)
+
+  // Countdown state
+  const [selectedCountdown, setSelectedCountdown] = useState<Countdown | null>(null)
+  const [addCdOpen,  setAddCdOpen]  = useState(false)
+  const [newCdTitle, setNewCdTitle] = useState('')
+  const [newCdDate,  setNewCdDate]  = useState('')
+  const [newCdEmoji, setNewCdEmoji] = useState('💕')
+
+  // Computed
+  const futureCountdowns = countdowns
+    .filter(c => c.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  const pastCountdowns = countdowns
+    .filter(c => c.date < todayStr)
+    .sort((a, b) => b.date.localeCompare(a.date))
+
+  const upcomingEvents = useMemo(() => {
+    const seen = new Set<string>()
+    return events
+      .filter(e => {
+        if (e.date < todayStr || seen.has(e.id)) return false
+        seen.add(e.id); return true
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5)
+  }, [events, todayStr])
+
+  const sortedMemories = useMemo(
+    () => [...memories].sort((a, b) => b.date.localeCompare(a.date)),
+    [memories]
+  )
+  const memoriesWithPhotos = useMemo(
+    () => sortedMemories.filter(m => m.photos?.length),
+    [sortedMemories]
+  )
+  const categories = useMemo(
+    () => Array.from(new Set(memories.map(m => m.category).filter((c): c is string => !!c))),
+    [memories]
+  )
+
+  const daysTotal = differenceInCalendarDays(today, RELATIONSHIP_START)
 
   function handleAddCountdown() {
-    if (!cdTitle.trim() || !cdDate) return
-    addCountdown(cdTitle.trim(), cdDate, cdEmoji)
-    setCdTitle('')
-    setCdDate('')
-    setCdEmoji('🎉')
-    setShowCountdownForm(false)
+    if (!newCdTitle.trim() || !newCdDate) return
+    addCountdown(newCdTitle.trim(), newCdDate, newCdEmoji)
+    setNewCdTitle(''); setNewCdDate(''); setNewCdEmoji('💕'); setAddCdOpen(false)
   }
 
-  const sortedCountdowns = [...countdowns].sort((a, b) => {
-    const da = getDaysUntil(a.date)
-    const db = getDaysUntil(b.date)
-    return da - db
-  })
-
   return (
-    <div
-      className="min-h-screen px-4 pt-14 relative"
-      style={pageBg ? { backgroundImage: `url(${pageBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-    >
-      {pageBg && <div className="fixed inset-0 bg-white/85 backdrop-blur-sm z-0 pointer-events-none" />}
-      <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgPick} />
+    <div className="min-h-screen bg-gray-50 pb-36">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 relative z-10">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Our Space</h1>
-          <p className="text-sm text-gray-400 mt-0.5">just the two of you 💕</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => bgInputRef.current?.click()}
-            className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
-            title="Set page background"
-          >
-            <Camera size={13} />
-          </button>
-          {pageBg && (
-            <button
-              onClick={() => setPageBg('us', null)}
-              className="w-8 h-8 rounded-full bg-white/80 shadow-card flex items-center justify-center text-gray-400 active:bg-gray-100"
-              title="Remove background"
-            >
-              <X size={13} />
-            </button>
-          )}
+      <div
+        className="px-5 pt-14 pb-4"
+        style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Us 💕</h1>
+            <p className="text-sm text-gray-400">our story, our space</p>
+          </div>
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium
-                       text-gray-400 bg-gray-100 active:bg-gray-200 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 bg-gray-100/80 active:bg-gray-200"
           >
-            <LogOut size={14} />
-            Sign out
+            <LogOut size={14} /> Sign out
           </button>
         </div>
       </div>
 
-      {/* Remaining content above overlay */}
-      <div className="relative z-10">
+      <div className="px-5 pt-4 space-y-8">
 
-      {/* Relationship hero */}
-      <RelationshipHero primary={primaryColor} />
+        {/* ── 1. Relationship Hero ── */}
+        <RelationshipHero primary={primary} />
 
-      {/* Leave a Note button */}
-      <motion.button
-        whileTap={{ scale: 0.97 }}
-        onClick={() => setShowNoteForm(true)}
-        className="w-full flex items-center gap-3 rounded-3xl px-5 py-4 mb-6 text-left
-                   active:opacity-90 transition-opacity"
-        style={{
-          background: `linear-gradient(135deg, ${primaryColor}22, ${primaryColor}0a)`,
-          border: `1.5px solid ${primaryColor}30`,
-        }}
-      >
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xl"
-          style={{ background: `${primaryColor}20` }}
-        >
-          💌
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-800">Leave a Note</p>
-          <p className="text-xs text-gray-400 truncate">
-            Send {USERS[OTHER_USER[currentUser]].displayName} a little love message
-          </p>
-        </div>
-        <Send size={16} style={{ color: primaryColor }} className="shrink-0" />
-      </motion.button>
+        {/* ── 2. Mood ── */}
+        <section>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">💕 How we feel today</h2>
 
-      {/* Mood section */}
-      <section className="mb-7">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-          How we feel today
-        </h2>
+          <motion.button
+            whileTap={{ scale: 0.985 }}
+            onClick={() => setMoodVisible(v => !v)}
+            className="w-full text-left rounded-3xl overflow-hidden mb-3"
+            style={{ border: `1px solid ${primary}15` }}
+          >
+            <div className="grid grid-cols-2 gap-3 p-3">
+              {([currentUser, partnerUser] as UserName[]).map(uid => {
+                const u    = USERS[uid]
+                const mood = getMood(uid)
+                const isMe = uid === currentUser
+                const bg   = uid === 'seval' ? 'bg-seval-50' : 'bg-mateo-50'
+                return (
+                  <div key={uid} className={cn('rounded-2xl p-4 text-center', bg)}>
+                    <div className="text-2xl mb-1">{u.emoji}</div>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">{isMe ? 'You' : u.displayName}</p>
+                    {mood ? (
+                      <div>
+                        <span className="text-2xl">{MOOD_CONFIG[mood.mood].emoji}</span>
+                        <p className="text-xs text-gray-500 mt-1">{MOOD_CONFIG[mood.mood].label}</p>
+                        {mood.note && (
+                          <p className="text-[10px] text-gray-400 italic mt-1 leading-snug line-clamp-2">
+                            &ldquo;{mood.note}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-300 italic">not set yet</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-center gap-1 pb-3">
+              <Pencil size={10} className="text-gray-300" />
+              <span className="text-[10px] text-gray-300 font-medium">Tap to update your mood</span>
+            </div>
+          </motion.button>
 
-        {/* Tappable card — opens mood picker */}
-        <motion.button
-          whileTap={{ scale: 0.985 }}
-          onClick={() => setMoodVisible(v => !v)}
-          className="w-full text-left rounded-3xl overflow-hidden mb-3 relative"
-          style={{ border: `1px solid ${primaryColor}15` }}
-        >
-          <div className="grid grid-cols-2 gap-3 p-3">
-            {([currentUser, partnerUser] as UserName[]).map(uid => {
-              const u    = USERS[uid]
-              const mood = getMood(uid)
-              const isMe = uid === currentUser
-              const bg   = uid === 'seval' ? 'bg-seval-50' : 'bg-mateo-50'
+          <AnimatePresence>
+            {moodVisible && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18 }}
+                className="flex gap-2 flex-wrap mb-2"
+              >
+                {MOOD_TYPES.map(([type, cfg]) => (
+                  <motion.button
+                    key={type}
+                    whileTap={{ scale: 0.88 }}
+                    onClick={() => openMoodPopup(type)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all',
+                      myMood?.mood === type ? 'text-white shadow-sm' : 'bg-white text-gray-600 shadow-card'
+                    )}
+                    style={myMood?.mood === type ? { background: primary } : {}}
+                  >
+                    <span className="text-base">{cfg.emoji}</span>
+                    {cfg.label}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
 
-              return (
-                <div key={uid} className={cn('rounded-2xl p-4 text-center', bg)}>
-                  <div className="text-2xl mb-1">{u.emoji}</div>
-                  <p className="text-xs font-semibold text-gray-600 mb-2">
-                    {isMe ? 'You' : u.displayName}
-                  </p>
-                  {mood ? (
-                    <div>
-                      <span className="text-2xl">{MOOD_CONFIG[mood.mood].emoji}</span>
-                      <p className="text-xs text-gray-500 mt-1">{MOOD_CONFIG[mood.mood].label}</p>
-                      {mood.note && (
-                        <p className="text-[10px] text-gray-400 italic mt-1 leading-snug line-clamp-2">
-                          &ldquo;{mood.note}&rdquo;
+        {/* ── 3. Upcoming Important Dates ── */}
+        {(futureCountdowns.length > 0 || upcomingEvents.length > 0) && (
+          <section>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📅 Upcoming Important Dates</h2>
+            <div className="space-y-2">
+              {futureCountdowns.map(c => {
+                const days = differenceInCalendarDays(parseISO(c.date), today)
+                return (
+                  <motion.button
+                    key={c.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedCountdown(c)}
+                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3.5 flex items-center gap-3 text-left"
+                  >
+                    <span className="text-2xl shrink-0">{c.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
+                      <p className="text-xs text-gray-400">{format(parseISO(c.date), 'MMM d, yyyy')}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-lg font-bold" style={{ color: primary }}>
+                        {days === 0 ? 'Today!' : days}
+                      </p>
+                      {days > 0 && <p className="text-[10px] text-gray-400">days left</p>}
+                    </div>
+                  </motion.button>
+                )
+              })}
+              {upcomingEvents.map(ev => {
+                const days = differenceInCalendarDays(parseISO(ev.date), today)
+                return (
+                  <div
+                    key={ev.id}
+                    className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
+                  >
+                    <div className="shrink-0 text-center w-10">
+                      {days === 0
+                        ? <span className="text-xl">🎉</span>
+                        : <><p className="text-base font-bold text-gray-700">{days}</p><p className="text-[9px] text-gray-400">days</p></>
+                      }
+                    </div>
+                    <div className="w-px h-8 bg-gray-100 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
+                      <p className="text-xs text-gray-400">{format(parseISO(ev.date), 'EEE, MMM d')}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── 4. Timeline ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">📖 Timeline</h2>
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setMemorySheet('new')}
+              className="flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 text-white"
+              style={{ background: primary }}
+            >
+              <Plus size={12} strokeWidth={2.5} /> Add
+            </motion.button>
+          </div>
+
+          {sortedMemories.length === 0 ? (
+            <button
+              onClick={() => setMemorySheet('new')}
+              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-10 text-center"
+            >
+              <span className="text-3xl block mb-2">📖</span>
+              <p className="text-sm text-gray-400">Start your story — add your first memory</p>
+            </button>
+          ) : (
+            <div className="relative pl-10">
+              {/* Vertical line */}
+              <div className="absolute left-[19px] top-2 bottom-2 w-px bg-gray-200" />
+
+              <div className="space-y-4">
+                {sortedMemories.map((memory, idx) => {
+                  const prevMem  = sortedMemories[idx - 1]
+                  const showMonth = !prevMem || prevMem.date.slice(0, 7) !== memory.date.slice(0, 7)
+                  return (
+                    <div key={memory.id}>
+                      {showMonth && (
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 -ml-10 pl-10">
+                          {format(parseISO(memory.date + 'T12:00:00'), 'MMMM yyyy')}
+                        </p>
+                      )}
+                      <div className="relative">
+                        {/* Dot */}
+                        <div
+                          className="absolute -left-[29px] top-3.5 w-3 h-3 rounded-full z-10"
+                          style={{ background: primary }}
+                        />
+                        <motion.button
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setMemorySheet(memory)}
+                          className="w-full bg-white rounded-2xl shadow-card overflow-hidden text-left"
+                        >
+                          {memory.photos && memory.photos.length > 0 && (
+                            <img src={memory.photos[0]} alt="" className="w-full h-36 object-cover" />
+                          )}
+                          <div className="p-3">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[10px] text-gray-400">
+                                {format(parseISO(memory.date + 'T12:00:00'), 'MMM d')}
+                              </span>
+                              {memory.category && (
+                                <span
+                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                  style={{ background: `${primary}15`, color: primary }}
+                                >
+                                  {memory.category}
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-semibold text-gray-800 text-sm">{memory.title}</p>
+                            {memory.notes && (
+                              <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                                {memory.notes}
+                              </p>
+                            )}
+                            {memory.checklist && memory.checklist.length > 0 && (
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {memory.checklist.length} checklist item{memory.checklist.length !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                            {memory.photos && memory.photos.length > 1 && (
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                +{memory.photos.length - 1} more photo{memory.photos.length > 2 ? 's' : ''}
+                              </p>
+                            )}
+                          </div>
+                        </motion.button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── 5. Memory Highlights ── */}
+        {memoriesWithPhotos.length > 0 && (
+          <section>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">⭐ Memory Highlights</h2>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5">
+              {memoriesWithPhotos.map(m => (
+                <motion.button
+                  key={m.id}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setMemorySheet(m)}
+                  className="shrink-0 relative rounded-2xl overflow-hidden text-left"
+                  style={{ width: 140, height: 180 }}
+                >
+                  <img src={m.photos![0]} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{m.title}</p>
+                    <p className="text-white/60 text-[10px] mt-0.5">
+                      {format(parseISO(m.date + 'T12:00:00'), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── 6. Relationship Stats ── */}
+        <section>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Relationship Stats</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+              <p className="text-2xl font-bold" style={{ color: primary }}>{daysTotal}</p>
+              <p className="text-[10px] text-gray-400 mt-1">days together</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+              <p className="text-2xl font-bold" style={{ color: primary }}>{memories.length}</p>
+              <p className="text-[10px] text-gray-400 mt-1">memories</p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={incrementBoomBoom}
+              className="bg-white rounded-2xl shadow-card p-4 text-center active:opacity-80"
+              title="Tap to count"
+            >
+              <p className="text-2xl font-bold" style={{ color: primary }}>{boomBoomCount}</p>
+              <p className="text-[10px] text-gray-400 mt-1">🛏️ boom boom</p>
+            </motion.button>
+          </div>
+        </section>
+
+        {/* ── 7. Milestones & Anniversaries ── */}
+        <section className="pb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">🎉 Milestones & Anniversaries</h2>
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setAddCdOpen(true)}
+              className="flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1.5 text-white"
+              style={{ background: primary }}
+            >
+              <Plus size={12} strokeWidth={2.5} /> Add
+            </motion.button>
+          </div>
+
+          {pastCountdowns.length === 0 ? (
+            <button
+              onClick={() => setAddCdOpen(true)}
+              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center"
+            >
+              <span className="text-3xl block mb-2">🎉</span>
+              <p className="text-sm text-gray-400">Add your first milestone or anniversary</p>
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {pastCountdowns.map(c => {
+                const days   = differenceInCalendarDays(today, parseISO(c.date))
+                const years  = Math.floor(days / 365)
+                const months = Math.floor(days / 30)
+                const label  = years >= 1
+                  ? `${years} year${years > 1 ? 's' : ''} together`
+                  : months >= 1
+                  ? `${months} month${months > 1 ? 's' : ''} together`
+                  : `${days} day${days !== 1 ? 's' : ''} together`
+
+                return (
+                  <motion.button
+                    key={c.id}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedCountdown(c)}
+                    className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
+                    style={{ background: `${primary}0d`, border: `1.5px solid ${primary}25` }}
+                  >
+                    <div
+                      className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
+                      style={{ background: `radial-gradient(circle at right, ${primary}, transparent)` }}
+                    />
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                      style={{ background: `${primary}18` }}
+                    >
+                      {c.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
+                      <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label} 💕</p>
+                      {c.romanticMessage && (
+                        <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">
+                          &ldquo;{c.romanticMessage}&rdquo;
                         </p>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-xs text-gray-300 italic">not set yet</p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          {/* Tap hint */}
-          <div className="flex items-center justify-center gap-1 pb-3">
-            <Pencil size={10} className="text-gray-300" />
-            <span className="text-[10px] text-gray-300 font-medium">Tap to update your mood</span>
-          </div>
-        </motion.button>
-
-        {/* Mood chips – revealed on tap */}
-        <AnimatePresence>
-          {moodVisible && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-              className="flex gap-2 flex-wrap mb-2"
-            >
-              {MOOD_TYPES.map(([type, cfg]) => (
-                <motion.button
-                  key={type}
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => openMoodPopup(type)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all',
-                    myMood?.mood === type
-                      ? 'text-white shadow-sm'
-                      : 'bg-white text-gray-600 shadow-card'
-                  )}
-                  style={myMood?.mood === type ? { background: primaryColor } : {}}
-                >
-                  <span className="text-base">{cfg.emoji}</span>
-                  {cfg.label}
-                </motion.button>
-              ))}
-            </motion.div>
+                    <span className="text-gray-300 text-base shrink-0">›</span>
+                  </motion.button>
+                )
+              })}
+            </div>
           )}
-        </AnimatePresence>
-      </section>
+        </section>
 
-      {/* Emotion popup */}
+      </div>
+
+      {/* ── Mood popup ── */}
       <AnimatePresence>
         {moodPopup && pendingMood && (
           <>
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setMoodPopup(false)}
               className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                         max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-10">
                 <div className="drag-handle" />
-
-                {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-base font-bold text-gray-800">How are you feeling?</h3>
                   <button
@@ -466,8 +1194,6 @@ export default function UsPage() {
                     <X size={16} />
                   </button>
                 </div>
-
-                {/* Mood options */}
                 <div className="flex justify-around mb-6">
                   {MOOD_TYPES.map(([type, cfg]) => (
                     <motion.button
@@ -478,26 +1204,19 @@ export default function UsPage() {
                         'flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all',
                         pendingMood === type ? 'shadow-sm' : ''
                       )}
-                      style={pendingMood === type ? { background: `${primaryColor}18` } : {}}
+                      style={pendingMood === type ? { background: `${primary}18` } : {}}
                     >
                       <span className="text-3xl">{cfg.emoji}</span>
                       <span
                         className="text-[10px] font-semibold"
-                        style={{ color: pendingMood === type ? primaryColor : '#9ca3af' }}
+                        style={{ color: pendingMood === type ? primary : '#9ca3af' }}
                       >
                         {cfg.label}
                       </span>
                     </motion.button>
                   ))}
                 </div>
-
-                {/* Message */}
-                <div
-                  className={cn(
-                    'rounded-2xl p-4 mb-5 transition-colors',
-                    isSeval ? 'bg-seval-50' : 'bg-mateo-50'
-                  )}
-                >
+                <div className={cn('rounded-2xl p-4 mb-5', isSeval ? 'bg-seval-50' : 'bg-mateo-50')}>
                   <p className="text-xs font-semibold text-gray-400 mb-2">
                     {pendingMood === myMood?.mood ? 'Update your message' : 'Add a message'}{' '}
                     <span className="font-normal text-gray-300">(optional)</span>
@@ -507,17 +1226,14 @@ export default function UsPage() {
                     onChange={e => setMoodMessage(e.target.value)}
                     placeholder={`Tell ${USERS[OTHER_USER[currentUser]].displayName} how you're feeling...`}
                     rows={3}
-                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent
-                               outline-none resize-none"
+                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent outline-none resize-none"
                   />
                 </div>
-
-                {/* Save */}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={saveMood}
                   className="w-full py-4 rounded-2xl text-white text-sm font-semibold"
-                  style={{ background: primaryColor }}
+                  style={{ background: primary }}
                 >
                   {MOOD_CONFIG[pendingMood].emoji} Share this feeling
                 </motion.button>
@@ -527,237 +1243,119 @@ export default function UsPage() {
         )}
       </AnimatePresence>
 
-      {/* Countdowns */}
-      <section className="mb-7">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Looking forward to...</h2>
-          <button
-            onClick={() => setShowCountdownForm(!showCountdownForm)}
-            className="text-xs font-semibold flex items-center gap-1"
-            style={{ color: primaryColor }}
-          >
-            <Plus size={14} />
-            Add
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {showCountdownForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: 'auto', marginBottom: 12 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              className="overflow-hidden"
-            >
-              <div className={cn('rounded-2xl p-4', lightBg)}>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={cdEmoji}
-                    onChange={e => setCdEmoji(e.target.value)}
-                    className="w-10 text-center text-xl bg-white rounded-xl p-1 outline-none shadow-card"
-                    maxLength={2}
-                  />
-                  <input
-                    type="text"
-                    value={cdTitle}
-                    onChange={e => setCdTitle(e.target.value)}
-                    placeholder="Something to celebrate..."
-                    autoFocus
-                    className="flex-1 text-sm text-gray-700 placeholder:text-gray-400 bg-white
-                               rounded-xl px-3 py-2 outline-none shadow-card"
-                  />
-                </div>
-                <input
-                  type="date"
-                  value={cdDate}
-                  onChange={e => setCdDate(e.target.value)}
-                  className="w-full text-sm text-gray-600 bg-white rounded-xl px-3 py-2 mb-3
-                             outline-none shadow-card"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowCountdownForm(false)}
-                    className="flex-1 py-2 rounded-xl bg-white text-gray-500 text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddCountdown}
-                    disabled={!cdTitle.trim() || !cdDate}
-                    className="flex-1 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-40"
-                    style={{ background: primaryColor }}
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {sortedCountdowns.length === 0 ? (
-          <div className="rounded-2xl bg-white shadow-card p-5 text-center">
-            <p className="text-2xl mb-2">⏳</p>
-            <p className="text-sm text-gray-400">Nothing yet — add something to look forward to 🌙</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <AnimatePresence mode="popLayout">
-              {sortedCountdowns.map(cd => {
-                const days = getDaysUntil(cd.date)
-                const isPast = days < 0
-
-                return (
-                  <motion.div
-                    key={cd.id}
-                    layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white rounded-2xl p-4 shadow-card flex items-center gap-3 group"
-                  >
-                    <span className="text-2xl shrink-0">{cd.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm">{cd.title}</p>
-                      <p className="text-xs text-gray-400">{formatDate(cd.date)}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {isPast ? (
-                        <p className="text-xs text-gray-300">Passed</p>
-                      ) : days === 0 ? (
-                        <p className="text-sm font-bold" style={{ color: primaryColor }}>
-                          Today!
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-xl font-bold text-gray-800">{days}</p>
-                          <p className="text-[10px] text-gray-400">days</p>
-                        </>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => deleteCountdown(cd.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
-                                 transition-all ml-1"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-          </div>
-        )}
-      </section>
-
-      {/* Notifications */}
-      <section className="mb-7">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notifications</h2>
-        <NotificationSetup primary={primaryColor} />
-      </section>
-
-      {/* Leave a Note compose sheet */}
+      {/* ── Memory Sheet ── */}
       <AnimatePresence>
-        {showNoteForm && (
+        {memorySheet !== null && (
+          <MemorySheet
+            key={memorySheet === 'new' ? 'new' : (memorySheet as Memory).id}
+            memory={memorySheet === 'new' ? null : memorySheet as Memory}
+            categories={categories}
+            primary={primary}
+            onClose={() => setMemorySheet(null)}
+            onSave={data => {
+              if (memorySheet === 'new') {
+                addMemory(data.title!, data.date!, data.notes, data.photos, data.category, data.checklist)
+              } else {
+                updateMemory((memorySheet as Memory).id, data)
+              }
+              setMemorySheet(null)
+            }}
+            onDelete={memorySheet !== 'new' ? () => {
+              deleteMemory((memorySheet as Memory).id)
+              setMemorySheet(null)
+            } : undefined}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Anniversary / Countdown Sheet ── */}
+      <AnimatePresence>
+        {selectedCountdown && (
+          <AnniversarySheet
+            key={selectedCountdown.id}
+            countdown={selectedCountdown}
+            primary={primary}
+            onClose={() => setSelectedCountdown(null)}
+            onDelete={() => { deleteCountdown(selectedCountdown.id); setSelectedCountdown(null) }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Add Milestone Sheet ── */}
+      <AnimatePresence>
+        {addCdOpen && (
           <>
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => { if (!noteSent) { setShowNoteForm(false); setNoteContent('') } }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setAddCdOpen(false)}
               className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                         max-w-lg mx-auto"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-10">
-                <div className="drag-handle" />
-
-                <AnimatePresence mode="wait">
-                  {noteSent ? (
-                    /* Success state */
-                    <motion.div
-                      key="sent"
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col items-center justify-center py-8 text-center"
+                <div className="drag-handle mb-4" />
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-gray-800">New Milestone</h3>
+                  <button
+                    onClick={() => setAddCdOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="flex gap-2 flex-wrap mb-4">
+                  {EMOJI_OPTIONS.map(e => (
+                    <button
+                      key={e}
+                      onClick={() => setNewCdEmoji(e)}
+                      className={cn(
+                        'text-2xl w-11 h-11 rounded-2xl flex items-center justify-center transition-all',
+                        newCdEmoji === e ? 'bg-gray-200 scale-110' : 'bg-gray-50'
+                      )}
                     >
-                      <motion.div
-                        animate={{ scale: [1, 1.25, 1] }}
-                        transition={{ repeat: 2, duration: 0.4 }}
-                        className="text-5xl mb-4"
-                      >
-                        💌
-                      </motion.div>
-                      <p className="text-base font-bold text-gray-800 mb-1">Note sent!</p>
-                      <p className="text-sm text-gray-400">
-                        {USERS[OTHER_USER[currentUser]].displayName} will see it when they open the app 💕
-                      </p>
-                    </motion.div>
-                  ) : (
-                    /* Compose state */
-                    <motion.div key="compose" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-5">
-                        <div>
-                          <h3 className="text-base font-bold text-gray-800">Leave a Note 💌</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            To {USERS[OTHER_USER[currentUser]].emoji}{' '}
-                            {USERS[OTHER_USER[currentUser]].displayName}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => { setShowNoteForm(false); setNoteContent('') }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      {/* Textarea */}
-                      <div
-                        className="rounded-2xl p-4 mb-4"
-                        style={{ background: `${primaryColor}0d` }}
-                      >
-                        <textarea
-                          value={noteContent}
-                          onChange={e => setNoteContent(e.target.value)}
-                          placeholder="Write something from the heart..."
-                          rows={5}
-                          autoFocus
-                          className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-transparent
-                                     outline-none resize-none leading-relaxed"
-                        />
-                      </div>
-
-                      {/* Send button */}
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={handleSendNote}
-                        disabled={!noteContent.trim()}
-                        className="w-full py-4 rounded-2xl text-white text-sm font-semibold
-                                   disabled:opacity-40 flex items-center justify-center gap-2"
-                        style={{ background: primaryColor }}
-                      >
-                        <Send size={15} />
-                        Send with love 💌
-                      </motion.button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-3 mb-5">
+                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
+                    <input
+                      value={newCdTitle}
+                      onChange={e => setNewCdTitle(e.target.value)}
+                      placeholder="e.g. First kiss"
+                      autoFocus
+                      className="w-full text-sm text-gray-800 bg-transparent outline-none"
+                    />
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+                    <input
+                      type="date"
+                      value={newCdDate}
+                      onChange={e => setNewCdDate(e.target.value)}
+                      className="w-full text-sm text-gray-700 bg-transparent outline-none"
+                    />
+                  </div>
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddCountdown}
+                  disabled={!newCdTitle.trim() || !newCdDate}
+                  className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
+                  style={{ background: primary }}
+                >
+                  Add Milestone
+                </motion.button>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
-      </div>{/* end z-10 wrapper */}
+
     </div>
   )
 }

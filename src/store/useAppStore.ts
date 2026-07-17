@@ -74,9 +74,13 @@ interface AppState {
 
   // Memories
   memories: Memory[]
-  addMemory: (title: string, date: string, notes?: string, photos?: string[]) => void
+  addMemory: (title: string, date: string, notes?: string, photos?: string[], category?: string, checklist?: string[]) => void
   updateMemory: (id: string, updates: Partial<Memory>) => void
   deleteMemory: (id: string) => void
+
+  // Relationship stats
+  boomBoomCount: number
+  incrementBoomBoom: () => void
 
   // Goals
   goals: Goal[]
@@ -447,7 +451,7 @@ export const useAppStore = create<AppState>()(
       // ── Memories ─────────────────────────────────────────────────────────────
       memories: [],
 
-      addMemory: (title, date, notes, photos) => {
+      addMemory: (title, date, notes, photos, category, checklist) => {
         const { currentUser } = get()
         if (!currentUser) return
         set(s => ({
@@ -459,6 +463,8 @@ export const useAppStore = create<AppState>()(
               date,
               notes,
               photos,
+              category,
+              checklist,
               createdBy: currentUser,
               createdAt: new Date().toISOString(),
             },
@@ -473,6 +479,10 @@ export const useAppStore = create<AppState>()(
 
       deleteMemory: id =>
         set(s => ({ memories: s.memories.filter(m => m.id !== id) })),
+
+      // ── Relationship stats ─────────────────────────────────────────────────────
+      boomBoomCount: 0,
+      incrementBoomBoom: () => set(s => ({ boomBoomCount: s.boomBoomCount + 1 })),
 
       // ── Goals ─────────────────────────────────────────────────────────────────
       goals: [],

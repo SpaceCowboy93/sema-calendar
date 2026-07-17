@@ -236,6 +236,8 @@ export interface Memory {
   photos?: string[] // base64 data URLs
   createdBy: UserName
   createdAt: string
+  category?: string
+  checklist?: string[]
 }
 
 export interface FinanceMonth {

@@ -2,16 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Wallet, Compass, User } from 'lucide-react'
+import { Heart, Wallet, User } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/together', label: 'Together', icon: Heart    },
-  { href: '/plans',    label: 'Finance',  icon: Wallet   },
-  { href: '/journey',  label: 'Journey',  icon: Compass  },
-  { href: '/us',       label: 'Us',       icon: User     },
+  { href: '/together', label: 'Planner', icon: Heart  },
+  { href: '/plans',    label: 'Finance', icon: Wallet },
+  { href: '/us',       label: 'Us',      icon: User   },
 ]
 
 export function BottomNav() {
