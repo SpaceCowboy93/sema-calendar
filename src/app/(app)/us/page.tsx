@@ -731,8 +731,11 @@ export default function UsPage() {
   const updateMemory    = useAppStore(s => s.updateMemory)
   const deleteMemory    = useAppStore(s => s.deleteMemory)
   const events          = useAppStore(s => s.events)
-  const boomBoomCount   = useAppStore(s => s.boomBoomCount)
+  const boomBoomCount     = useAppStore(s => s.boomBoomCount)
   const incrementBoomBoom = useAppStore(s => s.incrementBoomBoom)
+  const setBoomBoom       = useAppStore(s => s.setBoomBoom)
+  const goals             = useAppStore(s => s.goals)
+  const loveNotes         = useAppStore(s => s.loveNotes)
 
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
@@ -772,6 +775,28 @@ export default function UsPage() {
   const [newCdTitle, setNewCdTitle] = useState('')
   const [newCdDate,  setNewCdDate]  = useState('')
   const [newCdEmoji, setNewCdEmoji] = useState('💕')
+
+  // Boom Boom sheet + toast
+  const [boomBoomSheet,  setBoomBoomSheet]  = useState(false)
+  const [boomBoomToast,  setBoomBoomToast]  = useState(false)
+  const [boomBoomUndo,   setBoomBoomUndo]   = useState(0)   // previous value for undo
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleBoomBoom(delta: 1 | -1) {
+    const prev = boomBoomCount
+    setBoomBoom(boomBoomCount + delta)
+    setBoomBoomSheet(false)
+    setBoomBoomUndo(prev)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setBoomBoomToast(true)
+    toastTimerRef.current = setTimeout(() => setBoomBoomToast(false), 5000)
+  }
+
+  function handleBoomBoomUndo() {
+    setBoomBoom(boomBoomUndo)
+    setBoomBoomToast(false)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+  }
 
   // Upcoming dates show-more state
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
@@ -1202,28 +1227,114 @@ export default function UsPage() {
         {/* ── 7. Relationship Stats ── */}
         <section className="pb-8">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Relationship Stats</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-white rounded-2xl shadow-card p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>{daysTotal}</p>
-              <p className="text-[10px] text-gray-400 mt-1">days together</p>
+              <p className="text-2xl font-bold" style={{ color: primary }}>{pastCountdowns.length}</p>
+              <p className="text-[10px] text-gray-400 mt-1">milestones</p>
             </div>
             <div className="bg-white rounded-2xl shadow-card p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>{memories.length}</p>
-              <p className="text-[10px] text-gray-400 mt-1">memories</p>
+              <p className="text-2xl font-bold" style={{ color: primary }}>{loveNotes.length}</p>
+              <p className="text-[10px] text-gray-400 mt-1">love notes</p>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={incrementBoomBoom}
-              className="bg-white rounded-2xl shadow-card p-4 text-center active:opacity-80"
-              title="Tap to count"
-            >
-              <p className="text-2xl font-bold" style={{ color: primary }}>{boomBoomCount}</p>
-              <p className="text-[10px] text-gray-400 mt-1">🛏️ boom boom</p>
-            </motion.button>
+            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+              <p className="text-2xl font-bold" style={{ color: primary }}>
+                {goals.filter(g => g.categoryId === 'travel').length}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">trips</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+              <p className="text-2xl font-bold" style={{ color: primary }}>
+                {goals.filter(g => g.isCompleted).length}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">dreams achieved</p>
+            </div>
           </div>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setBoomBoomSheet(true)}
+            className="w-full bg-white rounded-2xl shadow-card p-4 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🛏️</span>
+              <p className="text-sm font-semibold text-gray-700">Boom Boom</p>
+            </div>
+            <p className="text-2xl font-bold" style={{ color: primary }}>{boomBoomCount}</p>
+          </motion.button>
         </section>
 
       </div>
+
+      {/* ── Boom Boom Sheet ── */}
+      <AnimatePresence>
+        {boomBoomSheet && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setBoomBoomSheet(false)}
+              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+            >
+              <div className="px-5 pt-4 pb-10">
+                <div className="drag-handle mb-5" />
+                <div className="text-center mb-6">
+                  <span className="text-4xl">🛏️</span>
+                  <h3 className="text-base font-bold text-gray-800 mt-2">Boom Boom</h3>
+                  <p className="text-sm text-gray-400 mt-1">Current count: <span className="font-bold text-gray-700">{boomBoomCount}</span></p>
+                </div>
+                <div className="flex gap-3 mb-4">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleBoomBoom(-1)}
+                    disabled={boomBoomCount <= 0}
+                    className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 text-xl font-bold disabled:opacity-30"
+                  >
+                    −1
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleBoomBoom(1)}
+                    className="flex-1 py-4 rounded-2xl text-white text-xl font-bold"
+                    style={{ background: primary }}
+                  >
+                    +1
+                  </motion.button>
+                </div>
+                <button
+                  onClick={() => setBoomBoomSheet(false)}
+                  className="w-full py-3.5 rounded-2xl bg-gray-50 text-gray-500 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Boom Boom Toast ── */}
+      <AnimatePresence>
+        {boomBoomToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-2xl shadow-lg whitespace-nowrap"
+          >
+            <span className="text-sm">Boom Boom updated ❤️</span>
+            <button
+              onClick={handleBoomBoomUndo}
+              className="text-xs font-bold text-amber-300 active:opacity-70"
+            >
+              Undo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Mood popup ── */}
       <AnimatePresence>

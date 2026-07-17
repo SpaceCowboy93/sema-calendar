@@ -81,6 +81,7 @@ interface AppState {
   // Relationship stats
   boomBoomCount: number
   incrementBoomBoom: () => void
+  setBoomBoom: (count: number) => void
 
   // Goals
   goals: Goal[]
@@ -483,6 +484,7 @@ export const useAppStore = create<AppState>()(
       // ── Relationship stats ─────────────────────────────────────────────────────
       boomBoomCount: 0,
       incrementBoomBoom: () => set(s => ({ boomBoomCount: s.boomBoomCount + 1 })),
+      setBoomBoom: (count) => set({ boomBoomCount: Math.max(0, count) }),
 
       // ── Goals ─────────────────────────────────────────────────────────────────
       goals: [],
