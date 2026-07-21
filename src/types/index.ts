@@ -100,6 +100,8 @@ export interface ChecklistEntry {
   isCompleted: boolean
 }
 
+export type FocusReminder = 'none' | 'at_time' | '10min' | '30min' | '1h'
+
 export interface Countdown {
   id: string
   title: string
@@ -309,6 +311,7 @@ export interface FocusActivity {
   createdBy: UserName
   createdAt: string
   updatedAt: string
+  reminder?: FocusReminder
 }
 
 // ── Receipt scanner ───────────────────────────────────────────────────────────

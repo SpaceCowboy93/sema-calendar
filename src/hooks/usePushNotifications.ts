@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { OTHER_USER } from '@/types'
 import type { UserName } from '@/types'
+import { getWeekStartDate } from '@/lib/utils'
 
 const LOG = (...args: unknown[]) => console.log('[Push]', ...args)
 const ERR = (...args: unknown[]) => console.error('[Push]', ...args)
@@ -321,9 +322,10 @@ export function usePushNotifications() {
 /* ── Collect all dated items from store state ─────────────────────────────── */
 interface DatedItem {
   id: string
-  type: 'event' | 'todo' | 'goal' | 'wishlist' | 'countdown'
+  type: 'event' | 'todo' | 'goal' | 'wishlist' | 'countdown' | 'focus'
   title: string
   fireAts: string[]
+  customMessage?: string
 }
 
 function computeFireAts(dateStr: string, timeStr: string): string[] {
@@ -391,6 +393,40 @@ function collectDatedItems(
       const fireAts = computeFireAts(c.date, c.time ?? '09:00')
       if (fireAts.length) items.push({ id: c.id, type: 'countdown', title: c.title, fireAts })
     }
+  })
+
+  // Focus activities: single explicit reminder fire time
+  const FOCUS_OFFSETS: Record<string, number> = {
+    at_time: 0,
+    '10min': 10 * 60 * 1000,
+    '30min': 30 * 60 * 1000,
+    '1h':    60 * 60 * 1000,
+  }
+  const FOCUS_LABELS: Record<string, string> = {
+    at_time: 'Now',
+    '10min': '10 min before',
+    '30min': '30 min before',
+    '1h':    '1 hour before',
+  }
+  ;(store.focusActivities ?? []).forEach(a => {
+    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
+    const offsetMs = FOCUS_OFFSETS[a.reminder]
+    if (offsetMs === undefined) return
+
+    const monday = getWeekStartDate(a.weekKey)
+    const actDate = new Date(monday)
+    actDate.setDate(actDate.getDate() + a.dayIndex)
+    const [h, m] = a.time.split(':').map(Number)
+    if (isNaN(h) || isNaN(m)) return
+    actDate.setHours(h, m, 0, 0)
+
+    const fireAtMs = actDate.getTime() - offsetMs
+    if (fireAtMs <= Date.now()) return
+
+    const fireAt = new Date(fireAtMs).toISOString()
+    const label = FOCUS_LABELS[a.reminder] ?? ''
+    const customMessage = label ? `${label}: ${a.title}` : a.title
+    items.push({ id: a.id, type: 'focus', title: a.title, fireAts: [fireAt], customMessage })
   })
 
   return items

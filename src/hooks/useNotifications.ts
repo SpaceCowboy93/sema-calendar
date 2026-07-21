@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/store/useAppStore'
+import { getWeekStartDate } from '@/lib/utils'
 
 interface ScheduledItem {
   id: string
@@ -70,6 +71,43 @@ function collectTimedItems(): ScheduledItem[] {
   return items
 }
 
+// ── Focus activities: single explicit fire time ───────────────────────────────
+
+function computeFocusFireAt(
+  weekKey: string,
+  dayIndex: number,
+  time: string,
+  reminder: string,
+): Date | null {
+  const monday = getWeekStartDate(weekKey)
+  const actDate = new Date(monday)
+  actDate.setDate(actDate.getDate() + dayIndex)
+  const [h, m] = time.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return null
+  actDate.setHours(h, m, 0, 0)
+
+  const offsets: Record<string, number> = {
+    at_time: 0,
+    '10min': 10 * 60 * 1000,
+    '30min': 30 * 60 * 1000,
+    '1h':    60 * 60 * 1000,
+  }
+  const off = offsets[reminder]
+  if (off === undefined) return null
+  return new Date(actDate.getTime() - off)
+}
+
+function collectFocusTimedItems(): ScheduledItem[] {
+  const { focusActivities } = useAppStore.getState()
+  const items: ScheduledItem[] = []
+  focusActivities.forEach(a => {
+    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
+    const fireAt = computeFocusFireAt(a.weekKey, a.dayIndex, a.time, a.reminder)
+    if (fireAt) items.push({ id: a.id, title: a.title, datetime: fireAt })
+  })
+  return items
+}
+
 function fireNotification(body: string) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   try {
@@ -97,6 +135,19 @@ export function useNotifications() {
     console.log(
       `[SeMa] scheduleAll — now: ${new Date(now).toLocaleTimeString()}, items: ${items.length}`,
     )
+
+    // Focus activities: fire at their explicit reminder time (no 3-tier system)
+    collectFocusTimedItems().forEach(item => {
+      const fireMs = item.datetime.getTime()
+      if (fireMs <= now) return
+      const delay = fireMs - now
+      console.log(`[SeMa] SCHEDULE focus reminder "${item.title}" in ${Math.round(delay / 60000)}min`)
+      const id = setTimeout(() => {
+        console.log(`[SeMa] FIRE focus reminder "${item.title}"`)
+        fireNotification(`${item.title} 💫`)
+      }, delay)
+      timerIds.current.push(id)
+    })
 
     items.forEach(item => {
       const eventMs = item.datetime.getTime()

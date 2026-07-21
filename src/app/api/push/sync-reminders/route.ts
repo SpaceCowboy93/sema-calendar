@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const rows: Record<string, unknown>[] = []
 
     for (const item of items) {
-      const { id, type, title, fireAts } = item
+      const { id, type, title, fireAts, customMessage } = item
       if (!id || !type || !title || !Array.isArray(fireAts)) {
         console.warn('[sync-reminders POST] Skipping malformed item:', item)
         continue
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
         const offsetIndex = fireAts.length - 1 - i
         const suffix  = REMINDER_LABELS[offsetIndex] ?? ''
-        const message = suffix ? `${suffix}: ${title}` : title
+        const message = (customMessage as string | undefined) ?? (suffix ? `${suffix}: ${title}` : title)
 
         rows.push({
           couple_id: 'sema',

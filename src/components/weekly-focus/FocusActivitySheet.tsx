@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Camera, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { type FocusActivity, type FocusChecklistItem } from '@/types'
-import { generateId } from '@/lib/utils'
+import { type FocusActivity, type FocusChecklistItem, type FocusReminder } from '@/types'
+import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
@@ -21,6 +21,14 @@ interface Props {
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+const REMINDER_OPTIONS: { value: FocusReminder; label: string }[] = [
+  { value: 'none',    label: 'None'          },
+  { value: 'at_time', label: 'At time'       },
+  { value: '10min',   label: '10 min before' },
+  { value: '30min',   label: '30 min before' },
+  { value: '1h',      label: '1 hr before'   },
+]
+
 export function FocusActivitySheet({
   open,
   onClose,
@@ -30,39 +38,42 @@ export function FocusActivitySheet({
   suggestedTitle,
   primary,
 }: Props) {
-  const addFocusActivity      = useAppStore(s => s.addFocusActivity)
-  const updateFocusActivity   = useAppStore(s => s.updateFocusActivity)
-  const deleteFocusActivity   = useAppStore(s => s.deleteFocusActivity)
+  const addFocusActivity         = useAppStore(s => s.addFocusActivity)
+  const updateFocusActivity      = useAppStore(s => s.updateFocusActivity)
+  const deleteFocusActivity      = useAppStore(s => s.deleteFocusActivity)
   const uploadFocusActivityPhoto = useAppStore(s => s.uploadFocusActivityPhoto)
 
   const isEdit = !!activity
 
-  // ── Local form state ──
-  const [title, setTitle]         = useState('')
-  const [time, setTime]           = useState('')
-  const [notes, setNotes]         = useState('')
-  const [checklist, setChecklist] = useState<FocusChecklistItem[]>([])
-  const [newItem, setNewItem]     = useState('')
-  const [photos, setPhotos]       = useState<string[]>([])
-  const [uploading, setUploading] = useState(false)
+  // ── Form state ──
+  const [title,         setTitle]         = useState('')
+  const [time,          setTime]          = useState('')
+  const [reminder,      setReminder]      = useState<FocusReminder>('none')
+  const [notes,         setNotes]         = useState('')
+  const [checklist,     setChecklist]     = useState<FocusChecklistItem[]>([])
+  const [newItem,       setNewItem]       = useState('')
+  const [photos,        setPhotos]        = useState<string[]>([])
+  const [uploading,     setUploading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [saving, setSaving]       = useState(false)
+  const [saving,        setSaving]        = useState(false)
 
   const titleRef    = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Sync form state when sheet opens or activity changes
+  // Sync form when sheet opens
   useEffect(() => {
     if (!open) return
     if (activity) {
       setTitle(activity.title)
       setTime(activity.time ?? '')
+      setReminder(activity.reminder ?? 'none')
       setNotes(activity.notes ?? '')
       setChecklist(activity.checklist ? [...activity.checklist] : [])
       setPhotos(activity.photos ? [...activity.photos] : [])
     } else {
       setTitle(suggestedTitle ?? '')
       setTime('')
+      setReminder('none')
       setNotes('')
       setChecklist([])
       setPhotos([])
@@ -70,7 +81,6 @@ export function FocusActivitySheet({
     setNewItem('')
     setSaving(false)
     setConfirmDelete(false)
-    // Auto-focus title after sheet animates in
     setTimeout(() => titleRef.current?.focus(), 340)
   }, [open, activity, suggestedTitle])
 
@@ -83,9 +93,7 @@ export function FocusActivitySheet({
   }
 
   function toggleChecklistItem(id: string) {
-    setChecklist(prev =>
-      prev.map(i => i.id === id ? { ...i, done: !i.done } : i)
-    )
+    setChecklist(prev => prev.map(i => i.id === id ? { ...i, done: !i.done } : i))
   }
 
   function removeChecklistItem(id: string) {
@@ -98,14 +106,10 @@ export function FocusActivitySheet({
     setUploading(true)
 
     if (isEdit && activity) {
-      // Upload directly → update activity
       for (const file of Array.from(files)) {
         await uploadFocusActivityPhoto(activity.id, file)
       }
-      // Sync local photos from store (they'll appear via the activity prop on re-render)
-      // We'll rely on the store update + next open to reflect
     } else {
-      // In create mode: keep files as object URLs for preview, upload after save
       const previews = Array.from(files).map(f => URL.createObjectURL(f))
       setPhotos(prev => [...prev, ...previews])
     }
@@ -115,8 +119,7 @@ export function FocusActivitySheet({
   function removePhoto(idx: number) {
     setPhotos(prev => prev.filter((_, i) => i !== idx))
     if (isEdit && activity) {
-      const newPhotos = (activity.photos ?? []).filter((_, i) => i !== idx)
-      updateFocusActivity(activity.id, { photos: newPhotos })
+      updateFocusActivity(activity.id, { photos: (activity.photos ?? []).filter((_, i) => i !== idx) })
     }
   }
 
@@ -126,30 +129,29 @@ export function FocusActivitySheet({
     if (!titleTrimmed) { titleRef.current?.focus(); return }
 
     setSaving(true)
-
     const checklistData = checklist.length > 0 ? checklist : undefined
     const timeTrimmed   = time.trim() || undefined
+    const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
 
     if (isEdit && activity) {
       updateFocusActivity(activity.id, {
         title:     titleTrimmed,
         time:      timeTrimmed,
+        reminder:  reminderVal,
         notes:     notes.trim() || undefined,
         checklist: checklistData,
       })
     } else {
-      // Create new — photos in create mode are object URLs (previews), not uploaded yet
-      // We create the activity first, then upload any pending photos
       const newId = addFocusActivity({
         weekKey,
         dayIndex,
         title:     titleTrimmed,
         time:      timeTrimmed,
+        reminder:  reminderVal,
         notes:     notes.trim() || undefined,
         checklist: checklistData,
       })
 
-      // Upload any preview photos
       if (photos.length > 0 && newId) {
         for (const preview of photos) {
           if (preview.startsWith('blob:')) {
@@ -160,7 +162,7 @@ export function FocusActivitySheet({
               await uploadFocusActivityPhoto(newId, file)
               URL.revokeObjectURL(preview)
             } catch {
-              // skip failed uploads silently
+              // skip silently
             }
           }
         }
@@ -171,7 +173,6 @@ export function FocusActivitySheet({
     onClose()
   }
 
-  // ── Delete ──
   function handleDelete() {
     if (!activity) return
     deleteFocusActivity(activity.id)
@@ -179,7 +180,8 @@ export function FocusActivitySheet({
     onClose()
   }
 
-  const canSave = title.trim().length > 0
+  const canSave   = title.trim().length > 0
+  const hasTime   = !!time.trim()
 
   return (
     <>
@@ -204,6 +206,7 @@ export function FocusActivitySheet({
               className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-10 max-h-[92dvh] overflow-y-auto overscroll-contain">
+
                 {/* Drag handle */}
                 <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
 
@@ -213,9 +216,7 @@ export function FocusActivitySheet({
                     <h3 className="text-base font-bold text-gray-800">
                       {isEdit ? 'Edit Activity' : 'New Activity'}
                     </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {DAYS[dayIndex]}
-                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">{DAYS[dayIndex]}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isEdit && (
@@ -250,23 +251,59 @@ export function FocusActivitySheet({
                   />
                 </div>
 
-                {/* Time (optional) */}
+                {/* Time */}
                 <div className="mb-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                    Time <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Time{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
                   <input
                     type="time"
                     value={time}
-                    onChange={e => setTime(e.target.value)}
+                    onChange={e => {
+                      setTime(e.target.value)
+                      // Clear reminder if time is removed
+                      if (!e.target.value) setReminder('none')
+                    }}
                     className="text-sm text-gray-700 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent w-full"
                   />
+                </div>
+
+                {/* Reminder */}
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
+                    Reminder{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
+                  </label>
+
+                  {!hasTime ? (
+                    <p className="text-xs text-gray-300">Set a time above to enable reminders</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {REMINDER_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setReminder(opt.value)}
+                          className={cn(
+                            'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
+                            reminder === opt.value
+                              ? 'text-white'
+                              : 'bg-gray-100 text-gray-500 active:bg-gray-200',
+                          )}
+                          style={reminder === opt.value ? { background: primary } : undefined}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}
                 <div className="mb-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                    Notes <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Notes{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
                   <textarea
                     value={notes}
@@ -280,7 +317,8 @@ export function FocusActivitySheet({
                 {/* Checklist */}
                 <div className="mb-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
-                    Checklist <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Checklist{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
 
                   {checklist.length > 0 && (
@@ -338,7 +376,8 @@ export function FocusActivitySheet({
                 {/* Photos */}
                 <div className="mb-6">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
-                    Photos <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Photos{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
                   <PhotoGallery
                     photos={isEdit ? (activity?.photos ?? []) : photos}
@@ -373,7 +412,6 @@ export function FocusActivitySheet({
         )}
       </AnimatePresence>
 
-      {/* Delete confirmation */}
       <DeleteConfirmSheet
         open={confirmDelete}
         title="Delete Activity"
