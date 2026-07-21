@@ -198,11 +198,6 @@ export default function TogetherPage() {
         </div>
       </div>
 
-      {/* ── Weekly Focus ── */}
-      <div className="pt-4">
-        <WeeklyFocusSection />
-      </div>
-
       <div className="px-4 py-4 space-y-4">
         {/* ── Unread partner note banner ── */}
         <AnimatePresence>
@@ -308,6 +303,11 @@ export default function TogetherPage() {
         </div>
 
         </div>
+
+      {/* ── Weekly Focus ── */}
+      <div className="pt-4">
+        <WeeklyFocusSection />
+      </div>
 
       {/* ── EventModal — edit existing calendar event only ── */}
       <EventModal
