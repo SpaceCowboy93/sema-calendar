@@ -3,13 +3,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Plus, X, Camera, ChevronLeft, ChevronRight,
+  Plus, X, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, Wallet, Trash2, Sparkles, Pencil,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
+import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 const CURRENCY = '€'
 
@@ -95,11 +97,6 @@ export default function FinancePage() {
   const currentUser        = useAppStore(s => s.currentUser)!
   const isSeval            = currentUser === 'seval'
   const primary            = isSeval ? '#8b5cf6' : '#14b8a6'
-  const pageBg             = useAppStore(s => s.pageBackgrounds.plans)
-  const uploadPageBg       = useAppStore(s => s.uploadPageBackground)
-  const setPageBg          = useAppStore(s => s.setPageBackground)
-  const bgInputRef         = useRef<HTMLInputElement>(null)
-
   const financeMonths      = useAppStore(s => s.financeMonths)
   const savingsTransactions = useAppStore(s => s.savingsTransactions)
   const shoppingLists      = useAppStore(s => s.shoppingLists)
@@ -119,6 +116,12 @@ export default function FinancePage() {
   const [incomeInput, setIncomeInput]     = useState('')
   const [confirmFinalize, setConfirmFinalize] = useState(false)
   const [deleteTxId, setDeleteTxId]       = useState<string | null>(null)
+  const [deleteMonthConfirm, setDeleteMonthConfirm] = useState(false)
+  const [editShoppingId, setEditShoppingId] = useState<string | null>(null)
+
+  const editShoppingList = editShoppingId
+    ? shoppingLists.find(l => l.id === editShoppingId) ?? null
+    : null
 
   // One-time migrations
   useEffect(() => { migrateFinanceData() }, [migrateFinanceData])
@@ -157,12 +160,6 @@ export default function FinancePage() {
   const prevMonthKey = prevKey(monthKey)
   const prevMonth    = financeMonths.find(m => m.key === prevMonthKey) ?? null
 
-  async function handleBgPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) await uploadPageBg('plans', file)
-    e.target.value = ''
-  }
-
   function handleStartBlank() {
     createFinanceMonth(monthKey)
     scheduleMonthEndPush(monthKey)
@@ -190,19 +187,14 @@ export default function FinancePage() {
   const remaining     = (currentMonth?.income ?? 0) - totalExpenses
 
   return (
-    <div
-      className="min-h-screen pb-32 relative"
-      style={pageBg ? { backgroundImage: `url(${pageBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-    >
-      {pageBg && <div className="fixed inset-0 bg-white/88 backdrop-blur-sm z-0 pointer-events-none" />}
-      <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgPick} />
+    <div className="min-h-screen pb-32 relative">
 
       <div className="relative z-10">
 
         {/* ── Hero ── */}
         <div
           className="px-5 pt-14 pb-5"
-          style={{ background: pageBg ? 'transparent' : 'linear-gradient(135deg, #fef9ee 0%, #f0fdf4 60%, #fafafa 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #fef9ee 0%, #f0fdf4 60%, #fafafa 100%)' }}
         >
           <div className="flex items-start justify-between">
             <div>
@@ -213,22 +205,6 @@ export default function FinancePage() {
                 <h1 className="text-2xl font-bold text-gray-800">Our Finance</h1>
               </div>
               <p className="text-sm text-gray-400 ml-10">Planning our future together.</p>
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <button
-                onClick={() => bgInputRef.current?.click()}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/80 shadow-card text-gray-400 active:bg-gray-100"
-              >
-                <Camera size={13} />
-              </button>
-              {pageBg && (
-                <button
-                  onClick={() => setPageBg('plans', null)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/80 shadow-card text-gray-400 active:bg-gray-100"
-                >
-                  <X size={13} />
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -476,12 +452,14 @@ export default function FinancePage() {
                   {monthShoppingLists.map((list, idx) => {
                     const cost = list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
                     return (
-                      <motion.div
+                      <motion.button
                         key={list.id}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.03 }}
-                        className="bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3"
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setEditShoppingId(list.id)}
+                        className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left active:bg-gray-50"
                       >
                         {list.coverPhoto ? (
                           <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
@@ -499,7 +477,7 @@ export default function FinancePage() {
                           </p>
                         </div>
                         {cost > 0 && <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(cost)}</p>}
-                      </motion.div>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -523,7 +501,7 @@ export default function FinancePage() {
             {/* Delete month */}
             <div className="px-4 mb-5">
               <button
-                onClick={() => { if (confirm(`Delete ${monthLabel(monthKey)}?`)) deleteFinanceMonth(monthKey) }}
+                onClick={() => setDeleteMonthConfirm(true)}
                 className="w-full py-2.5 rounded-2xl text-red-400 text-sm flex items-center justify-center gap-1.5 bg-white shadow-card"
               >
                 <Trash2 size={13} /> Delete This Month
@@ -532,6 +510,18 @@ export default function FinancePage() {
           </>
         )}
       </div>
+
+      {/* ── Shopping list editor (from Shopping This Month) ── */}
+      <AnimatePresence>
+        {editShoppingList && (
+          <ShoppingListEditorSheet
+            mode="edit"
+            list={editShoppingList}
+            onSave={() => setEditShoppingId(null)}
+            onClose={() => setEditShoppingId(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Income edit modal ── */}
       <AnimatePresence>
@@ -655,6 +645,15 @@ export default function FinancePage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Delete month confirm ── */}
+      <DeleteConfirmSheet
+        open={deleteMonthConfirm}
+        title="Delete this month?"
+        message={`${monthLabel(monthKey)} and all its budget data will be permanently removed.`}
+        onCancel={() => setDeleteMonthConfirm(false)}
+        onConfirm={() => { deleteFinanceMonth(monthKey); setDeleteMonthConfirm(false) }}
+      />
 
       {/* ── Delete savings transaction confirm ── */}
       <AnimatePresence>
@@ -968,21 +967,22 @@ function FinanceCategoryEditorSheet({
             >
               Save Changes
             </button>
-            {!confirmDel ? (
-              <button onClick={() => setConfirmDel(true)}
-                className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
-                <Trash2 size={13} /> Remove Category
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button onClick={() => setConfirmDel(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium">Cancel</button>
-                <button onClick={onDelete} className="flex-1 py-3 rounded-2xl bg-red-500 text-white text-sm font-medium">Delete</button>
-              </div>
-            )}
+            <button onClick={() => setConfirmDel(true)}
+              className="w-full py-2 flex items-center justify-center gap-1.5 text-red-400 text-sm">
+              <Trash2 size={13} /> Remove Category
+            </button>
           </div>
         </div>
       </motion.div>
 
+      <DeleteConfirmSheet
+        open={confirmDel}
+        title="Remove this category?"
+        message="This budget category and its data will be permanently removed."
+        confirmLabel="Remove"
+        onCancel={() => setConfirmDel(false)}
+        onConfirm={() => { onDelete(); setConfirmDel(false) }}
+      />
     </>
   )
 }

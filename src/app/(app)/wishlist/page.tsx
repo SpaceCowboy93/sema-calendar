@@ -6,6 +6,7 @@ import { Plus, Trash2, Check, X } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { type WishlistItem, type WishlistCategory } from '@/types'
 import { WISHLIST_CATEGORY_CONFIG, cn } from '@/lib/utils'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 const CATEGORIES = Object.entries(WISHLIST_CATEGORY_CONFIG) as [
   WishlistCategory,
@@ -26,6 +27,7 @@ export default function WishlistPage() {
   const [newNotes, setNewNotes]         = useState('')
   const [activeFilter, setActiveFilter] = useState<WishlistCategory | 'all'>('all')
   const [detailItem, setDetailItem]     = useState<WishlistItem | null>(null)
+  const [deleteWishId, setDeleteWishId] = useState<string | null>(null)
 
   const isSeval      = currentUser === 'seval'
   const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
@@ -175,7 +177,7 @@ export default function WishlistPage() {
                 item={item}
                 onTap={() => setDetailItem(item)}
                 onToggle={() => toggleWishlistItem(item.id)}
-                onDelete={() => deleteWishlistItem(item.id)}
+                onDelete={() => setDeleteWishId(item.id)}
                 primaryColor={primaryColor}
               />
             ))}
@@ -193,7 +195,7 @@ export default function WishlistPage() {
                     item={item}
                     onTap={() => setDetailItem(item)}
                     onToggle={() => toggleWishlistItem(item.id)}
-                    onDelete={() => deleteWishlistItem(item.id)}
+                    onDelete={() => setDeleteWishId(item.id)}
                     primaryColor={primaryColor}
                     isDone
                   />
@@ -203,6 +205,14 @@ export default function WishlistPage() {
           )}
         </>
       )}
+
+      <DeleteConfirmSheet
+        open={!!deleteWishId}
+        title="Delete this wish?"
+        message="This wish will be permanently removed."
+        onCancel={() => setDeleteWishId(null)}
+        onConfirm={() => { deleteWishlistItem(deleteWishId!); setDeleteWishId(null) }}
+      />
 
       {/* Detail / edit modal */}
       <AnimatePresence>

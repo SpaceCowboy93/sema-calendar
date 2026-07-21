@@ -2,22 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Wallet, User } from 'lucide-react'
+import { Home, LayoutGrid, Wallet, User } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/together', label: 'Planner', icon: Heart  },
-  { href: '/plans',    label: 'Finance', icon: Wallet },
-  { href: '/us',       label: 'Us',      icon: User   },
+  { href: '/together', label: 'Home',     icon: Home       },
+  { href: '/planner',  label: 'Planner',  icon: LayoutGrid },
+  { href: '/plans',    label: 'Finances', icon: Wallet     },
+  { href: '/us',       label: 'Us',       icon: User       },
 ]
 
 export function BottomNav() {
-  const pathname = usePathname()
+  const pathname    = usePathname()
   const currentUser = useAppStore(s => s.currentUser)
 
-  const isSeval = currentUser === 'seval'
+  const isSeval     = currentUser === 'seval'
   const activeColor = isSeval ? '#8b5cf6' : '#14b8a6'
 
   return (

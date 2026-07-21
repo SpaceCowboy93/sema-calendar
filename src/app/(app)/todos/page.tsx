@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { USERS, type SharedTodo } from '@/types'
 import { cn } from '@/lib/utils'
 import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 export default function TodosPage() {
   const currentUser = useAppStore(s => s.currentUser)!
@@ -28,6 +29,7 @@ export default function TodosPage() {
   const [taskDate, setTaskDate]       = useState('')
   const [focusLast, setFocusLast]     = useState(false)
   const [editingTodo, setEditingTodo] = useState<SharedTodo | null>(null)
+  const [deleteTodoId, setDeleteTodoId] = useState<string | null>(null)
 
   const titleRef = useRef<HTMLInputElement>(null)
   const itemRefs = useRef<(HTMLInputElement | null)[]>([])
@@ -233,7 +235,7 @@ export default function TodosPage() {
                 key={todo.id}
                 todo={todo}
                 onToggle={() => toggleTodo(todo.id)}
-                onDelete={() => deleteTodo(todo.id)}
+                onDelete={() => setDeleteTodoId(todo.id)}
                 onEdit={() => setEditingTodo(todo)}
                 primaryColor={primaryColor}
               />
@@ -251,7 +253,7 @@ export default function TodosPage() {
                     key={todo.id}
                     todo={todo}
                     onToggle={() => toggleTodo(todo.id)}
-                    onDelete={() => deleteTodo(todo.id)}
+                    onDelete={() => setDeleteTodoId(todo.id)}
                     onEdit={() => setEditingTodo(todo)}
                     primaryColor={primaryColor}
                     isDone
@@ -262,6 +264,15 @@ export default function TodosPage() {
           )}
         </>
       )}
+
+      <DeleteConfirmSheet
+        open={!!deleteTodoId}
+        title="Remove this plan?"
+        message="This plan will be permanently removed."
+        confirmLabel="Remove"
+        onCancel={() => setDeleteTodoId(null)}
+        onConfirm={() => { deleteTodo(deleteTodoId!); setDeleteTodoId(null) }}
+      />
 
       {/* Edit modal */}
       <AnimatePresence>

@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { type Goal, type GoalCategory } from '@/types'
 import { cn } from '@/lib/utils'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 /* ─── Category config ─────────────────────────────────────────────────────────── */
 const GOAL_CATEGORIES: Record<GoalCategory, {
@@ -413,6 +414,7 @@ function GoalCard({
   onDelete: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const hasCounter = goal.progressTarget > 0
   const pct        = hasCounter
@@ -421,6 +423,7 @@ function GoalCard({
   const isMaxed    = hasCounter && goal.progressCurrent >= goal.progressTarget
 
   return (
+    <>
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
@@ -491,7 +494,7 @@ function GoalCard({
                 <Pencil size={13} />
               </button>
               <button
-                onClick={onDelete}
+                onClick={() => setShowConfirm(true)}
                 className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
                            transition-all p-1"
               >
@@ -552,6 +555,15 @@ function GoalCard({
         </div>
       </div>
     </motion.div>
+
+    <DeleteConfirmSheet
+      open={showConfirm}
+      title="Let go of this dream?"
+      message="This dream will be permanently removed."
+      onCancel={() => setShowConfirm(false)}
+      onConfirm={() => { onDelete(); setShowConfirm(false) }}
+    />
+    </>
   )
 }
 

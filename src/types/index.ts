@@ -95,12 +95,6 @@ export interface WishlistItem {
   checklist?: string[]
 }
 
-export interface PageBackgrounds {
-  together?: string  // Supabase Storage public URL
-  plans?: string
-  us?: string
-}
-
 export interface ChecklistEntry {
   text: string
   isCompleted: boolean
@@ -206,6 +200,17 @@ export interface SavingsGoal {
   createdAt: string
 }
 
+export interface ShoppingListReceipt {
+  store: string
+  date: string          // YYYY-MM-DD
+  currency: string      // e.g. 'EUR'
+  items: ReceiptItem[]
+  subtotal: number
+  tax: number
+  grandTotal: number
+  photos?: string[]     // receipt photo(s)
+}
+
 export interface ShoppingList {
   id: string
   name: string
@@ -224,6 +229,10 @@ export interface ShoppingList {
   completedAt?: string
   completedBy?: UserName
   completionNote?: string
+  receipt?: ShoppingListReceipt  // populated after scanning a receipt
+  // Finance linkage — stable link to the FinanceCategoryItem created on completion
+  financeItemId?: string     // ID of the FinanceCategoryItem in the linked Finance month
+  financeMonthKey?: string   // Finance month key ('YYYY-MM') where the link lives
 }
 
 export type ShoppingListInput = {
@@ -276,4 +285,24 @@ export interface SavingsTransaction {
   note?: string
   createdAt: string
   createdBy: UserName
+}
+
+// ── Receipt scanner ───────────────────────────────────────────────────────────
+export interface ReceiptItem {
+  id: string
+  name: string
+  quantity: number
+  unitPrice: number
+  lineTotal: number
+  confidence?: number      // 0–1, from OCR; undefined = manually entered
+}
+
+export interface ReceiptResult {
+  store: string
+  date: string             // YYYY-MM-DD
+  currency: string         // e.g. 'EUR'
+  items: ReceiptItem[]
+  subtotal: number
+  tax: number
+  grandTotal: number
 }

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useSyncStatus, triggerPull } from '@/hooks/useSupabaseSync'
 import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
 import { useLightboxStore } from '@/store/useLightboxStore'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 export default function ShoppingPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
@@ -23,6 +24,7 @@ export default function ShoppingPage() {
   const [openListId, setOpenListId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editListId, setEditListId] = useState<string | null>(null)
+  const [deleteListId, setDeleteListId] = useState<string | null>(null)
   const openLightbox = useLightboxStore(s => s.open)
 
   const editList = editListId ? lists.find(l => l.id === editListId) ?? null : null
@@ -142,7 +144,7 @@ export default function ShoppingPage() {
                     Edit
                   </button>
                   <button
-                    onClick={e => { e.stopPropagation(); deleteList(list.id) }}
+                    onClick={e => { e.stopPropagation(); setDeleteListId(list.id) }}
                     className="text-gray-300 active:text-red-400 p-1 shrink-0"
                   >
                     <Trash2 size={15} />
@@ -244,6 +246,13 @@ export default function ShoppingPage() {
         )}
       </div>
 
+      <DeleteConfirmSheet
+        open={!!deleteListId}
+        title="Delete this list?"
+        message="This shopping list and all its items will be permanently removed."
+        onCancel={() => setDeleteListId(null)}
+        onConfirm={() => { deleteList(deleteListId!); setDeleteListId(null) }}
+      />
     </div>
   )
 }

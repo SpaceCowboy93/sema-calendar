@@ -80,10 +80,11 @@ interface Props {
   onClose: () => void
   primary: string
   initialDate?: string
+  initialType?: CreateType
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
-export function FullCreateSheet({ open, onClose, primary, initialDate }: Props) {
+export function FullCreateSheet({ open, onClose, primary, initialDate, initialType }: Props) {
   const currentUser       = useAppStore(s => s.currentUser)!
   const openLightbox      = useLightboxStore(s => s.open)
   const addEvent          = useAppStore(s => s.addEvent)
@@ -129,6 +130,14 @@ export function FullCreateSheet({ open, onClose, primary, initialDate }: Props) 
   useEffect(() => {
     if (open && initialDate) setDate(initialDate)
   }, [open, initialDate])
+
+  // Pre-select type when opened from a category context (e.g. Planner category sheets)
+  useEffect(() => {
+    if (open && initialType) {
+      setType(initialType)
+      setColor(TYPE_CONFIG[initialType].defaultColor)
+    }
+  }, [open, initialType])
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime('')

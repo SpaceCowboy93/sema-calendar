@@ -7,6 +7,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import { cn } from '@/lib/utils'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 export default function NotesPage() {
   const currentUser  = useAppStore(s => s.currentUser)!
@@ -17,6 +18,7 @@ export default function NotesPage() {
 
   const [text, setText]       = useState('')
   const [showInput, setShowInput] = useState(false)
+  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null)
 
   const isSeval      = currentUser === 'seval'
   const primaryColor = isSeval ? '#8b5cf6' : '#14b8a6'
@@ -169,7 +171,7 @@ export default function NotesPage() {
                     </button>
                     {isFromMe && (
                       <button
-                        onClick={() => deleteLoveNote(note.id)}
+                        onClick={() => setDeleteNoteId(note.id)}
                         className="flex items-center gap-1 text-xs font-medium text-gray-400
                                    hover:text-red-400 transition-colors"
                       >
@@ -184,6 +186,14 @@ export default function NotesPage() {
           </AnimatePresence>
         </div>
       )}
+
+      <DeleteConfirmSheet
+        open={!!deleteNoteId}
+        title="Delete this note?"
+        message="This love note will be permanently removed."
+        onCancel={() => setDeleteNoteId(null)}
+        onConfirm={() => { deleteLoveNote(deleteNoteId!); setDeleteNoteId(null) }}
+      />
     </div>
   )
 }

@@ -7,8 +7,8 @@ import {
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
   type Goal, type GoalCategory, type PartnerNote,
-  type ShoppingList, type ShoppingItem, type ShoppingListInput, type PageBackgrounds,
-  type BudgetItem, type SavingsGoal,
+  type ShoppingList, type ShoppingItem, type ShoppingListInput,
+  type BudgetItem, type SavingsGoal, type FinanceCategoryItem,
   type FinanceMonth, type FinanceMonthReport, type SavingsTransaction,
   OTHER_USER,
 } from '@/types'
@@ -129,15 +129,143 @@ interface AppState {
   migrateFinanceData: () => void
   migrateCategories: () => void
 
-  // Page backgrounds
-  pageBackgrounds: PageBackgrounds
-  setPageBackground: (page: keyof PageBackgrounds, url: string | null) => void
-  uploadPageBackground: (page: keyof PageBackgrounds, file: File) => Promise<void>
-
   // Generic photo upload (returns public URL or null)
   uploadPhoto: (folder: string, file: File) => Promise<string | null>
   uploadGoalPhoto: (goalId: string, file: File) => Promise<void>
   uploadWishlistPhoto: (itemId: string, file: File) => Promise<void>
+}
+
+/* ── Shopping → Finance sync helper ──────────────────────────────────────────
+ * Pure function: given the old and new ShoppingList state, returns updated
+ * financeMonths and any patch to apply back onto the ShoppingList record
+ * (financeItemId, financeMonthKey). Keeps the FinanceCategoryItem in the
+ * Shopping budget category of the correct FinanceMonth in sync.
+ * ─────────────────────────────────────────────────────────────────────────── */
+function applyShoppingFinanceSync(
+  financeMonths: FinanceMonth[],
+  oldList: ShoppingList,
+  newList: ShoppingList,
+  now: string,
+): { financeMonths: FinanceMonth[]; listPatch: Partial<ShoppingList> } {
+
+  const listCost = (l: ShoppingList) =>
+    l.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
+
+  const findShoppingLoc = (months: FinanceMonth[], key: string) => {
+    const mi = months.findIndex(m => m.key === key)
+    if (mi === -1) return null
+    const bi = months[mi].budgetItems.findIndex(b => b.category === 'Shopping' || b.emoji === '🛍️')
+    if (bi === -1) return null
+    return { mi, bi }
+  }
+
+  const ensureMonth = (months: FinanceMonth[], key: string): FinanceMonth[] => {
+    if (months.some(m => m.key === key)) return months
+    return [...months, {
+      key, income: 0,
+      budgetItems: DEFAULT_BUDGET_ITEMS.map(b => ({ ...b, actual: 0 })),
+      isFinalized: false, createdAt: now, updatedAt: now,
+    }]
+  }
+
+  const removeFinItem = (months: FinanceMonth[], key: string, itemId: string) => {
+    const loc = findShoppingLoc(months, key)
+    if (!loc) return { months, oldContrib: 0 }
+    const b = months[loc.mi].budgetItems[loc.bi]
+    const linked = b.items?.find(i => i.id === itemId)
+    const oldContrib = linked?.unitPrice ?? 0
+    return {
+      months: months.map((m, mi) => mi !== loc.mi ? m : {
+        ...m, updatedAt: now,
+        budgetItems: m.budgetItems.map((b2, bi) => bi !== loc.bi ? b2 : {
+          ...b2,
+          actual: Math.max(0, b2.actual - oldContrib),
+          items: (b2.items ?? []).filter(i => i.id !== itemId),
+        }),
+      }),
+      oldContrib,
+    }
+  }
+
+  const addFinItem = (months: FinanceMonth[], key: string, list: ShoppingList, total: number) => {
+    const m2 = ensureMonth(months, key)
+    const loc = findShoppingLoc(m2, key)
+    if (!loc) return { months: m2, itemId: '' }
+    const itemId = generateId()
+    const newItem: FinanceCategoryItem = {
+      id: itemId, name: list.name, quantity: 1, unitPrice: total,
+      note: list.storeName, isPaid: true, createdAt: now, updatedAt: now,
+    }
+    return {
+      months: m2.map((m, mi) => mi !== loc.mi ? m : {
+        ...m, updatedAt: now,
+        budgetItems: m.budgetItems.map((b, bi) => bi !== loc.bi ? b : {
+          ...b,
+          actual: b.actual + total,
+          items: [...(b.items ?? []), newItem],
+        }),
+      }),
+      itemId,
+    }
+  }
+
+  const wasCompleted  = oldList.isCompleted ?? false
+  const nowCompleted  = newList.isCompleted ?? false
+
+  // ── Case 1: newly completed ──
+  if (!wasCompleted && nowCompleted) {
+    const total = listCost(newList)
+    if (total <= 0) return { financeMonths, listPatch: {} }
+    const monthKey = (newList.completedAt ?? now).slice(0, 7)
+    const { months, itemId } = addFinItem(financeMonths, monthKey, newList, total)
+    if (!itemId) return { financeMonths, listPatch: {} }
+    return { financeMonths: months, listPatch: { financeItemId: itemId, financeMonthKey: monthKey } }
+  }
+
+  // ── Case 2: un-completed ──
+  if (wasCompleted && !nowCompleted) {
+    if (!oldList.financeItemId || !oldList.financeMonthKey) {
+      return { financeMonths, listPatch: { financeItemId: undefined, financeMonthKey: undefined } }
+    }
+    const { months } = removeFinItem(financeMonths, oldList.financeMonthKey, oldList.financeItemId)
+    return { financeMonths: months, listPatch: { financeItemId: undefined, financeMonthKey: undefined } }
+  }
+
+  // ── Case 3: still completed — update existing link ──
+  if (wasCompleted && nowCompleted && oldList.financeItemId && oldList.financeMonthKey) {
+    const newTotal = listCost(newList)
+    const newCompletedAt = newList.completedAt ?? oldList.completedAt ?? now
+    const newMonthKey = newCompletedAt.slice(0, 7)
+
+    if (newMonthKey !== oldList.financeMonthKey) {
+      // Month changed → move entry
+      const { months: m1 } = removeFinItem(financeMonths, oldList.financeMonthKey, oldList.financeItemId)
+      if (newTotal <= 0) return { financeMonths: m1, listPatch: { financeItemId: undefined, financeMonthKey: newMonthKey } }
+      const { months: m2, itemId } = addFinItem(m1, newMonthKey, newList, newTotal)
+      return { financeMonths: m2, listPatch: { financeItemId: itemId || undefined, financeMonthKey: newMonthKey } }
+    }
+
+    // Same month — update in-place
+    const loc = findShoppingLoc(financeMonths, oldList.financeMonthKey)
+    if (!loc) return { financeMonths, listPatch: {} }
+    const b = financeMonths[loc.mi].budgetItems[loc.bi]
+    const linked = b.items?.find(i => i.id === oldList.financeItemId)
+    const oldContrib = linked?.unitPrice ?? 0
+    const delta = newTotal - oldContrib
+    const updatedMonths = financeMonths.map((m, mi) => mi !== loc.mi ? m : {
+      ...m, updatedAt: now,
+      budgetItems: m.budgetItems.map((b2, bi) => bi !== loc.bi ? b2 : {
+        ...b2,
+        actual: Math.max(0, b2.actual + delta),
+        items: (b2.items ?? []).map(i => i.id !== oldList.financeItemId ? i : {
+          ...i, unitPrice: newTotal, name: newList.name, note: newList.storeName, updatedAt: now,
+        }),
+      }),
+    })
+    return { financeMonths: updatedMonths, listPatch: {} }
+  }
+
+  return { financeMonths, listPatch: {} }
 }
 
 export const useAppStore = create<AppState>()(
@@ -686,89 +814,113 @@ export const useAppStore = create<AppState>()(
         return id
       },
 
-      updateShoppingList: (id, updates) =>
-        set(s => ({
-          shoppingLists: s.shoppingLists.map(l =>
-            l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l
-          ),
-        })),
+      updateShoppingList: (id, updates) => {
+        const now = new Date().toISOString()
+        const s = get()
+        const oldList = s.shoppingLists.find(l => l.id === id)
+        if (!oldList) return
+        const newList: ShoppingList = { ...oldList, ...updates, updatedAt: now }
+        const { financeMonths, listPatch } = applyShoppingFinanceSync(s.financeMonths, oldList, newList, now)
+        set(st => ({
+          shoppingLists: st.shoppingLists.map(l => l.id === id ? { ...newList, ...listPatch } : l),
+          financeMonths,
+        }))
+      },
 
-      deleteShoppingList: id =>
-        set(s => ({ shoppingLists: s.shoppingLists.filter(l => l.id !== id) })),
+      deleteShoppingList: id => {
+        const now = new Date().toISOString()
+        const s = get()
+        const list = s.shoppingLists.find(l => l.id === id)
+        let financeMonths = s.financeMonths
+        if (list?.isCompleted && list.financeItemId && list.financeMonthKey) {
+          const uncompleted = { ...list, isCompleted: false as const }
+          financeMonths = applyShoppingFinanceSync(financeMonths, list, uncompleted, now).financeMonths
+        }
+        set(st => ({ shoppingLists: st.shoppingLists.filter(l => l.id !== id), financeMonths }))
+      },
 
-      updateShoppingItem: (listId, itemId, updates) =>
-        set(s => ({
-          shoppingLists: s.shoppingLists.map(l =>
-            l.id === listId
-              ? {
-                  ...l,
-                  items: l.items.map(i => i.id === itemId ? { ...i, ...updates } : i),
-                  updatedAt: new Date().toISOString(),
-                }
-              : l
-          ),
-        })),
+      updateShoppingItem: (listId, itemId, updates) => {
+        const now = new Date().toISOString()
+        const s = get()
+        const oldList = s.shoppingLists.find(l => l.id === listId)
+        if (!oldList) return
+        const newList: ShoppingList = {
+          ...oldList, updatedAt: now,
+          items: oldList.items.map(i => i.id === itemId ? { ...i, ...updates } : i),
+        }
+        const { financeMonths, listPatch } = applyShoppingFinanceSync(s.financeMonths, oldList, newList, now)
+        set(st => ({
+          shoppingLists: st.shoppingLists.map(l => l.id === listId ? { ...newList, ...listPatch } : l),
+          financeMonths,
+        }))
+      },
 
       addShoppingItem: (listId, name, quantity = 1, notes, price, photo) => {
-        const { currentUser } = get()
-        if (!currentUser) return
+        const now = new Date().toISOString()
+        const s = get()
+        if (!s.currentUser) return
+        const oldList = s.shoppingLists.find(l => l.id === listId)
+        if (!oldList) return
         const newItem: ShoppingItem = {
           id: generateId(), name: name.trim(), quantity, isChecked: false,
-          createdAt: new Date().toISOString(),
+          createdAt: now,
           notes: notes?.trim() || undefined,
           price: price ?? undefined,
           photo: photo ?? undefined,
         }
-        set(s => ({
-          shoppingLists: s.shoppingLists.map(l =>
-            l.id === listId
-              ? { ...l, items: [...l.items, newItem], updatedAt: new Date().toISOString() }
-              : l
-          ),
+        const newList: ShoppingList = { ...oldList, updatedAt: now, items: [...oldList.items, newItem] }
+        const { financeMonths, listPatch } = applyShoppingFinanceSync(s.financeMonths, oldList, newList, now)
+        set(st => ({
+          shoppingLists: st.shoppingLists.map(l => l.id === listId ? { ...newList, ...listPatch } : l),
+          financeMonths,
         }))
       },
 
       toggleShoppingItem: (listId, itemId) => {
-        const { currentUser } = get()
-        if (!currentUser) return
-        set(s => ({
-          shoppingLists: s.shoppingLists.map(l => {
-            if (l.id !== listId) return l
-            const updatedItems = l.items.map(i =>
-              i.id === itemId
-                ? { ...i, isChecked: !i.isChecked, checkedBy: !i.isChecked ? currentUser : undefined }
-                : i
-            )
-            const allChecked = updatedItems.length > 0 && updatedItems.every(i => i.isChecked)
-            return {
-              ...l,
-              updatedAt:   new Date().toISOString(),
-              items:       updatedItems,
-              isCompleted: allChecked,
-              completedAt: allChecked
-                ? (l.isCompleted && l.completedAt ? l.completedAt : new Date().toISOString())
-                : undefined,
-              completedBy: allChecked ? currentUser : undefined,
-            }
-          }),
+        const now = new Date().toISOString()
+        const s = get()
+        if (!s.currentUser) return
+        const oldList = s.shoppingLists.find(l => l.id === listId)
+        if (!oldList) return
+        const updatedItems = oldList.items.map(i =>
+          i.id === itemId
+            ? { ...i, isChecked: !i.isChecked, checkedBy: !i.isChecked ? s.currentUser! : undefined }
+            : i
+        )
+        const allChecked = updatedItems.length > 0 && updatedItems.every(i => i.isChecked)
+        const newList: ShoppingList = {
+          ...oldList, updatedAt: now, items: updatedItems,
+          isCompleted: allChecked,
+          completedAt: allChecked
+            ? (oldList.isCompleted && oldList.completedAt ? oldList.completedAt : now)
+            : undefined,
+          completedBy: allChecked ? s.currentUser! : undefined,
+        }
+        const { financeMonths, listPatch } = applyShoppingFinanceSync(s.financeMonths, oldList, newList, now)
+        set(st => ({
+          shoppingLists: st.shoppingLists.map(l => l.id === listId ? { ...newList, ...listPatch } : l),
+          financeMonths,
         }))
       },
 
-      deleteShoppingItem: (listId, itemId) =>
-        set(s => ({
-          shoppingLists: s.shoppingLists.map(l =>
-            l.id === listId
-              ? {
-                  ...l,
-                  items: l.items.filter(i => i.id !== itemId),
-                  updatedAt: new Date().toISOString(),
-                  // Un-complete if an item is deleted while completed
-                  isCompleted: false,
-                  completedAt: undefined,
-                }
-              : l
-          ),
-        })),
+      deleteShoppingItem: (listId, itemId) => {
+        const now = new Date().toISOString()
+        const s = get()
+        const oldList = s.shoppingLists.find(l => l.id === listId)
+        if (!oldList) return
+        const newList: ShoppingList = {
+          ...oldList, updatedAt: now,
+          items: oldList.items.filter(i => i.id !== itemId),
+          // Un-complete when an item is removed
+          isCompleted: false,
+          completedAt: undefined,
+        }
+        const { financeMonths, listPatch } = applyShoppingFinanceSync(s.financeMonths, oldList, newList, now)
+        set(st => ({
+          shoppingLists: st.shoppingLists.map(l => l.id === listId ? { ...newList, ...listPatch } : l),
+          financeMonths,
+        }))
+      },
 
       // ── Finance ──────────────────────────────────────────────────────────────
       monthlyIncome: 0,
@@ -903,19 +1055,6 @@ export const useAppStore = create<AppState>()(
             budgetItems: m.budgetItems.map(renamePets),
           })),
         }))
-      },
-
-      // ── Page backgrounds ─────────────────────────────────────────────────────
-      pageBackgrounds: {},
-
-      setPageBackground: (page, url) =>
-        set(s => ({
-          pageBackgrounds: { ...s.pageBackgrounds, [page]: url ?? undefined },
-        })),
-
-      uploadPageBackground: async (page, file) => {
-        const url = await get().uploadPhoto('page-backgrounds', file)
-        if (url) get().setPageBackground(page, url)
       },
 
       // ── Generic upload helper ─────────────────────────────────────────────────

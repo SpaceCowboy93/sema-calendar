@@ -8,6 +8,38 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 export function GlobalImageLightbox() {
   const { isOpen, images, index, close, next, prev } = useLightboxStore()
 
+  // Track whether we've pushed a history entry for the back button
+  const didPushHistoryRef = useRef(false)
+
+  // Push history state when lightbox opens so Android back closes it first
+  useEffect(() => {
+    if (isOpen) {
+      history.pushState({ lightboxOpen: true }, '')
+      didPushHistoryRef.current = true
+    }
+  }, [isOpen])
+
+  // popstate fires when user presses the system/browser back button
+  useEffect(() => {
+    const handler = () => {
+      if (didPushHistoryRef.current) {
+        didPushHistoryRef.current = false
+        close()
+      }
+    }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, [close])
+
+  // Close lightbox AND pop the history entry we pushed (if any)
+  const safeClose = useCallback(() => {
+    if (didPushHistoryRef.current) {
+      didPushHistoryRef.current = false
+      history.back()
+    }
+    close()
+  }, [close])
+
   // Zoom/pan refs (direct DOM manipulation for perf)
   const scaleRef   = useRef(1)
   const panRef     = useRef({ x: 0, y: 0 })
@@ -61,13 +93,13 @@ export function GlobalImageLightbox() {
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape')     close()
+      if (e.key === 'Escape')     safeClose()
       if (e.key === 'ArrowRight') next()
       if (e.key === 'ArrowLeft')  prev()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isOpen, close, next, prev])
+  }, [isOpen, safeClose, next, prev])
 
   // ── Touch: swipe + pinch + pan ──────────────────────────────────────────────
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -144,8 +176,8 @@ export function GlobalImageLightbox() {
   // Prevent close-on-click after a drag
   const handleOverlayClick = useCallback(() => {
     if (mouseDraggedRef.current) { mouseDraggedRef.current = false; return }
-    close()
-  }, [close])
+    safeClose()
+  }, [safeClose])
 
   const handleZoomOut = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -212,7 +244,7 @@ export function GlobalImageLightbox() {
 
           {/* Close */}
           <button
-            onClick={e => { e.stopPropagation(); close() }}
+            onClick={e => { e.stopPropagation(); safeClose() }}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white z-10"
           >
             <X size={18} />
