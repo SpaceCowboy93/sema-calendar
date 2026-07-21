@@ -287,6 +287,30 @@ export interface SavingsTransaction {
   createdBy: UserName
 }
 
+// ── Weekly Focus ──────────────────────────────────────────────────────────────
+
+export interface FocusChecklistItem {
+  id: string
+  text: string
+  done: boolean
+}
+
+/** A single planned activity within a Weekly Focus day. */
+export interface FocusActivity {
+  id: string
+  weekKey: string             // 'YYYY-WNN' e.g. '2026-W29'
+  dayIndex: number            // 0 = Monday … 6 = Sunday
+  title: string
+  time?: string               // HH:MM optional
+  notes?: string
+  checklist?: FocusChecklistItem[]
+  photos?: string[]           // Supabase Storage public URLs
+  isCompleted: boolean
+  createdBy: UserName
+  createdAt: string
+  updatedAt: string
+}
+
 // ── Receipt scanner ───────────────────────────────────────────────────────────
 export interface ReceiptItem {
   id: string

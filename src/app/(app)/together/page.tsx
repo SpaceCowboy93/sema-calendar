@@ -12,6 +12,7 @@ import {
   getTodayString, cn, EVENT_COLOR_CLASS,
 } from '@/lib/utils'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
+import { WeeklyFocusSection } from '@/components/weekly-focus/WeeklyFocusSection'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -197,6 +198,11 @@ export default function TogetherPage() {
         </div>
       </div>
 
+      {/* ── Weekly Focus ── */}
+      <div className="pt-4">
+        <WeeklyFocusSection />
+      </div>
+
       <div className="px-4 py-4 space-y-4">
         {/* ── Unread partner note banner ── */}
         <AnimatePresence>
@@ -220,12 +226,12 @@ export default function TogetherPage() {
           )}
         </AnimatePresence>
 
-        {/* ── Selected date events ── */}
+        {/* ── Calendar events for selected date ── */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700">
               {selectedDate === getTodayString()
-                ? 'Today'
+                ? "Today's Events"
                 : format(parseISO(selectedDate), 'EEEE, MMM d')}
             </h2>
           </div>

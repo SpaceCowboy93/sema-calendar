@@ -1,5 +1,8 @@
 import { clsx, type ClassValue } from 'clsx'
-import { format, differenceInDays, parseISO } from 'date-fns'
+import {
+  format, differenceInDays, parseISO,
+  getISOWeek, getISOWeekYear, startOfISOWeek, addWeeks,
+} from 'date-fns'
 import type { UserName, MoodType, WishlistCategory } from '@/types'
 
 export function cn(...inputs: ClassValue[]) {
@@ -132,4 +135,33 @@ export function getCalendarDays(year: number, month: number): Date[] {
 
 export function toDateString(d: Date): string {
   return format(d, 'yyyy-MM-dd')
+}
+
+// ── Weekly Focus week utilities ────────────────────────────────────────────────
+
+/** Returns the ISO week key for a given date, e.g. '2026-W29'. */
+export function getWeekKey(date: Date = new Date()): string {
+  const week = getISOWeek(date)
+  const year = getISOWeekYear(date)
+  return `${year}-W${String(week).padStart(2, '0')}`
+}
+
+/** Returns the Monday Date of the given week key. */
+export function getWeekStartDate(weekKey: string): Date {
+  const [yearStr, weekStr] = weekKey.split('-W')
+  const year = parseInt(yearStr, 10)
+  const week = parseInt(weekStr, 10)
+  // Jan 4 is always in ISO week 1 of its year
+  const jan4 = new Date(year, 0, 4)
+  const weekOneMonday = startOfISOWeek(jan4)
+  return addWeeks(weekOneMonday, week - 1)
+}
+
+/** Returns a human-readable label, e.g. 'Week 29 · Jul 14–20'. */
+export function getWeekLabel(weekKey: string): string {
+  const monday = getWeekStartDate(weekKey)
+  const sunday = new Date(monday)
+  sunday.setDate(sunday.getDate() + 6)
+  const weekNum = parseInt(weekKey.split('-W')[1], 10)
+  return `Week ${weekNum} · ${format(monday, 'MMM d')}–${format(sunday, 'd')}`
 }

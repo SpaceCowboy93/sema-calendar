@@ -10,6 +10,7 @@ import {
   type ShoppingList, type ShoppingItem, type ShoppingListInput,
   type BudgetItem, type SavingsGoal, type FinanceCategoryItem,
   type FinanceMonth, type FinanceMonthReport, type SavingsTransaction,
+  type FocusActivity, type FocusChecklistItem,
   OTHER_USER,
 } from '@/types'
 
@@ -128,6 +129,21 @@ interface AppState {
   deleteSavingsTransaction: (id: string) => void
   migrateFinanceData: () => void
   migrateCategories: () => void
+
+  // Weekly Focus
+  focusActivities: FocusActivity[]
+  focusCarryOver: boolean
+  addFocusActivity: (data: {
+    weekKey: string; dayIndex: number; title: string
+    time?: string; notes?: string
+    checklist?: FocusChecklistItem[]; photos?: string[]
+  }) => string
+  updateFocusActivity: (id: string, updates: Partial<FocusActivity>) => void
+  toggleFocusActivity: (id: string) => void
+  deleteFocusActivity: (id: string) => void
+  uploadFocusActivityPhoto: (id: string, file: File) => Promise<void>
+  setFocusCarryOver: (enabled: boolean) => void
+  carryOverToWeek: (fromWeekKey: string, toWeekKey: string) => void
 
   // Generic photo upload (returns public URL or null)
   uploadPhoto: (folder: string, file: File) => Promise<string | null>
@@ -1055,6 +1071,95 @@ export const useAppStore = create<AppState>()(
             budgetItems: m.budgetItems.map(renamePets),
           })),
         }))
+      },
+
+      // ── Weekly Focus ─────────────────────────────────────────────────────────
+      focusActivities: [],
+      focusCarryOver: true,
+
+      addFocusActivity: (data) => {
+        const { currentUser } = get()
+        if (!currentUser) return ''
+        const now = new Date().toISOString()
+        const id = generateId()
+        const activity: FocusActivity = {
+          id,
+          weekKey:     data.weekKey,
+          dayIndex:    data.dayIndex,
+          title:       data.title,
+          time:        data.time,
+          notes:       data.notes,
+          checklist:   data.checklist,
+          photos:      data.photos,
+          isCompleted: false,
+          createdBy:   currentUser,
+          createdAt:   now,
+          updatedAt:   now,
+        }
+        set(s => ({ focusActivities: [...s.focusActivities, activity] }))
+        return id
+      },
+
+      updateFocusActivity: (id, updates) =>
+        set(s => ({
+          focusActivities: s.focusActivities.map(a =>
+            a.id === id
+              ? { ...a, ...updates, updatedAt: new Date().toISOString() }
+              : a
+          ),
+        })),
+
+      toggleFocusActivity: (id) =>
+        set(s => ({
+          focusActivities: s.focusActivities.map(a =>
+            a.id === id
+              ? { ...a, isCompleted: !a.isCompleted, updatedAt: new Date().toISOString() }
+              : a
+          ),
+        })),
+
+      deleteFocusActivity: (id) =>
+        set(s => ({ focusActivities: s.focusActivities.filter(a => a.id !== id) })),
+
+      uploadFocusActivityPhoto: async (id, file) => {
+        const url = await get().uploadPhoto(`focus/${id}`, file)
+        if (!url) return
+        set(s => ({
+          focusActivities: s.focusActivities.map(a =>
+            a.id === id
+              ? { ...a, photos: [...(a.photos ?? []), url], updatedAt: new Date().toISOString() }
+              : a
+          ),
+        }))
+      },
+
+      setFocusCarryOver: (enabled) => set({ focusCarryOver: enabled }),
+
+      carryOverToWeek: (fromWeekKey, toWeekKey) => {
+        const now = new Date().toISOString()
+        set(s => {
+          const incomplete = s.focusActivities.filter(
+            a => a.weekKey === fromWeekKey && !a.isCompleted
+          )
+          // Build a set of existing titles per day in the target week
+          const existingKeys = new Set<string>()
+          s.focusActivities
+            .filter(a => a.weekKey === toWeekKey)
+            .forEach(a => existingKeys.add(`${a.dayIndex}::${a.title.toLowerCase().trim()}`))
+
+          const newActivities: FocusActivity[] = incomplete
+            .filter(a => !existingKeys.has(`${a.dayIndex}::${a.title.toLowerCase().trim()}`))
+            .map(a => ({
+              ...a,
+              id:        generateId(),
+              weekKey:   toWeekKey,
+              isCompleted: false,
+              createdAt: now,
+              updatedAt: now,
+            }))
+
+          return { focusActivities: [...s.focusActivities, ...newActivities] }
+        })
       },
 
       // ── Generic upload helper ─────────────────────────────────────────────────
