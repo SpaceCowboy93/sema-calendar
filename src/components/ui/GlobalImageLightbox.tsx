@@ -9,20 +9,30 @@ export function GlobalImageLightbox() {
   const { isOpen, images, index, close, next, prev } = useLightboxStore()
 
   // Zoom/pan refs (direct DOM manipulation for perf)
-  const scaleRef     = useRef(1)
-  const panRef       = useRef({ x: 0, y: 0 })
-  const imgWrapRef   = useRef<HTMLDivElement>(null)
+  const scaleRef   = useRef(1)
+  const panRef     = useRef({ x: 0, y: 0 })
+  const imgWrapRef = useRef<HTMLDivElement>(null)
 
-  // Swipe detection
+  // Swipe detection (single touch when NOT zoomed)
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
 
   // Pinch zoom
   const lastPinchRef = useRef<number | null>(null)
 
+  // Touch pan (single touch when zoomed)
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null)
+
+  // Mouse drag pan
+  const mouseDownRef    = useRef(false)
+  const mouseDraggedRef = useRef(false)
+  const mouseStartRef   = useRef({ x: 0, y: 0 })
+  const panAtStartRef   = useRef({ x: 0, y: 0 })
+
   const applyTransform = useCallback(() => {
     if (!imgWrapRef.current) return
     imgWrapRef.current.style.transform =
       `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${scaleRef.current})`
+    imgWrapRef.current.style.cursor = scaleRef.current > 1 ? 'grab' : 'default'
   }, [])
 
   const resetTransform = useCallback(() => {
@@ -59,33 +69,44 @@ export function GlobalImageLightbox() {
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, close, next, prev])
 
-  // Touch: swipe + pinch
+  // ── Touch: swipe + pinch + pan ──────────────────────────────────────────────
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX
       const dy = e.touches[0].clientY - e.touches[1].clientY
-      lastPinchRef.current = Math.hypot(dx, dy)
+      lastPinchRef.current  = Math.hypot(dx, dy)
       swipeStartRef.current = null
+      lastTouchRef.current  = null
     } else {
       lastPinchRef.current  = null
       swipeStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      lastTouchRef.current  = { x: e.touches[0].clientX, y: e.touches[0].clientY }
     }
   }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastPinchRef.current !== null) {
+      // Pinch-to-zoom
       const dx   = e.touches[0].clientX - e.touches[1].clientX
       const dy   = e.touches[0].clientY - e.touches[1].clientY
       const dist = Math.hypot(dx, dy)
       scaleRef.current = Math.min(5, Math.max(1, scaleRef.current * (dist / lastPinchRef.current)))
       lastPinchRef.current = dist
       applyTransform()
+    } else if (e.touches.length === 1 && scaleRef.current > 1 && lastTouchRef.current) {
+      // Single-finger pan when zoomed
+      const dx = e.touches[0].clientX - lastTouchRef.current.x
+      const dy = e.touches[0].clientY - lastTouchRef.current.y
+      panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy }
+      lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      applyTransform()
     }
   }, [applyTransform])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    lastTouchRef.current = null
     if (e.changedTouches.length === 0 || !swipeStartRef.current) return
-    if (scaleRef.current > 1.05) return // don't swipe if zoomed
+    if (scaleRef.current > 1.05) { swipeStartRef.current = null; return } // no swipe when zoomed
     const dx = e.changedTouches[0].clientX - swipeStartRef.current.x
     const dy = Math.abs(e.changedTouches[0].clientY - swipeStartRef.current.y)
     if (Math.abs(dx) > 50 && dy < 70) {
@@ -93,6 +114,38 @@ export function GlobalImageLightbox() {
     }
     swipeStartRef.current = null
   }, [next, prev])
+
+  // ── Mouse drag pan (desktop, when zoomed) ──────────────────────────────────
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (scaleRef.current <= 1) return
+    e.preventDefault()
+    mouseDownRef.current    = true
+    mouseDraggedRef.current = false
+    mouseStartRef.current   = { x: e.clientX, y: e.clientY }
+    panAtStartRef.current   = { ...panRef.current }
+    if (imgWrapRef.current) imgWrapRef.current.style.cursor = 'grabbing'
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!mouseDownRef.current) return
+    const dx = e.clientX - mouseStartRef.current.x
+    const dy = e.clientY - mouseStartRef.current.y
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) mouseDraggedRef.current = true
+    panRef.current = { x: panAtStartRef.current.x + dx, y: panAtStartRef.current.y + dy }
+    applyTransform()
+    if (imgWrapRef.current) imgWrapRef.current.style.cursor = 'grabbing'
+  }, [applyTransform])
+
+  const handleMouseUp = useCallback(() => {
+    mouseDownRef.current = false
+    if (imgWrapRef.current) imgWrapRef.current.style.cursor = scaleRef.current > 1 ? 'grab' : 'default'
+  }, [])
+
+  // Prevent close-on-click after a drag
+  const handleOverlayClick = useCallback(() => {
+    if (mouseDraggedRef.current) { mouseDraggedRef.current = false; return }
+    close()
+  }, [close])
 
   const handleZoomOut = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -132,10 +185,15 @@ export function GlobalImageLightbox() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-[300] bg-black/96 flex items-center justify-center"
-          onClick={close}
+          style={{ touchAction: 'none' }}
+          onClick={handleOverlayClick}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
         >
           {/* Image */}
           <div

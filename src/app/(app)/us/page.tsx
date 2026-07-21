@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import {
   USERS, OTHER_USER,
-  type Memory, type Countdown, type MoodType, type UserName,
+  type Memory, type Countdown, type MoodType, type UserName, type ChecklistEntry,
 } from '@/types'
 import { MOOD_CONFIG, getTodayString, cn } from '@/lib/utils'
 
@@ -488,23 +488,52 @@ function AnniversarySheet({
   const uploadPhoto     = useAppStore(s => s.uploadPhoto)
   const openLightbox    = useLightboxStore(s => s.open)
 
-  const [title,     setTitle]     = useState(countdown.title)
-  const [date,      setDate]      = useState(countdown.date)
-  const [notes,     setNotes]     = useState(countdown.notes ?? '')
-  const [checklist, setChecklist] = useState<string[]>(countdown.checklist ?? [])
-  const [newItem,   setNewItem]   = useState('')
-  const [romantic,  setRomantic]  = useState(countdown.romanticMessage ?? '')
-  const [photos,    setPhotos]    = useState<string[]>(countdown.photos ?? [])
+  const [title,    setTitle]    = useState(countdown.title)
+  const [date,     setDate]     = useState(countdown.date)
+  const [notes,    setNotes]    = useState(countdown.notes ?? '')
+  const [romantic, setRomantic] = useState(countdown.romanticMessage ?? '')
+  const [photos,   setPhotos]   = useState<string[]>(countdown.photos ?? [])
   const [uploading, setUploading] = useState(false)
-  const [dirty,     setDirty]     = useState(false)
+  const [dirty,    setDirty]    = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
+
+  // Migrate legacy checklist (string[]) → ChecklistEntry[]
+  const initEntries: ChecklistEntry[] = countdown.checklistEntries
+    ?? (countdown.checklist ?? []).map(text => ({ text, isCompleted: false }))
+  const [entries,     setEntries]     = useState<ChecklistEntry[]>(initEntries)
+  const [newItem,     setNewItem]     = useState('')
+  const [editingIdx,  setEditingIdx]  = useState<number | null>(null)
+  const [editText,    setEditText]    = useState('')
 
   function mark() { setDirty(true) }
 
-  function addCheckItem(text: string) {
+  function addEntry(text: string) {
     if (!text.trim()) return
-    setChecklist(c => [...c, text.trim()])
+    setEntries(e => [...e, { text: text.trim(), isCompleted: false }])
     setNewItem('')
+    mark()
+  }
+
+  function toggleEntry(idx: number) {
+    setEntries(e => e.map((item, i) => i === idx ? { ...item, isCompleted: !item.isCompleted } : item))
+    mark()
+  }
+
+  function startEditEntry(idx: number) {
+    setEditingIdx(idx)
+    setEditText(entries[idx].text)
+  }
+
+  function saveEditEntry() {
+    if (editingIdx === null || !editText.trim()) return
+    setEntries(e => e.map((item, i) => i === editingIdx ? { ...item, text: editText.trim() } : item))
+    setEditingIdx(null)
+    mark()
+  }
+
+  function removeEntry(idx: number) {
+    setEntries(e => e.filter((_, i) => i !== idx))
+    if (editingIdx === idx) setEditingIdx(null)
     mark()
   }
 
@@ -514,22 +543,24 @@ function AnniversarySheet({
     if (!file) return
     setUploading(true)
     const url = await uploadPhoto(`anniversaries/${countdown.id}`, file)
-    if (url) setPhotos(p => [...p, url])
+    if (url) { setPhotos(p => [...p, url]); mark() }
     setUploading(false)
-    mark()
   }
 
   function handleSave() {
     updateCountdown(countdown.id, {
-      title:          title.trim() || countdown.title,
+      title:            title.trim() || countdown.title,
       date,
-      notes:          notes || undefined,
-      checklist:      checklist.length ? checklist : undefined,
-      photos:         photos.length    ? photos    : undefined,
-      romanticMessage: romantic || undefined,
+      notes:            notes || undefined,
+      checklistEntries: entries.length ? entries : undefined,
+      photos:           photos.length  ? photos  : undefined,
+      romanticMessage:  romantic || undefined,
     })
     onClose()
   }
+
+  const doneCount  = entries.filter(e => e.isCompleted).length
+  const totalCount = entries.length
 
   const daysSince = differenceInCalendarDays(new Date(), parseISO(countdown.date))
   const isFuture  = daysSince < 0
@@ -614,29 +645,120 @@ function AnniversarySheet({
             />
           </div>
 
+          {/* ── Anniversary Preparation ── */}
           <div className="mb-3">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Things to prepare</p>
-            {checklist.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100">
-                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0" style={{ borderColor: primary }}>
-                  <Check size={9} style={{ color: primary }} />
-                </div>
-                <span className="flex-1 text-sm text-gray-700">{item}</span>
-                <button onClick={() => { setChecklist(c => c.filter((_, idx) => idx !== i)); mark() }} className="text-gray-300 active:text-red-400">
-                  <X size={13} />
-                </button>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Anniversary Preparation
+              </p>
+              {totalCount > 0 && (
+                <span className="text-[10px] font-semibold" style={{ color: primary }}>
+                  {doneCount} of {totalCount} completed
+                </span>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            {totalCount > 0 && (
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: primary }}
+                  animate={{ width: `${(doneCount / totalCount) * 100}%` }}
+                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                />
               </div>
-            ))}
+            )}
+
+            <div className="space-y-1.5">
+              <AnimatePresence initial={false}>
+                {entries.map((entry, idx) => (
+                  <motion.div
+                    key={idx}
+                    layout
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.13 }}
+                  >
+                    {editingIdx === idx ? (
+                      /* Inline edit */
+                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                        <input
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEditEntry(); if (e.key === 'Escape') setEditingIdx(null) }}
+                          autoFocus
+                          className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                        />
+                        <button onClick={saveEditEntry} disabled={!editText.trim()}
+                          className="text-xs font-bold px-2 py-1 rounded-lg text-white disabled:opacity-40"
+                          style={{ background: primary }}>
+                          Save
+                        </button>
+                        <button onClick={() => setEditingIdx(null)}
+                          className="text-xs font-medium px-2 py-1 rounded-lg bg-gray-200 text-gray-600">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      /* Display row */
+                      <div className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-opacity',
+                        entry.isCompleted ? 'bg-gray-50 opacity-70' : 'bg-gray-50'
+                      )}>
+                        {/* Toggle checkbox */}
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => toggleEntry(idx)}
+                          className={cn(
+                            'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
+                            entry.isCompleted ? 'border-transparent' : 'border-gray-300'
+                          )}
+                          style={entry.isCompleted ? { background: primary, borderColor: primary } : {}}
+                        >
+                          {entry.isCompleted && <Check size={10} color="white" strokeWidth={3} />}
+                        </motion.button>
+
+                        {/* Tap text to edit */}
+                        <button
+                          className="flex-1 text-left"
+                          onClick={() => startEditEntry(idx)}
+                          onDoubleClick={() => startEditEntry(idx)}
+                        >
+                          <span className={cn(
+                            'text-sm',
+                            entry.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                          )}>
+                            {entry.text}
+                          </span>
+                        </button>
+
+                        <button onClick={() => startEditEntry(idx)}
+                          className="text-gray-300 active:text-blue-400 p-0.5 shrink-0">
+                          <Pencil size={11} />
+                        </button>
+                        <button onClick={() => removeEntry(idx)}
+                          className="text-gray-300 active:text-red-400 p-0.5 shrink-0">
+                          <X size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
             <div className="flex gap-2 mt-2">
               <input
                 value={newItem}
                 onChange={e => setNewItem(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCheckItem(newItem) } }}
-                placeholder="Add something to prepare..."
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEntry(newItem) } }}
+                placeholder="Add something to prepare…"
                 className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-3 py-2 outline-none"
               />
               <button
-                onClick={() => addCheckItem(newItem)}
+                onClick={() => addEntry(newItem)}
                 disabled={!newItem.trim()}
                 className="w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-30"
                 style={{ background: primary }}
@@ -650,11 +772,11 @@ function AnniversarySheet({
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Suggestions 💡</p>
             <div className="flex flex-wrap gap-2">
               {ANNIVERSARY_SUGGESTIONS.map((s, i) => {
-                const already = checklist.includes(s.text)
+                const already = entries.some(e => e.text === s.text)
                 return (
                   <button
                     key={i}
-                    onClick={() => { if (!already) addCheckItem(s.text) }}
+                    onClick={() => { if (!already) addEntry(s.text) }}
                     className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium', already ? 'opacity-40' : 'active:opacity-80')}
                     style={{ background: `${primary}10`, color: already ? primary : '#6b7280', border: `1px solid ${primary}20` }}
                   >

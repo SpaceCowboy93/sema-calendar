@@ -101,6 +101,11 @@ export interface PageBackgrounds {
   us?: string
 }
 
+export interface ChecklistEntry {
+  text: string
+  isCompleted: boolean
+}
+
 export interface Countdown {
   id: string
   title: string
@@ -109,7 +114,8 @@ export interface Countdown {
   createdBy: UserName
   time?: string            // HH:MM
   notes?: string
-  checklist?: string[]
+  checklist?: string[]           // legacy — kept for backward compat
+  checklistEntries?: ChecklistEntry[] // replaces checklist
   photos?: string[]
   romanticMessage?: string
 }
@@ -216,6 +222,8 @@ export interface ShoppingList {
   photos?: string[]    // multiple base64 data URLs; photos[0] is the cover
   isCompleted?: boolean
   completedAt?: string
+  completedBy?: UserName
+  completionNote?: string
 }
 
 export type ShoppingListInput = {

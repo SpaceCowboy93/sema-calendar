@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, Clock, Plus, X, Send, FileText, Camera, Check, Trash2, Pencil } from 'lucide-react'
@@ -1349,7 +1349,6 @@ function ShoppingDetailSheet({
   const [itemName,  setItemName]  = useState('')
   const [itemQty,   setItemQty]   = useState('1')
   const [itemPrice, setItemPrice] = useState('')
-  const [itemNotes, setItemNotes] = useState('')
   const photoRef = useRef<HTMLInputElement>(null)
 
   /* inline item editing */
@@ -1359,18 +1358,30 @@ function ShoppingDetailSheet({
   const [editPrice, setEditPrice] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
+  /* completion dialog */
+  const [completionDialog, setCompletionDialog] = useState(false)
+  const [leaveNoteMode,    setLeaveNoteMode]    = useState(false)
+  const [completionNote,   setCompletionNote]   = useState(list.completionNote ?? '')
+  const prevCompletedRef = useRef(list.isCompleted ?? false)
+
+  useEffect(() => {
+    if (list.isCompleted && !prevCompletedRef.current) {
+      setCompletionDialog(true)
+    }
+    prevCompletedRef.current = list.isCompleted ?? false
+  }, [list.isCompleted])
+
   const openLightbox = useLightboxStore(s => s.open)
   const checked = list.items.filter(i => i.isChecked).length
   const total   = list.items.length
   const pct     = total > 0 ? (checked / total) * 100 : 0
   const cost    = listTotal(list)
   const photos  = effectivePhotos(list)
-  const coverUrl = photos[0]
 
   function handleAddItem() {
     if (!itemName.trim()) return
-    onAddItem(itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined)
-    setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes('')
+    onAddItem(itemName.trim(), parseInt(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
+    setItemName(''); setItemQty('1'); setItemPrice('')
   }
 
   function startEditItem(item: ShoppingItem) {
@@ -1395,8 +1406,15 @@ function ShoppingDetailSheet({
   async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     const resized = await resizeImage(file)
-    onUpdate({ photos: [...photos, resized], coverPhoto: photos[0] || resized })
+    const updated = [...photos, resized]
+    onUpdate({ photos: updated, coverPhoto: updated[0] })
     e.target.value = ''
+  }
+
+  function saveCompletionNote() {
+    onUpdate({ completionNote: completionNote.trim() || undefined })
+    setCompletionDialog(false)
+    setLeaveNoteMode(false)
   }
 
   return (
@@ -1414,69 +1432,39 @@ function ShoppingDetailSheet({
       >
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
 
-        {coverUrl ? (
-          <div className="relative rounded-t-[2rem] overflow-hidden h-36 shrink-0">
-            <img src={coverUrl} alt="" className="w-full h-full object-cover cursor-pointer" onClick={() => openLightbox(photos)} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <button onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-              <X size={16} />
-            </button>
-            <button onClick={() => photoRef.current?.click()}
-              className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-              <Camera size={14} />
-            </button>
-            <div className="absolute bottom-3 left-4 right-4">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="font-bold text-white text-base">{list.name}</p>
-                  {list.storeName && <p className="text-white/70 text-xs">📍 {list.storeName}</p>}
-                </div>
-                {cost > 0 && <p className="text-white font-bold text-lg">€{cost.toFixed(2)}</p>}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="px-5 pt-4 pb-2 shrink-0">
-            <div className="drag-handle mb-3" />
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-bold text-gray-800">{list.name}</h3>
-                  {list.isCompleted && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">✓ Completed</span>
-                  )}
-                </div>
-                {list.storeName && <p className="text-xs text-gray-400 mt-0.5">📍 {list.storeName}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => photoRef.current?.click()} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                  <Camera size={14} />
-                </button>
-                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Multiple photos gallery (if more than one) */}
-        {photos.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto px-4 py-2 shrink-0">
-            {photos.map((p, i) => (
-              <button key={i} className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden" onClick={() => openLightbox(photos, i)}>
-                <img src={p} alt="" className="w-full h-full object-cover" />
-                {i === 0 && (
-                  <span className="absolute bottom-0.5 left-0.5 text-[7px] px-1 py-0.5 rounded bg-black/50 text-white font-bold leading-none">Cover</span>
+        {/* ── Header: always minimal ── */}
+        <div className="px-5 pt-4 pb-3 shrink-0">
+          <div className="drag-handle mb-3" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <h3 className="text-base font-bold text-gray-800 truncate">{list.name}</h3>
+                {list.isCompleted && (
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">✓ Done</span>
                 )}
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-gray-400 flex-wrap">
+                {list.storeName && <span>📍 {list.storeName}</span>}
+                {list.date     && <span>🗓 {list.date}</span>}
+                {cost > 0      && <span className="font-semibold text-gray-600">€{cost.toFixed(2)} total</span>}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button onClick={() => photoRef.current?.click()}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 active:bg-gray-200">
+                <Camera size={14} />
               </button>
-            ))}
+              <button onClick={onClose}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:bg-gray-200">
+                <X size={16} />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
 
-        <div className="px-5 py-3 shrink-0 border-b border-gray-100">
-          <div className="flex items-center gap-3 mb-1.5">
+        {/* ── Progress ── */}
+        <div className="px-5 pb-3 shrink-0 border-b border-gray-100">
+          <div className="flex items-center gap-3">
             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
@@ -1485,37 +1473,47 @@ function ShoppingDetailSheet({
                 transition={{ type: 'spring', stiffness: 100, damping: 18 }}
               />
             </div>
-            <span className="text-xs font-bold shrink-0" style={{ color: list.isCompleted ? '#10b981' : '#9ca3af' }}>
+            <span className="text-xs font-bold shrink-0 tabular-nums"
+              style={{ color: list.isCompleted ? '#10b981' : '#9ca3af' }}>
               {checked}/{total}
             </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-400">{total} item{total !== 1 ? 's' : ''}</p>
-            {cost > 0 && (
-              <motion.p key={cost.toFixed(2)} initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-                className="text-sm font-bold text-gray-800">
-                €{cost.toFixed(2)} total
-              </motion.p>
-            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+
+          {/* Completion banner */}
           {list.isCompleted && (
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className="text-center py-3 rounded-2xl"
+              className="rounded-2xl px-4 py-3"
               style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0' }}
             >
-              <p className="text-sm font-bold text-emerald-600">🎉 All done! Great shopping trip.</p>
+              <p className="text-sm font-bold text-emerald-600">🎉 Shopping completed!</p>
               {list.completedAt && (
                 <p className="text-[10px] text-emerald-400 mt-0.5">
-                  Completed {new Date(list.completedAt).toLocaleDateString()}
+                  {new Date(list.completedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {list.completedBy ? ` · by ${list.completedBy}` : ''}
                 </p>
+              )}
+              {list.completionNote ? (
+                <div className="mt-2 pt-2 border-t border-emerald-100">
+                  <p className="text-[11px] text-emerald-700 leading-relaxed italic">"{list.completionNote}"</p>
+                  <button
+                    onClick={() => { setLeaveNoteMode(true); setCompletionDialog(true) }}
+                    className="text-[10px] text-emerald-500 font-semibold mt-1 active:opacity-70"
+                  >Edit note</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setLeaveNoteMode(true); setCompletionDialog(true) }}
+                  className="mt-1.5 text-[10px] text-emerald-500 font-semibold active:opacity-70"
+                >+ Add a note about this trip</button>
               )}
             </motion.div>
           )}
 
+          {/* Add-item row */}
           <div className="bg-gray-50 rounded-2xl p-3">
             <div className="flex items-center gap-2">
               <input
@@ -1536,6 +1534,7 @@ function ShoppingDetailSheet({
             </div>
           </div>
 
+          {/* Items list */}
           <AnimatePresence initial={false}>
             {list.items.map(item => (
               <motion.div
@@ -1580,7 +1579,7 @@ function ShoppingDetailSheet({
                     </div>
                   </div>
                 ) : (
-                  /* Display row */
+                  /* Display row — tap content or pencil to edit */
                   <div className={cn(
                     'flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors',
                     item.isChecked ? 'opacity-55 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
@@ -1594,7 +1593,12 @@ function ShoppingDetailSheet({
                     >
                       {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
                     </button>
-                    <div className="flex-1 min-w-0">
+                    {/* Tappable content area — opens inline edit */}
+                    <button
+                      className="flex-1 min-w-0 text-left"
+                      onClick={() => startEditItem(item)}
+                      onDoubleClick={() => startEditItem(item)}
+                    >
                       <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
                         {item.name}
                       </p>
@@ -1608,7 +1612,7 @@ function ShoppingDetailSheet({
                         )}
                         {item.notes && <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>}
                       </div>
-                    </div>
+                    </button>
                     <button onClick={() => startEditItem(item)} className="text-gray-300 active:text-blue-400 p-1 shrink-0">
                       <Pencil size={12} />
                     </button>
@@ -1624,6 +1628,27 @@ function ShoppingDetailSheet({
           {list.items.length === 0 && (
             <p className="text-center text-xs text-gray-400 py-6">No items yet — add one above</p>
           )}
+
+          {/* Photos section */}
+          {photos.length > 0 && (
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
+                <button onClick={() => photoRef.current?.click()}
+                  className="text-[10px] font-semibold text-gray-400 active:opacity-70 flex items-center gap-0.5">
+                  <Camera size={11} /> Add
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {photos.map((p, i) => (
+                  <button key={i} onClick={() => openLightbox(photos, i)}
+                    className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden active:opacity-80">
+                    <img src={p} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-5 pb-10 pt-3 shrink-0 border-t border-gray-100">
@@ -1635,6 +1660,81 @@ function ShoppingDetailSheet({
           </button>
         </div>
       </motion.div>
+
+      {/* ── Completion dialog ── */}
+      <AnimatePresence>
+        {completionDialog && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
+              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6"
+            />
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.88, opacity: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              className="fixed inset-0 z-[70] flex items-center justify-center p-6 pointer-events-none"
+            >
+              <div
+                className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal pointer-events-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                {!leaveNoteMode ? (
+                  <>
+                    <div className="text-center mb-5">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: 2, duration: 0.45 }}
+                        className="text-4xl mb-3"
+                      >🎉</motion.div>
+                      <h3 className="text-base font-bold text-gray-800 mb-1">Shopping completed!</h3>
+                      <p className="text-sm text-gray-400 leading-relaxed">
+                        Would you like to leave a note about this shopping trip?
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setCompletionDialog(false) }}
+                        className="flex-1 py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold active:opacity-80"
+                      >Not Now</button>
+                      <button
+                        onClick={() => setLeaveNoteMode(true)}
+                        className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold active:opacity-80"
+                        style={{ background: RED }}
+                      >Leave Note</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base font-bold text-gray-800">Trip note 🛍️</h3>
+                      <button onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
+                        className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <textarea
+                      value={completionNote}
+                      onChange={e => setCompletionNote(e.target.value)}
+                      placeholder="How did the trip go? Any notes for next time…"
+                      rows={4}
+                      autoFocus
+                      className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-2xl px-4 py-3 outline-none resize-none mb-4 leading-relaxed"
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={saveCompletionNote}
+                      className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
+                      style={{ background: RED }}
+                    >Save Note</motion.button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   )
 }

@@ -748,6 +748,7 @@ export const useAppStore = create<AppState>()(
               completedAt: allChecked
                 ? (l.isCompleted && l.completedAt ? l.completedAt : new Date().toISOString())
                 : undefined,
+              completedBy: allChecked ? currentUser : undefined,
             }
           }),
         }))
