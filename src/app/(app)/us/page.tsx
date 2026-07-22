@@ -581,27 +581,24 @@ export default function UsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-36">
+    <div className="min-h-screen pb-36 relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#f9a8d4', size: 300, top: '-60px', left: '-40px',  duration: 20, delay: 0   },
-        { color: '#fdba74', size: 220, top: '38%',   left: '55%',    duration: 25, delay: 5   },
-        { color: '#c4b5fd', size: 200, top: '72%',   left: '10%',    duration: 18, delay: 9   },
+        { color: '#f9a8d4', size: 320, top: '-60px', left: '-40px',  duration: 11, delay: 0   },
+        { color: '#fdba74', size: 240, top: '38%',   left: '55%',    duration: 14, delay: 2   },
+        { color: '#c4b5fd', size: 220, top: '72%',   left: '10%',    duration: 10, delay: 5   },
       ]} />
 
-      {/* Header */}
-      <div
-        className="px-5 pt-14 pb-4"
-        style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
-      >
+      {/* ── Header ── */}
+      <div className="px-5 pt-14 pb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Us 💕</h1>
-            <p className="text-sm text-gray-400">our story, our space</p>
+            <p className="text-sm text-gray-500">our story, our space</p>
           </div>
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 bg-gray-100/80 active:bg-gray-200"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
           >
             <LogOut size={14} /> Sign out
           </button>

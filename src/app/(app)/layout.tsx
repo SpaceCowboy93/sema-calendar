@@ -67,8 +67,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Floating action button */}
       <motion.button
         whileTap={{ scale: 0.88 }}
-        animate={{ opacity: scrolling ? 0.35 : 1 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+        animate={{ opacity: scrolling ? 0.35 : 1, rotate: quickAddOpen ? 45 : 0 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         onClick={() => setQuickAddOpen(true)}
         className="fixed bottom-20 right-5 z-30 w-14 h-14 rounded-full
                    flex items-center justify-center text-white backdrop-blur-sm"

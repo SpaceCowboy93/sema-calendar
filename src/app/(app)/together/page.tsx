@@ -1,51 +1,91 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format, isSameMonth, isToday, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, X, Send } from 'lucide-react'
+import { format, isSameMonth, isToday, parseISO, differenceInCalendarDays } from 'date-fns'
+import { ChevronLeft, ChevronRight, Clock, Search, X, Send } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS, OTHER_USER, type UserName, type CalendarEvent } from '@/types'
+import {
+  USERS, OTHER_USER, type UserName, type CalendarEvent, type Countdown,
+} from '@/types'
 import { EventModal } from '@/components/calendar/EventModal'
 import {
   getCalendarDays, toDateString, formatTime,
   getTodayString, cn, EVENT_COLOR_CLASS,
 } from '@/lib/utils'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
-import { WeeklyFocusSection } from '@/components/weekly-focus/WeeklyFocusSection'
+import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
+import {
+  CATEGORY_DEFS, type CategoryType,
+  CategoryHubSheet, ShoppingHubSheet,
+} from '@/components/ui/CategoryHub'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
+type HomeSearchHit = {
+  id: string
+  typeLabel: string
+  hex: string
+  title: string
+  sub: string
+  onOpen: () => void
+}
+
 export default function TogetherPage() {
-  const currentUser  = useAppStore(s => s.currentUser)!
-  const events       = useAppStore(s => s.events)
-  const partnerNotes = useAppStore(s => s.partnerNotes)
-  const markRead     = useAppStore(s => s.markPartnerNoteRead)
-  const sendNote     = useAppStore(s => s.sendPartnerNote)
+  const currentUser     = useAppStore(s => s.currentUser)!
+  const events          = useAppStore(s => s.events)
+  const partnerNotes    = useAppStore(s => s.partnerNotes)
+  const markRead        = useAppStore(s => s.markPartnerNoteRead)
+  const sendNote        = useAppStore(s => s.sendPartnerNote)
+  const todos           = useAppStore(s => s.todos)
+  const goals           = useAppStore(s => s.goals)
+  const wishlist        = useAppStore(s => s.wishlistItems)
+  const shoppingLists   = useAppStore(s => s.shoppingLists)
+  const countdowns      = useAppStore(s => s.countdowns)
+  const deleteCountdown = useAppStore(s => s.deleteCountdown)
 
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
   const lightBg     = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
 
+  // Greeting (once-daily animation)
+  const [greetingReady, setGreetingReady] = useState(false)
+  const [greetingAnim,  setGreetingAnim]  = useState(false)
+
+  useEffect(() => {
+    const today = getTodayString()
+    const seen  = localStorage.getItem('sema-greeting-date')
+    setGreetingReady(true)
+    setGreetingAnim(seen !== today)
+    if (seen !== today) localStorage.setItem('sema-greeting-date', today)
+  }, [])
+
+  function getGreeting() {
+    const h = new Date().getHours()
+    if (h >= 5 && h < 12) return 'Good morning'
+    if (h >= 12 && h < 18) return 'Good afternoon'
+    if (h >= 18 && h < 22) return 'Good evening'
+    return 'Good night'
+  }
+
   // Calendar state
-  const [viewDate, setViewDate]         = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(getTodayString())
-  const [modalOpen, setModalOpen]       = useState(false)
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [viewDate,      setViewDate]      = useState(new Date())
+  const [selectedDate,  setSelectedDate]  = useState(getTodayString())
+  const [modalOpen,     setModalOpen]     = useState(false)
+  const [editingEvent,  setEditingEvent]  = useState<CalendarEvent | null>(null)
 
   // Double-tap to add event
   const lastTapRef     = useRef(0)
   const lastTapDateRef = useRef('')
 
   function handleDayTap(dateStr: string) {
-    const now      = Date.now()
-    const diff     = now - lastTapRef.current
-    const dayEvts  = eventsByDate[dateStr] ?? []
+    const now     = Date.now()
+    const diff    = now - lastTapRef.current
+    const dayEvts = eventsByDate[dateStr] ?? []
 
     if (diff < 300 && diff > 0 && lastTapDateRef.current === dateStr) {
-      // Double-tap → create new event on any day
       lastTapRef.current     = 0
       lastTapDateRef.current = ''
       setSelectedDate(dateStr)
@@ -59,18 +99,23 @@ export default function TogetherPage() {
     setSelectedDate(dateStr)
 
     if (dayEvts.length === 1) {
-      // Single event → open it immediately
       setEditingEvent(dayEvts[0])
       setModalOpen(true)
-      lastTapRef.current = 0 // prevent accidental double-tap
+      lastTapRef.current = 0
     }
   }
 
   // Note sheet
-  const [noteOpen, setNoteOpen]       = useState(false)
-  const [noteText, setNoteText]       = useState('')
-  const [noteSent, setNoteSent]       = useState(false)
+  const [noteOpen,    setNoteOpen]    = useState(false)
+  const [noteText,    setNoteText]    = useState('')
+  const [noteSent,    setNoteSent]    = useState(false)
   const [readingNote, setReadingNote] = useState(false)
+
+  // Search
+  const [query,             setQuery]             = useState('')
+  const [openCategory,      setOpenCategory]      = useState<CategoryType | null>(null)
+  const [selectedCountdown, setSelectedCountdown] = useState<Countdown | null>(null)
+  const isSearching = query.trim().length > 0
 
   const unreadNote = partnerNotes.find(n => n.to === currentUser && !n.isRead) ?? null
 
@@ -97,6 +142,77 @@ export default function TogetherPage() {
     })
   }, [eventsByDate, selectedDate])
 
+  /* ── Search across all record types ─────────────────────────────────── */
+  const searchResults = useMemo<HomeSearchHit[]>(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    const hits: HomeSearchHit[] = []
+
+    const push = (
+      id: string, typeLabel: string, hex: string,
+      title: string, sub: string, onOpen: () => void,
+    ) => {
+      if (title.toLowerCase().includes(q) || sub.toLowerCase().includes(q))
+        hits.push({ id, typeLabel, hex, title, sub, onOpen })
+    }
+
+    events.forEach(e =>
+      push(e.id, 'Moment', '#fbbf24', e.title, e.notes ?? e.date,
+        () => { setEditingEvent(e); setModalOpen(true) }))
+    todos.forEach(t =>
+      push(t.id, 'Plan', '#34d399', t.title, t.notes ?? t.date ?? '',
+        () => setOpenCategory('plans')))
+    goals.forEach(g =>
+      push(g.id, 'Dream', '#60a5fa', g.title, g.notes ?? g.targetDate ?? '',
+        () => setOpenCategory('dreams')))
+    wishlist.forEach(w =>
+      push(w.id, 'Wish', '#a78bfa', w.title, w.notes ?? '',
+        () => setOpenCategory('wishes')))
+    shoppingLists.forEach(l =>
+      push(l.id, 'Shopping', '#ef4444', l.name, l.storeName ?? l.notes ?? '',
+        () => setOpenCategory('shopping')))
+    countdowns.forEach(c =>
+      push(c.id, 'Countdown', '#ec4899', c.title, c.notes ?? c.date,
+        () => setSelectedCountdown(c)))
+
+    return hits.slice(0, 20)
+  }, [query, events, todos, goals, wishlist, shoppingLists, countdowns])
+
+  /* ── Category stats ──────────────────────────────────────────────────── */
+  const catStats = useMemo(() => {
+    const plansActive    = todos.filter(t => !t.isCompleted).length
+    const plansDone      = todos.filter(t => t.isCompleted).length
+    const dreamsActive   = goals.filter(g => !g.isCompleted).length
+    const dreamsAchieved = goals.filter(g => g.isCompleted).length
+    const wishesActive   = wishlist.filter(w => !w.isCompleted).length
+    const wishesDone     = wishlist.filter(w => w.isCompleted).length
+    const shopActive     = shoppingLists.filter(l => !l.isCompleted).length
+
+    const mm = getTodayString().slice(0, 7)
+    const shopMonth = shoppingLists
+      .filter(l => (l.completedAt ?? l.updatedAt ?? l.createdAt).slice(0, 7) === mm)
+      .reduce((s, l) => s + l.items.reduce((a, i) => a + (i.price ?? 0) * i.quantity, 0), 0)
+
+    let lastMomentLabel: string | null = null
+    if (events.length > 0) {
+      const lastDate = [...events].sort((a, b) => b.date.localeCompare(a.date))[0].date
+      const d = differenceInCalendarDays(new Date(), parseISO(lastDate))
+      lastMomentLabel =
+        d === 0 ? 'Last: today' :
+        d === 1 ? 'Last: yesterday' :
+        d > 0 && d <= 30 ? `Last: ${d} days ago` :
+        `Last: ${format(parseISO(lastDate), 'MMM d')}`
+    }
+
+    return {
+      plans:    { line1: `${plansActive} active`,   line2: plansDone > 0 ? `${plansDone} done` : null },
+      dreams:   { line1: `${dreamsActive} saved`,   line2: dreamsAchieved > 0 ? `${dreamsAchieved} achieved` : null },
+      wishes:   { line1: `${wishesActive} wishes`,  line2: wishesDone > 0 ? `${wishesDone} fulfilled` : null },
+      shopping: { line1: `${shopActive} ${shopActive === 1 ? 'list' : 'lists'}`, line2: shopMonth > 0 ? `€${Math.round(shopMonth)} this month` : null },
+      moments:  { line1: `${events.length} captured`, line2: lastMomentLabel },
+    } as Record<CategoryType, { line1: string; line2: string | null }>
+  }, [todos, goals, wishlist, shoppingLists, events])
+
   function handleSendNote() {
     if (!noteText.trim()) return
     sendNote(noteText.trim())
@@ -105,12 +221,12 @@ export default function TogetherPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#6ee7b7', size: 320, top: '-80px', left: '-60px',  duration: 18, delay: 0   },
-        { color: '#7dd3fc', size: 260, top: '30%',   left: '60%',    duration: 22, delay: 4   },
-        { color: '#a5f3fc', size: 200, top: '65%',   left: '-30px',  duration: 16, delay: 8   },
+        { color: '#6ee7b7', size: 340, top: '-80px', left: '-60px',  duration: 10, delay: 0 },
+        { color: '#7dd3fc', size: 280, top: '30%',   left: '60%',    duration: 13, delay: 2 },
+        { color: '#a5f3fc', size: 220, top: '65%',   left: '-30px',  duration: 9,  delay: 5 },
       ]} />
 
       {/* ── Calendar header ── */}
@@ -122,6 +238,22 @@ export default function TogetherPage() {
             : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
         }}
       >
+        {/* Compact daily greeting */}
+        {greetingReady && (
+          <motion.div
+            initial={greetingAnim ? { opacity: 0, y: -6 } : { opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="mb-4"
+          >
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">SeMa</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {getGreeting()}, {USERS[currentUser].displayName} ❤️
+            </p>
+            <p className="text-[11px] text-gray-400">{format(new Date(), 'EEEE, MMMM d')}</p>
+          </motion.div>
+        )}
+
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -309,14 +441,109 @@ export default function TogetherPage() {
           </AnimatePresence>
         </div>
 
+        {/* ── Search ── */}
+        <div className="pt-1">
+          <div className="relative mb-3">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search events, plans, dreams, wishes…"
+              className="w-full bg-white rounded-2xl shadow-card pl-9 pr-9 py-3 text-sm text-gray-700
+                         placeholder:text-gray-300 outline-none"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 active:text-gray-600"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <AnimatePresence>
+            {isSearching && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+                className="space-y-2"
+              >
+                {searchResults.length === 0 ? (
+                  <div className="bg-white rounded-2xl shadow-card px-4 py-6 text-center">
+                    <p className="text-sm text-gray-400">No results for &ldquo;{query}&rdquo;</p>
+                    <p className="text-xs text-gray-300 mt-1">Try a different keyword</p>
+                  </div>
+                ) : (
+                  searchResults.map(hit => (
+                    <motion.button
+                      key={`${hit.typeLabel}-${hit.id}`}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={hit.onOpen}
+                      className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left"
+                    >
+                      <div
+                        className="w-1 h-8 rounded-full shrink-0"
+                        style={{ background: hit.hex }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{hit.title}</p>
+                        {hit.sub && (
+                          <p className="text-xs text-gray-400 truncate">{hit.sub}</p>
+                        )}
+                      </div>
+                      <span
+                        className="text-[10px] font-semibold uppercase tracking-wide shrink-0 px-2 py-0.5 rounded-full"
+                        style={{ background: `${hit.hex}18`, color: hit.hex }}
+                      >
+                        {hit.typeLabel}
+                      </span>
+                    </motion.button>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-      {/* ── Weekly Focus ── */}
-      <div className="pt-4">
-        <WeeklyFocusSection />
+        {/* ── Category Dashboard ── */}
+        {!isSearching && (
+          <div className="grid grid-cols-2 gap-2.5 pt-1 pb-2">
+            {CATEGORY_DEFS.map((cat, i) => {
+              const st = catStats[cat.id]
+              return (
+                <motion.button
+                  key={cat.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.2, ease: 'easeOut' }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setOpenCategory(cat.id)}
+                  className="rounded-2xl px-3.5 py-3 text-left overflow-hidden"
+                  style={{
+                    background: `${cat.hex}12`,
+                    boxShadow: `0 2px 12px ${cat.hex}1a`,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.hex }} />
+                    <p className="text-[13px] font-bold text-gray-800 leading-none">{cat.label}</p>
+                  </div>
+                  <p className="text-xs font-semibold leading-tight" style={{ color: cat.hex }}>{st.line1}</p>
+                  {st.line2 && <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{st.line2}</p>}
+                </motion.button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* ── EventModal — edit existing calendar event only ── */}
+      {/* ── EventModal — edit existing calendar event ── */}
       <EventModal
         isOpen={modalOpen && !!editingEvent}
         onClose={() => { setModalOpen(false); setEditingEvent(null) }}
@@ -324,13 +551,49 @@ export default function TogetherPage() {
         event={editingEvent}
       />
 
-      {/* ── FullCreateSheet — create new items with category picker ── */}
+      {/* ── FullCreateSheet — create new items ── */}
       <FullCreateSheet
         open={modalOpen && !editingEvent}
         onClose={() => setModalOpen(false)}
         primary={primary}
         initialDate={selectedDate}
       />
+
+      {/* ── Category hub sheets (opened from search) ── */}
+      <AnimatePresence>
+        {openCategory && openCategory !== 'shopping' && (
+          <CategoryHubSheet
+            key={openCategory}
+            type={openCategory as 'wishes' | 'dreams' | 'moments' | 'plans'}
+            primary={primary}
+            currentUser={currentUser}
+            onClose={() => setOpenCategory(null)}
+            onEditMoment={ev => { setEditingEvent(ev); setModalOpen(true); setOpenCategory(null) }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {openCategory === 'shopping' && (
+          <ShoppingHubSheet
+            primary={primary}
+            currentUser={currentUser}
+            onClose={() => setOpenCategory(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── AnniversarySheet (opened from search) ── */}
+      <AnimatePresence>
+        {selectedCountdown && (
+          <AnniversarySheet
+            countdown={selectedCountdown}
+            primary={primary}
+            onClose={() => setSelectedCountdown(null)}
+            onDelete={() => { deleteCountdown(selectedCountdown.id); setSelectedCountdown(null) }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Note compose sheet ── */}
       <AnimatePresence>
@@ -432,4 +695,3 @@ export default function TogetherPage() {
     </div>
   )
 }
-

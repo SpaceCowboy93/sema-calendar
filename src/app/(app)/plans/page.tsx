@@ -188,12 +188,12 @@ export default function FinancePage() {
   const remaining     = (currentMonth?.income ?? 0) - totalExpenses
 
   return (
-    <div className="min-h-screen pb-32 relative">
+    <div className="min-h-screen pb-32 relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#6ee7b7', size: 280, top: '-50px', left: '-40px',  duration: 19, delay: 0   },
-        { color: '#fcd34d', size: 220, top: '35%',   left: '58%',    duration: 23, delay: 6   },
-        { color: '#34d399', size: 190, top: '70%',   left: '20%',    duration: 15, delay: 10  },
+        { color: '#6ee7b7', size: 300, top: '-50px', left: '-40px',  duration: 11, delay: 0   },
+        { color: '#fcd34d', size: 240, top: '35%',   left: '58%',    duration: 13, delay: 2   },
+        { color: '#34d399', size: 210, top: '70%',   left: '20%',    duration: 9,  delay: 5   },
       ]} />
 
       <div className="relative z-10">
