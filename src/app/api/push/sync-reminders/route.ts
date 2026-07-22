@@ -11,13 +11,14 @@ function adminClient() {
 // Maps the stable offset label to a human-readable message prefix.
 // Labels match the ReminderEntry.label values produced by usePushNotifications.ts.
 const LABEL_PREFIX: Record<string, string> = {
-  prev_day_8pm: 'Tomorrow',
-  '1h_before':  '1 hour',
+  prev_day_8pm:  'Tomorrow',
+  '1h_before':   '1 hour',
   '5min_before': '5 min',
-  at_time:      '',       // no prefix — fire exactly at event time
-  '10min':      'In 10 min',
-  '30min':      'In 30 min',
-  '1h':         'In 1 hour',
+  at_time:       '',          // no prefix — fire exactly at event time
+  '5min':        'In 5 min',
+  '10min':       'In 10 min',
+  '30min':       'In 30 min',
+  '1h':          'In 1 hour',
 }
 
 function labelToMessage(label: string, title: string): string {

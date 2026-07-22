@@ -31,6 +31,7 @@ const PRIORITY_OPTIONS: { value: FocusPriority | 'none'; label: string }[] = [
 const REMINDER_OPTIONS: { value: FocusReminder; label: string }[] = [
   { value: 'none',    label: 'None'          },
   { value: 'at_time', label: 'At time'       },
+  { value: '5min',    label: '5 min before'  },
   { value: '10min',   label: '10 min before' },
   { value: '30min',   label: '30 min before' },
   { value: '1h',      label: '1 hr before'   },

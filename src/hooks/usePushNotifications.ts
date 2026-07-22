@@ -148,6 +148,7 @@ function computeReminders(dateStr: string, timeStr: string): ReminderEntry[] {
 
 const FOCUS_OFFSET_MS: Record<string, number> = {
   at_time: 0,
+  '5min':  5  * 60 * 1000,
   '10min': 10 * 60 * 1000,
   '30min': 30 * 60 * 1000,
   '1h':    60 * 60 * 1000,
@@ -235,66 +236,75 @@ export function usePushNotifications() {
   const [swReady,     setSwReady]     = useState(false)
   const [serverSaved, setServerSaved] = useState<boolean | null>(null)
   const [endpoint,    setEndpoint]    = useState<string | null>(null)
+  // initialized: true once the async init effect has fully settled.
+  // The card shows a "Checking…" state until this is true.
+  const [initialized, setInitialized] = useState(false)
 
   // Initialise: register SW, detect existing subscription, check server record
   useEffect(() => {
     if (typeof window === 'undefined') return
+    setInitialized(false)
 
     ;(async () => {
-      LOG('Init — userAgent:', navigator.userAgent.slice(0, 80))
-      LOG('serviceWorker supported:', 'serviceWorker' in navigator)
-      LOG('PushManager supported:',   'PushManager' in window)
-      LOG('Notification.permission:',
-        typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
-      LOG('currentUser:', currentUser)
+      try {
+        LOG('Init — userAgent:', navigator.userAgent.slice(0, 80))
+        LOG('serviceWorker supported:', 'serviceWorker' in navigator)
+        LOG('PushManager supported:',   'PushManager' in window)
+        LOG('Notification.permission:',
+          typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
+        LOG('currentUser:', currentUser)
 
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        LOG('Push not supported on this platform')
-        setStatus('unsupported')
-        return
-      }
-
-      if (Notification.permission === 'denied') {
-        LOG('Notification permission is denied')
-        setStatus('denied')
-        return
-      }
-
-      const reg = await registerSW()
-      if (!reg) {
-        ERR('SW registration failed — showing degraded UI')
-        setSwError('Service worker failed to register. Try refreshing.')
-        setStatus('default')
-        return
-      }
-      setSwReady(true)
-
-      const sub = await getCurrentSub()
-      if (sub) {
-        LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
-        setStatus('subscribed')
-        setEndpoint(sub.endpoint)
-        // Re-send identity to SW in case it was restarted (e.g. browser update)
-        if (currentUser) {
-          notifySWOfUser(currentUser)
-          const saved = await fetchServerSaved(currentUser)
-          setServerSaved(saved)
-          if (!saved) {
-            LOG('Server has no subscription for', currentUser,
-              '— device may be registered under wrong user')
-          }
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          LOG('Push not supported on this platform')
+          setStatus('unsupported')
+          return
         }
-        return
-      }
 
-      setEndpoint(null)
-      setServerSaved(null)
-      if (Notification.permission === 'granted') {
-        LOG('Permission granted but no subscription — showing "Connect this device"')
-        setStatus('granted')
-      } else {
-        LOG('Permission not yet requested — showing "Enable Notifications"')
-        setStatus('default')
+        if (Notification.permission === 'denied') {
+          LOG('Notification permission is denied')
+          setStatus('denied')
+          return
+        }
+
+        const reg = await registerSW()
+        if (!reg) {
+          ERR('SW registration failed — showing degraded UI')
+          setSwError('Service worker failed to register. Try refreshing.')
+          setStatus('default')
+          return
+        }
+        setSwReady(true)
+
+        const sub = await getCurrentSub()
+        if (sub) {
+          LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
+          setStatus('subscribed')
+          setEndpoint(sub.endpoint)
+          // Re-send identity to SW in case it was restarted (e.g. browser update)
+          if (currentUser) {
+            notifySWOfUser(currentUser)
+            const saved = await fetchServerSaved(currentUser)
+            setServerSaved(saved)
+            if (!saved) {
+              LOG('Server has no subscription for', currentUser,
+                '— device may be registered under wrong user or stale endpoint')
+            }
+          }
+          return
+        }
+
+        setEndpoint(null)
+        setServerSaved(null)
+        if (Notification.permission === 'granted') {
+          LOG('Permission granted but no subscription — showing "Connect this device"')
+          setStatus('granted')
+        } else {
+          LOG('Permission not yet requested — showing "Enable Notifications"')
+          setStatus('default')
+        }
+      } finally {
+        // Always mark initialized so the card can show the correct state
+        setInitialized(true)
       }
     })()
   }, [currentUser])
@@ -348,6 +358,15 @@ export function usePushNotifications() {
     await syncReminders(triggerUser)
     await syncReminders(other)
   }, [syncReminders])
+
+  // Auto-sync reminders once when the device is fully subscribed and confirmed by server.
+  // This ensures planner/event reminders are current after every page load.
+  useEffect(() => {
+    if (status === 'subscribed' && serverSaved === true && currentUser) {
+      LOG('Auto-sync reminders for confirmed subscribed device:', currentUser)
+      syncBothUsers(currentUser as UserName).catch(() => {})
+    }
+  }, [status, serverSaved, currentUser, syncBothUsers])
 
   // ── Enable ──────────────────────────────────────────────────────────────────
 
@@ -519,6 +538,7 @@ export function usePushNotifications() {
     loading,
     serverSaved,
     endpoint,
+    initialized,
     enable,
     disable,
     reconnect,

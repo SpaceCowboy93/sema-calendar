@@ -100,7 +100,7 @@ export interface ChecklistEntry {
   isCompleted: boolean
 }
 
-export type FocusReminder = 'none' | 'at_time' | '10min' | '30min' | '1h'
+export type FocusReminder = 'none' | 'at_time' | '5min' | '10min' | '30min' | '1h'
 export type FocusPriority = 'low' | 'medium' | 'high'
 
 export interface Countdown {
