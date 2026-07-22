@@ -20,6 +20,7 @@ import {
   CategoryHubSheet, ShoppingHubSheet,
 } from '@/components/ui/CategoryHub'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
+import { NotificationPromptCard } from '@/components/NotificationPromptCard'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -253,6 +254,9 @@ export default function TogetherPage() {
             <p className="text-[11px] text-gray-400">{format(new Date(), 'EEEE, MMMM d')}</p>
           </motion.div>
         )}
+
+        {/* Notification prompt — visible only until this device is subscribed */}
+        <NotificationPromptCard primary={primary} />
 
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-3">

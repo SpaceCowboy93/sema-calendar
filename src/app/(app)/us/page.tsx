@@ -11,7 +11,6 @@ import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
-import { NotificationSetup } from '@/components/NotificationSetup'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
@@ -879,7 +878,7 @@ export default function UsPage() {
         )}
 
         {/* ── 7. Relationship Stats ── */}
-        <section>
+        <section className="pb-8">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Relationship Stats</h2>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-white rounded-2xl shadow-card p-4 text-center">
@@ -914,12 +913,6 @@ export default function UsPage() {
             </div>
             <p className="text-2xl font-bold" style={{ color: primary }}>{boomBoomCount}</p>
           </motion.button>
-        </section>
-
-        {/* ── 8. Notifications ── */}
-        <section className="pb-8">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">🔔 Notifications</h2>
-          <NotificationSetup primary={primary} />
         </section>
 
       </div>
