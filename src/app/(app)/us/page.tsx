@@ -7,7 +7,8 @@ import {
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
-import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
+import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
@@ -265,9 +266,11 @@ function MemorySheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
-        <div className="px-5 pt-4 pb-12">
+        {/* Non-scrolling header */}
+        <div className="px-5 pt-4 shrink-0">
           <div className="drag-handle mb-4" />
 
           <div className="flex items-center justify-between mb-4">
@@ -278,7 +281,10 @@ function MemorySheet({
               <X size={16} />
             </button>
           </div>
+        </div>
 
+        {/* Scrollable form content */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
           {/* Title */}
           <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
@@ -401,7 +407,7 @@ function MemorySheet({
           </div>
 
           {/* Photos */}
-          <div className="mb-5">
+          <div className="mb-2">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
               <button
@@ -431,8 +437,10 @@ function MemorySheet({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Actions */}
+        {/* Pinned action footer */}
+        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
           <div className="flex gap-2">
             {isEdit && onDelete && (
               <button
@@ -589,21 +597,21 @@ export default function UsPage() {
         { color: '#c4b5fd', size: 220, top: '72%',   left: '10%',    duration: 10, delay: 5   },
       ]} />
 
-      {/* ── Header ── */}
-      <div className="px-5 pt-14 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Us 💕</h1>
-            <p className="text-sm text-gray-500">our story, our space</p>
-          </div>
+      <PageHeader
+        icon={Heart}
+        iconColor="#ec4899"
+        iconBg="rgba(244,114,182,0.15)"
+        title="Us"
+        subtitle="Our story, our space"
+        action={
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
           >
             <LogOut size={14} /> Sign out
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="px-5 pt-4 space-y-8">
 
@@ -931,7 +939,7 @@ export default function UsPage() {
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
-              <div className="px-5 pt-4 pb-10">
+              <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle mb-5" />
                 <div className="text-center mb-6">
                   <span className="text-4xl">🛏️</span>
@@ -1003,7 +1011,7 @@ export default function UsPage() {
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
-              <div className="px-5 pt-4 pb-10">
+              <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle" />
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-base font-bold text-gray-800">How are you feeling?</h3>
@@ -1115,7 +1123,7 @@ export default function UsPage() {
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
               className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
-              <div className="px-5 pt-4 pb-10">
+              <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle mb-4" />
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-bold text-gray-800">New Milestone</h3>

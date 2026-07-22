@@ -844,11 +844,10 @@ function FinanceCategoryEditorSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
-        style={{ maxHeight: '90vh' }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-        <div className="flex flex-col" style={{ maxHeight: '90vh' }}>
 
           {/* Fixed header */}
           <div className="px-5 pt-4 pb-3 shrink-0">
@@ -865,7 +864,7 @@ function FinanceCategoryEditorSheet({
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-5 pb-2 space-y-3">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-2 space-y-3">
 
             {/* Planned Budget */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
@@ -966,7 +965,7 @@ function FinanceCategoryEditorSheet({
           </div>
 
           {/* Fixed footer */}
-          <div className="px-5 pt-3 pb-10 border-t border-gray-100 shrink-0">
+          <div className="px-5 pt-3 pb-sheet-footer border-t border-gray-100 shrink-0">
             <button
               onClick={save}
               className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
@@ -979,7 +978,6 @@ function FinanceCategoryEditorSheet({
               <Trash2 size={13} /> Remove Category
             </button>
           </div>
-        </div>
       </motion.div>
 
       <DeleteConfirmSheet
@@ -1169,7 +1167,7 @@ function AddBudgetSheet({
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
       >
-        <div className="px-5 pt-4 pb-10">
+        <div className="px-5 pt-4 pb-sheet-footer">
           <div className="drag-handle mb-5" />
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-bold text-gray-800">New Budget Category</h3>
@@ -1240,7 +1238,7 @@ function SavingsSheet({
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
       >
-        <div className="px-5 pt-4 pb-10">
+        <div className="px-5 pt-4 pb-sheet-footer">
           <div className="drag-handle mb-5" />
           <div className="flex items-center justify-between mb-5">
             <div>

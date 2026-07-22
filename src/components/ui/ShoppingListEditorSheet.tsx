@@ -207,9 +207,25 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   const displayTotal = mode === 'create' ? draftTotal : editTotal
   const liveItems   = mode === 'edit' ? (list?.items ?? []) : []
 
+  /* ── Save button ──────────────────────────────────────────────────────── */
+  const saveButton = (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={handleSave}
+      disabled={!name.trim() || saving}
+      className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+      style={{ background: RED }}
+    >
+      {saving
+        ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
+        : <><ShoppingBag size={16} />{mode === 'create' ? 'Create Shopping List' : 'Save Changes'}</>
+      }
+    </motion.button>
+  )
+
   /* ── Form content ─────────────────────────────────────────────────────── */
   const formContent = (
-    <div className="space-y-3 pb-6">
+    <div className="space-y-3 pb-4">
       <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
       <input ref={itemPhotoRef} type="file" accept="image/*" className="hidden" onChange={e => handleItemPhotoPick(e, setItemPhoto)} />
       <input ref={editPhotoRef} type="file" accept="image/*" className="hidden" onChange={e => handleItemPhotoPick(e, setEditPhoto)} />
@@ -460,19 +476,6 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         </div>
       </div>
 
-      {/* Save / Create button */}
-      <motion.button
-        whileTap={{ scale: 0.97 }}
-        onClick={handleSave}
-        disabled={!name.trim() || saving}
-        className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2 mt-2"
-        style={{ background: RED }}
-      >
-        {saving
-          ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
-          : <><ShoppingBag size={16} />{mode === 'create' ? 'Create Shopping List' : 'Save Changes'}</>
-        }
-      </motion.button>
     </div>
   )
 
@@ -506,6 +509,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     return (
       <>
         {formContent}
+        <div className="pb-4">{saveButton}</div>
         {deleteConfirm}
       </>
     )
@@ -522,7 +526,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[92vh] flex flex-col"
+                   max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <div className="px-5 pt-4 pb-2 shrink-0">
           <div className="drag-handle mb-3" />
@@ -536,8 +541,12 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
           {formContent}
+        </div>
+
+        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+          {saveButton}
         </div>
       </motion.div>
 

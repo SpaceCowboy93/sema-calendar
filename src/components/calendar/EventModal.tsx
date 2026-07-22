@@ -179,10 +179,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                       max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+            style={{ maxHeight: 'calc(100dvh - 48px)' }}
           >
-            <div className="px-5 pt-4 pb-10">
+            {/* Non-scrolling header */}
+            <div className="px-5 pt-4 shrink-0">
               <div className="drag-handle" />
 
               {/* Header */}
@@ -197,7 +198,10 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   <X size={16} />
                 </button>
               </div>
+            </div>
 
+            {/* Scrollable form content */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
               {/* Title */}
               <div className="mb-4">
                 <input
@@ -307,7 +311,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </div>
 
               {/* Photos */}
-              <div className="mb-6">
+              <div className="mb-2">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Photos
                 </p>
@@ -377,8 +381,10 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   Max 5MB · JPG, PNG, WebP · ☆ = set as card background
                 </p>
               </div>
+            </div>
 
-              {/* Save */}
+            {/* Pinned action footer */}
+            <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
               <button
                 onClick={handleSave}
                 disabled={!title.trim() || saving}

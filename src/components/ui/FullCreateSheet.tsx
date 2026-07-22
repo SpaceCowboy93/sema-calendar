@@ -320,9 +320,11 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
             className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                       max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+                       max-w-lg mx-auto flex flex-col"
+            style={{ maxHeight: 'calc(100dvh - 48px)' }}
           >
-            <div className="px-5 pt-4 pb-10">
+            {/* Non-scrolling header */}
+            <div className="px-5 pt-4 pb-0 shrink-0">
               <div className="drag-handle" />
 
               {/* Header */}
@@ -337,7 +339,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
               </div>
 
               {/* Type selector chips */}
-              <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
                 {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
                   const tc = TYPE_CONFIG[t]
                   const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
@@ -358,7 +360,10 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                   )
                 })}
               </div>
+            </div>
 
+            {/* Scrollable body */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
               <AnimatePresence mode="wait">
                 {/* Sent state (note) */}
                 {sent ? (
@@ -382,7 +387,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="space-y-4"
+                    className="space-y-4 pb-4"
                   >
                     {/* Shopping list mode — render dedicated editor, no generic form */}
                     {cfg.shopMode ? (
@@ -587,32 +592,36 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                         )}
                       </>
                     )}
-
-                    {/* Save */}
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleSave}
-                      disabled={!canSubmit}
-                      className="w-full py-4 rounded-2xl text-white text-sm font-semibold
-                                 disabled:opacity-40 flex items-center justify-center gap-2 mt-2"
-                      style={{
-                        background: cfg.noteMode
-                          ? primary
-                          : `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)`,
-                      }}
-                    >
-                      {saving ? (
-                        <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
-                      ) : (
-                        <><Plus size={16} /> {cfg.saveLabel}</>
-                      )}
-                    </motion.button>
                     </>
                     )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Pinned footer — only when there's a save action */}
+            {!sent && !cfg.shopMode && (
+              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleSave}
+                  disabled={!canSubmit}
+                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold
+                             disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{
+                    background: cfg.noteMode
+                      ? primary
+                      : `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)`,
+                  }}
+                >
+                  {saving ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
+                  ) : (
+                    <><Plus size={16} /> {cfg.saveLabel}</>
+                  )}
+                </motion.button>
+              </div>
+            )}
           </motion.div>
         </>
       )}

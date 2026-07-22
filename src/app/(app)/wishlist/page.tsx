@@ -334,10 +334,11 @@ function WishDetailModal({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[90vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
-        <div className="px-5 pt-4 pb-10">
+        {/* Non-scrolling header */}
+        <div className="px-5 pt-4 shrink-0">
           <div className="drag-handle" />
 
           {/* Header */}
@@ -353,7 +354,10 @@ function WishDetailModal({
               <X size={16} />
             </button>
           </div>
+        </div>
 
+        {/* Scrollable form content */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
           {/* Title */}
           <input
             type="text"
@@ -387,7 +391,7 @@ function WishDetailModal({
 
           {/* Notes / content */}
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notes</p>
-          <div className={cn('rounded-2xl p-4 mb-5', lightBg)}>
+          <div className={cn('rounded-2xl p-4', lightBg)}>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -397,8 +401,10 @@ function WishDetailModal({
                          outline-none resize-none"
             />
           </div>
+        </div>
 
-          {/* Actions */}
+        {/* Pinned action footer */}
+        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
           {hasChanges && (
             <motion.button
               initial={{ opacity: 0, y: 4 }}

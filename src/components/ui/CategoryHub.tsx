@@ -192,7 +192,8 @@ export function CategoryHubSheet({
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[80vh] flex flex-col"
+                   max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="drag-handle mb-3" />
@@ -302,18 +303,21 @@ export function CategoryHubSheet({
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+              style={{ maxHeight: 'calc(100dvh - 48px)' }}
             >
-              <div className="px-5 pt-4 pb-10">
+              <div className="px-5 pt-4 pb-3 shrink-0">
                 <div className="drag-handle mb-4" />
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-gray-800">Edit {def.label.slice(0, -1)}</h3>
                   <button onClick={() => setEditingId(null)}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                     <X size={16} />
                   </button>
                 </div>
-                <div className="space-y-3 mb-5">
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+                <div className="space-y-3">
                   <div className="bg-gray-50 rounded-2xl px-4 py-3">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
                     <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
@@ -338,6 +342,8 @@ export function CategoryHubSheet({
                     </div>
                   </div>
                 </div>
+              </div>
+              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
                 <div className="flex gap-2">
                   <button onClick={() => setShowDeleteConfirm(true)}
                     className="flex-1 py-3.5 rounded-2xl text-red-400 text-sm font-semibold bg-red-50 active:opacity-80">
@@ -396,7 +402,8 @@ export function ShoppingHubSheet({
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[88vh] flex flex-col"
+                   max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="drag-handle mb-3" />
@@ -641,7 +648,8 @@ export function ShoppingDetailSheet({
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto max-h-[92vh] flex flex-col"
+                   max-w-lg mx-auto flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
 
@@ -914,7 +922,7 @@ export function ShoppingDetailSheet({
           )}
         </div>
 
-        <div className="px-5 pb-10 pt-3 shrink-0 border-t border-gray-100">
+        <div className="px-5 pt-3 shrink-0 border-t border-gray-100 pb-sheet-footer">
           <button
             onClick={() => setShowDeleteListConfirm(true)}
             className="w-full py-3 rounded-2xl text-red-400 text-sm font-medium flex items-center justify-center gap-2 bg-red-50"

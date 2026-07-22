@@ -218,10 +218,11 @@ export function FocusActivitySheet({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto flex flex-col"
+              style={{ maxHeight: 'calc(100dvh - 48px)' }}
             >
-              <div className="px-5 pt-4 pb-10 max-h-[92dvh] overflow-y-auto overscroll-contain">
-
+              {/* Non-scrolling header */}
+              <div className="px-5 pt-4 shrink-0">
                 {/* Drag handle */}
                 <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
 
@@ -250,6 +251,10 @@ export function FocusActivitySheet({
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Scrollable form content */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
 
                 {/* Title */}
                 <div className="mb-4">
@@ -414,7 +419,7 @@ export function FocusActivitySheet({
                 </div>
 
                 {/* Photos */}
-                <div className="mb-6">
+                <div className="mb-2">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
                     Photos{' '}
                     <span className="font-normal normal-case text-gray-300">(optional)</span>
@@ -435,8 +440,10 @@ export function FocusActivitySheet({
                     onChange={e => handlePhotoFiles(e.target.files)}
                   />
                 </div>
+              </div>
 
-                {/* Save */}
+              {/* Pinned save footer */}
+              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSave}
