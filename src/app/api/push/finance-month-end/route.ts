@@ -10,6 +10,7 @@ function adminClient() {
 
 // POST — schedule a month-end finance push notification for both users
 // Body: { monthKey: 'YYYY-MM', fireAt: ISO string }
+// Uses reminder_key upsert so repeated calls are idempotent.
 export async function POST(req: NextRequest) {
   try {
     const { monthKey, fireAt } = await req.json()
@@ -28,30 +29,27 @@ export async function POST(req: NextRequest) {
 
     const supabase = adminClient()
 
-    // Delete existing unsent reminders for this monthKey + finance-month-end
-    await supabase
-      .from('push_reminders')
-      .delete()
-      .eq('couple_id', 'sema')
-      .eq('item_type', 'finance-month-end')
-      .eq('item_id', monthKey)
-      .is('sent_at', null)
-
-    // Insert for both users
     const rows = ['seval', 'mateo'].map(user => ({
-      couple_id: 'sema',
-      user_name: user,
-      item_id:   monthKey,
-      item_type: 'finance-month-end',
-      fire_at:   fireAt,
-      title:     'SeMa 💕',
-      message:   `Your ${monthName} finance report is ready! Time to review. 📊`,
+      couple_id:            'sema',
+      user_name:            user,
+      item_id:              monthKey,
+      item_type:            'finance-month-end',
+      // reminder_key format: {user}:finance-month-end:{monthKey}:fire
+      reminder_key:         `${user}:finance-month-end:${monthKey}:fire`,
+      fire_at:              fireAt,
+      title:                'SeMa 💕',
+      message:              `Your ${monthName} finance report is ready! Time to review. 📊`,
+      retry_count:          0,
+      last_error:           null,
+      failed_permanently_at: null,
     }))
 
-    const { error } = await supabase.from('push_reminders').insert(rows)
+    const { error } = await supabase
+      .from('push_reminders')
+      .upsert(rows, { onConflict: 'reminder_key' })
 
     if (error) {
-      console.error('[finance-month-end] Insert error:', error.message)
+      console.error('[finance-month-end] Upsert error:', error.message)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

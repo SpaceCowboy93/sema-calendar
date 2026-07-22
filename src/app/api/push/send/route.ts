@@ -15,10 +15,50 @@ function adminClient() {
   )
 }
 
+// Authorization matrix:
+//   production + secret set     → check Bearer token
+//   production + secret missing → reject 503 (misconfiguration; never expose unauthenticated)
+//   development + secret set    → check Bearer token
+//   development + secret missing → allow with warning (dev convenience only)
+//
+// Returns { ok, statusCode, message } so the handler can emit the right HTTP status.
+type AuthResult =
+  | { ok: true }
+  | { ok: false; statusCode: 401 | 503; message: string }
+
+function isAuthorized(req: NextRequest): AuthResult {
+  const secret = process.env.PUSH_SEND_SECRET
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      // Fail closed: missing secret in production is a misconfiguration, not a missing token.
+      // Return 503 (not 401) so the caller cannot distinguish this from a server error.
+      console.error('[send] PUSH_SEND_SECRET not configured in production — all requests rejected')
+      return { ok: false, statusCode: 503, message: 'Service unavailable — server misconfiguration' }
+    }
+    console.warn('[send] PUSH_SEND_SECRET not set — allowing request (development only)')
+    return { ok: true }
+  }
+
+  const auth = req.headers.get('authorization') ?? ''
+  if (auth !== `Bearer ${secret}`) {
+    console.warn('[send] Unauthorized — wrong or missing Bearer token')
+    return { ok: false, statusCode: 401, message: 'Unauthorized' }
+  }
+
+  return { ok: true }
+}
+
 // POST — send a push to all subscriptions for a given user
 // Body: { userName, title, body, url?, tag? }
-// For test: { userName: 'mateo', title: 'Test 💕', body: 'SeMa push is working!' }
+// Auth: Authorization: Bearer <PUSH_SEND_SECRET>
+// Caller: server/cron only. Never called from the browser (use /api/push/test instead).
 export async function POST(req: NextRequest) {
+  const auth = isAuthorized(req)
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.statusCode })
+  }
+
   try {
     const { userName: rawUserName, title, body, url = '/together', tag = 'sema-test' } = await req.json()
     const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
@@ -57,7 +97,6 @@ export async function POST(req: NextRequest) {
       })
     )
 
-    // Remove stale subscriptions
     if (stale.length) {
       await supabase.from('push_subscriptions').delete().in('endpoint', stale)
     }

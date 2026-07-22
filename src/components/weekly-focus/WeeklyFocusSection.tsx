@@ -23,6 +23,12 @@ const PRIORITY_MARKS: Record<string, string> = {
   high: '!!!',
 }
 
+const PRIORITY_RANK: Record<string, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+}
+
 const SWIPE_HINT_KEY = 'sema-swipe-hint-dismissed'
 
 // ── Swipeable activity row ────────────────────────────────────────────────────
@@ -124,7 +130,12 @@ function SwipeableRow({
           >
             {activity.title}
             {mark && (
-              <span className="ml-1.5 text-[11px] font-medium text-gray-300">{mark}</span>
+              <span
+                className="ml-2 text-[10px] font-semibold tracking-wide"
+                style={{ color: activity.isCompleted ? '#d1d5db' : `${primary}90` }}
+              >
+                {mark}
+              </span>
             )}
           </span>
           {activity.time && (
@@ -171,11 +182,14 @@ function DayCard({
   const total = activities.length
   const allDone = total > 0 && completed === total
 
-  // Incomplete first (sorted by time), completed last
+  // Priority first, then time, completed last
   const sorted = useMemo(() => {
     const incomplete = activities
       .filter(a => !a.isCompleted)
       .sort((a, b) => {
+        const pa = PRIORITY_RANK[a.priority ?? ''] ?? 3
+        const pb = PRIORITY_RANK[b.priority ?? ''] ?? 3
+        if (pa !== pb) return pa - pb
         if (a.time && b.time) return a.time.localeCompare(b.time)
         if (a.time) return -1
         if (b.time) return 1

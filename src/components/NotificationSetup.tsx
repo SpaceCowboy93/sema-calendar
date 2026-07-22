@@ -18,7 +18,7 @@ function isInStandaloneMode() {
 }
 
 export function NotificationSetup({ primary }: { primary: string }) {
-  const { status, swError, loading, serverSaved, enable, disable, reconnect } = usePushNotifications()
+  const { status, swError, loading, serverSaved, endpoint, enable, disable, reconnect } = usePushNotifications()
   const currentUser = useAppStore(s => s.currentUser)
   const displayName = currentUser ? USERS[currentUser].displayName : ''
 
@@ -27,29 +27,24 @@ export function NotificationSetup({ primary }: { primary: string }) {
   const [showIOSHelp, setShowIOSHelp] = useState(false)
 
   async function sendTestPush() {
-    if (!currentUser) return
+    if (!currentUser || !endpoint) return
     setTestState('sending')
     setTestDetail('')
     console.log('[Push] Sending test push for user:', currentUser)
     try {
-      const res  = await fetch('/api/push/send', {
+      const res  = await fetch('/api/push/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userName: currentUser,
-          title: 'SeMa',
-          body: 'Push notifications are working!',
-          tag: 'sema-test',
-        }),
+        body: JSON.stringify({ endpoint, userName: currentUser }),
       })
       const data = await res.json()
-      console.log('[Push] /api/push/send response:', res.status, data)
+      console.log('[Push] /api/push/test response:', res.status, data)
       if (data.ok && data.sent > 0) {
         setTestState('ok')
-        setTestDetail(`Delivered to ${data.sent} device${data.sent !== 1 ? 's' : ''}`)
+        setTestDetail('Delivered! Background the app to see it.')
       } else {
         setTestState('err')
-        setTestDetail(data.error ?? data.message ?? `sent=${data.sent ?? 0}`)
+        setTestDetail(data.error ?? `sent=${data.sent ?? 0}`)
       }
     } catch (err) {
       console.error('[Push] sendTestPush fetch error:', err)
@@ -196,7 +191,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
             {testState === 'err' && '✗ '}
             {testState === 'idle' && <Bell size={11} />}
             {testState === 'sending' ? 'Sending…'
-              : testState === 'ok'   ? 'Delivered! Background the app to see it.'
+              : testState === 'ok'   ? 'Delivered!'
               : testState === 'err'  ? 'Not delivered — see detail below'
               : 'Send test notification'}
           </motion.button>

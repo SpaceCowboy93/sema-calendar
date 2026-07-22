@@ -9,12 +9,36 @@ import { getWeekStartDate } from '@/lib/utils'
 const LOG = (...args: unknown[]) => console.log('[Push]', ...args)
 const ERR = (...args: unknown[]) => console.error('[Push]', ...args)
 
+// ── Push status ───────────────────────────────────────────────────────────────
 // default     — permission not yet requested
 // granted     — permission granted, but no PushManager subscription yet
 // subscribed  — subscription exists in PushManager
 // denied      — user blocked notifications
 // unsupported — platform has no Service Worker or PushManager at all
 export type PushStatus = 'unsupported' | 'denied' | 'default' | 'granted' | 'subscribed'
+
+// ── Reminder entry (v2) ───────────────────────────────────────────────────────
+// Each item now carries labelled reminder entries instead of a raw string[].
+// The label is used server-side to:
+//   (a) build the stable reminder_key: {user}:{type}:{id}:{label}
+//   (b) compute the human-readable push message
+//
+// Standard labels:  prev_day_8pm | 1h_before | 5min_before
+// Focus labels:     at_time | 10min | 30min | 1h
+
+export interface ReminderEntry {
+  fireAt: string   // ISO-8601 UTC timestamp
+  label:  string   // stable offset identifier
+}
+
+export interface DatedItem {
+  id:        string
+  type:      'event' | 'todo' | 'goal' | 'wishlist' | 'countdown' | 'focus'
+  title:     string
+  reminders: ReminderEntry[]
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -33,7 +57,10 @@ async function registerSW(): Promise<ServiceWorkerRegistration | null> {
   }
   try {
     LOG('Registering service worker /sw.js …')
-    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    const reg = await navigator.serviceWorker.register('/sw.js', {
+      scope:            '/',
+      updateViaCache:   'none',  // always fetch fresh SW on page load
+    })
     LOG('SW registered — scope:', reg.scope, 'state:', reg.active?.state ?? 'installing')
     return reg
   } catch (err) {
@@ -66,23 +93,159 @@ async function fetchServerSaved(userName: string): Promise<boolean> {
   }
 }
 
+/** Tell the active Service Worker which user is signed in so it can
+ *  correctly re-save a renewed subscription on pushsubscriptionchange. */
+async function notifySWOfUser(userName: string) {
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const sw  = reg.active
+    if (sw) {
+      sw.postMessage({ type: 'SET_USER', userName: userName.toLowerCase() })
+      LOG('Sent SET_USER to SW for', userName)
+    } else {
+      LOG('SW not yet active — SET_USER not sent')
+    }
+  } catch (err) {
+    LOG('notifySWOfUser failed (non-critical):', err)
+  }
+}
+
+// ── Reminder computation ──────────────────────────────────────────────────────
+
+/** Compute labelled reminder entries for a standard timed item.
+ *  Returns only future entries (past ones are skipped and logged). */
+function computeReminders(dateStr: string, timeStr: string): ReminderEntry[] {
+  const timeNorm = /^\d{2}:\d{2}:\d{2}$/.test(timeStr) ? timeStr : `${timeStr}:00`
+  const eventMs  = new Date(`${dateStr}T${timeNorm}`).getTime()
+  const now      = Date.now()
+
+  if (isNaN(eventMs)) {
+    ERR('computeReminders — invalid date/time:', dateStr, timeStr)
+    return []
+  }
+
+  const dayBefore = new Date(`${dateStr}T${timeNorm}`)
+  dayBefore.setDate(dayBefore.getDate() - 1)
+  dayBefore.setHours(20, 0, 0, 0)
+
+  const candidates = [
+    { label: 'prev_day_8pm', ms: dayBefore.getTime() },
+    { label: '1h_before',    ms: eventMs - 60 * 60 * 1000 },
+    { label: '5min_before',  ms: eventMs -  5 * 60 * 1000 },
+  ]
+
+  const future  = candidates.filter(c => c.ms > now)
+  const skipped = candidates.filter(c => c.ms <= now)
+  if (skipped.length) {
+    LOG(`computeReminders(${dateStr} ${timeStr}) — skipped past:`,
+      skipped.map(c => c.label).join(', '))
+  }
+
+  return future.map(c => ({ fireAt: new Date(c.ms).toISOString(), label: c.label }))
+}
+
+// ── Item collection ───────────────────────────────────────────────────────────
+
+const FOCUS_OFFSET_MS: Record<string, number> = {
+  at_time: 0,
+  '10min': 10 * 60 * 1000,
+  '30min': 30 * 60 * 1000,
+  '1h':    60 * 60 * 1000,
+}
+
+/** Collect all future-dated items from the store for a given user.
+ *  The returned DatedItem[] is the single source of truth for the sync payload. */
+function collectDatedItems(
+  store: ReturnType<typeof useAppStore.getState>,
+  _userName: UserName,   // kept for future per-user filtering; currently shared data
+): DatedItem[] {
+  void _userName
+  const items: DatedItem[] = []
+
+  store.events.forEach(e => {
+    if (e.date && e.startTime) {
+      const reminders = computeReminders(e.date, e.startTime)
+      if (reminders.length) items.push({ id: e.id, type: 'event', title: e.title, reminders })
+    }
+  })
+
+  store.todos.forEach(t => {
+    if (!t.isCompleted && t.date && t.startTime) {
+      const reminders = computeReminders(t.date, t.startTime)
+      if (reminders.length) items.push({ id: t.id, type: 'todo', title: t.title, reminders })
+    }
+  })
+
+  store.goals.forEach(g => {
+    if (!g.isCompleted && g.targetDate && g.startTime) {
+      const reminders = computeReminders(g.targetDate, g.startTime)
+      if (reminders.length) items.push({ id: g.id, type: 'goal', title: g.title, reminders })
+    }
+  })
+
+  store.wishlistItems.forEach(w => {
+    if (!w.isCompleted && w.date && w.startTime) {
+      const reminders = computeReminders(w.date, w.startTime)
+      if (reminders.length) items.push({ id: w.id, type: 'wishlist', title: w.title, reminders })
+    }
+  })
+
+  store.countdowns.forEach(c => {
+    if (c.date) {
+      const reminders = computeReminders(c.date, c.time ?? '09:00')
+      if (reminders.length) items.push({ id: c.id, type: 'countdown', title: c.title, reminders })
+    }
+  })
+
+  // Focus activities: one reminder at the user-configured offset
+  ;(store.focusActivities ?? []).forEach(a => {
+    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
+    const offsetMs = FOCUS_OFFSET_MS[a.reminder]
+    if (offsetMs === undefined) return
+
+    const monday  = getWeekStartDate(a.weekKey)
+    const actDate = new Date(monday)
+    actDate.setDate(actDate.getDate() + a.dayIndex)
+    const [h, m] = a.time.split(':').map(Number)
+    if (isNaN(h) || isNaN(m)) return
+    actDate.setHours(h, m, 0, 0)
+
+    const fireAtMs = actDate.getTime() - offsetMs
+    if (fireAtMs <= Date.now()) return
+
+    items.push({
+      id:        a.id,
+      type:      'focus',
+      title:     a.title,
+      reminders: [{ fireAt: new Date(fireAtMs).toISOString(), label: a.reminder }],
+    })
+  })
+
+  return items
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
 export function usePushNotifications() {
   const currentUser = useAppStore(s => s.currentUser)
+
   const [status,      setStatus]      = useState<PushStatus>('default')
   const [swError,     setSwError]     = useState<string | null>(null)
   const [loading,     setLoading]     = useState(false)
   const [swReady,     setSwReady]     = useState(false)
   const [serverSaved, setServerSaved] = useState<boolean | null>(null)
+  const [endpoint,    setEndpoint]    = useState<string | null>(null)
 
-  // Re-run on currentUser change so switching profiles reflects correct server state
+  // Initialise: register SW, detect existing subscription, check server record
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     ;(async () => {
       LOG('Init — userAgent:', navigator.userAgent.slice(0, 80))
       LOG('serviceWorker supported:', 'serviceWorker' in navigator)
-      LOG('PushManager supported:', 'PushManager' in window)
-      LOG('Notification.permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
+      LOG('PushManager supported:',   'PushManager' in window)
+      LOG('Notification.permission:',
+        typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
       LOG('currentUser:', currentUser)
 
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -106,23 +269,25 @@ export function usePushNotifications() {
       }
       setSwReady(true)
 
-      // Check for existing PushManager subscription first
       const sub = await getCurrentSub()
       if (sub) {
         LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
         setStatus('subscribed')
-        // Check if the server has this subscription stored under the active user
+        setEndpoint(sub.endpoint)
+        // Re-send identity to SW in case it was restarted (e.g. browser update)
         if (currentUser) {
+          notifySWOfUser(currentUser)
           const saved = await fetchServerSaved(currentUser)
           setServerSaved(saved)
           if (!saved) {
-            LOG('Server has no subscription for', currentUser, '— device may be registered under wrong user')
+            LOG('Server has no subscription for', currentUser,
+              '— device may be registered under wrong user')
           }
         }
         return
       }
 
-      // No PushManager subscription
+      setEndpoint(null)
       setServerSaved(null)
       if (Notification.permission === 'granted') {
         LOG('Permission granted but no subscription — showing "Connect this device"')
@@ -134,23 +299,42 @@ export function usePushNotifications() {
     })()
   }, [currentUser])
 
-  // Sync reminders for one user (all shared items from current store state)
+  // ── Reminder sync ───────────────────────────────────────────────────────────
+  // Sends the full current-state item list to the server so push_reminders rows
+  // are kept in sync. The server will upsert on reminder_key and delete orphans.
+  //
+  // Rate-limit note: the server enforces a 3-second minimum between syncs per
+  // user. A 429 response is handled gracefully (logged, not thrown).
+
   const syncReminders = useCallback(async (userName: UserName) => {
     try {
       const store = useAppStore.getState()
       const items = collectDatedItems(store, userName)
+
       LOG(`syncReminders — user: ${userName}, items: ${items.length}`)
-      items.forEach(item => LOG(`  "${item.title}" (${item.type}) fireAts:`, item.fireAts))
-      if (items.length === 0) {
-        LOG('syncReminders — no future-dated items for', userName)
-        return
-      }
+      items.forEach(item =>
+        LOG(`  "${item.title}" (${item.type})`,
+          item.reminders.map(r => `${r.label}@${r.fireAt.slice(11, 16)}UTC`).join(' | '))
+      )
+
+      // Include this device's endpoint so the server can do an ownership check
+      const sub = await getCurrentSub()
+
       const res  = await fetch('/api/push/sync-reminders', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName, items }),
+        body:    JSON.stringify({
+          userName,
+          items,
+          endpoint: sub?.endpoint ?? null,
+        }),
       })
       const data = await res.json()
+
+      if (res.status === 429) {
+        LOG('syncReminders rate-limited — retryAfter:', data.retryAfter, 's')
+        return
+      }
       LOG('syncReminders response:', res.status, data)
     } catch (err) {
       ERR('syncReminders failed:', err)
@@ -164,6 +348,8 @@ export function usePushNotifications() {
     await syncReminders(triggerUser)
     await syncReminders(other)
   }, [syncReminders])
+
+  // ── Enable ──────────────────────────────────────────────────────────────────
 
   const enable = useCallback(async () => {
     if (!currentUser) {
@@ -208,27 +394,30 @@ export function usePushNotifications() {
 
       LOG('Calling PushManager.subscribe() …')
       const sub = await swReg.pushManager.subscribe({
-        userVisibleOnly: true,
+        userVisibleOnly:      true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
       LOG('PushManager.subscribe() succeeded')
       LOG('  endpoint suffix:', sub.endpoint.slice(-40))
-      LOG('  p256dh present:', !!sub.toJSON().keys?.p256dh)
-      LOG('  auth present:',   !!sub.toJSON().keys?.auth)
+      LOG('  p256dh present:',  !!sub.toJSON().keys?.p256dh)
+      LOG('  auth present:',    !!sub.toJSON().keys?.auth)
 
       LOG('Saving subscription for user:', currentUser)
       const res  = await fetch('/api/push/subscribe', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
+        body:    JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
       })
       const data = await res.json()
       LOG('/api/push/subscribe response:', res.status, data)
 
       if (res.ok) {
         setStatus('subscribed')
+        setEndpoint(sub.endpoint)
         setSwError(null)
         setServerSaved(true)
+        // Anchor identity in the SW so pushsubscriptionchange works correctly
+        await notifySWOfUser(currentUser)
         await syncBothUsers(currentUser)
       } else {
         ERR('subscribe API returned error:', data)
@@ -243,8 +432,10 @@ export function usePushNotifications() {
     }
   }, [swReady, currentUser, syncBothUsers])
 
-  // Re-save the existing PushManager subscription under the active user.
-  // Use this when the device was previously registered under the wrong user.
+  // ── Reconnect ───────────────────────────────────────────────────────────────
+  // Re-saves the existing PushManager subscription under the active user.
+  // Use when the device was registered under the wrong user.
+
   const reconnect = useCallback(async () => {
     if (!currentUser) {
       ERR('reconnect() called but currentUser is null')
@@ -259,23 +450,26 @@ export function usePushNotifications() {
         const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default'
         setStatus(perm === 'granted' ? 'granted' : 'default')
         setServerSaved(null)
+        setEndpoint(null)
         return
       }
 
       LOG('reconnect() — re-saving subscription for user:', currentUser)
       LOG('  endpoint suffix:', sub.endpoint.slice(-40))
       const res  = await fetch('/api/push/subscribe', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
+        body:    JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
       })
       const data = await res.json()
       LOG('reconnect /api/push/subscribe response:', res.status, data)
 
       if (res.ok) {
         setStatus('subscribed')
+        setEndpoint(sub.endpoint)
         setSwError(null)
         setServerSaved(true)
+        await notifySWOfUser(currentUser)
         await syncBothUsers(currentUser)
       } else {
         setSwError(data.error ?? 'Failed to save subscription.')
@@ -289,6 +483,8 @@ export function usePushNotifications() {
     }
   }, [currentUser, syncBothUsers])
 
+  // ── Disable ─────────────────────────────────────────────────────────────────
+
   const disable = useCallback(async () => {
     setLoading(true)
     try {
@@ -296,9 +492,9 @@ export function usePushNotifications() {
       if (sub) {
         LOG('Removing subscription …')
         const res = await fetch('/api/push/subscribe', {
-          method: 'DELETE',
+          method:  'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
+          body:    JSON.stringify({ endpoint: sub.endpoint }),
         })
         LOG('DELETE /api/push/subscribe:', res.status)
         await sub.unsubscribe()
@@ -307,6 +503,7 @@ export function usePushNotifications() {
         LOG('disable() — no active subscription found')
       }
       setStatus('default')
+      setEndpoint(null)
       setServerSaved(null)
       setSwError(null)
     } catch (err) {
@@ -316,118 +513,15 @@ export function usePushNotifications() {
     }
   }, [])
 
-  return { status, swError, loading, serverSaved, enable, disable, reconnect, syncReminders }
-}
-
-/* ── Collect all dated items from store state ─────────────────────────────── */
-interface DatedItem {
-  id: string
-  type: 'event' | 'todo' | 'goal' | 'wishlist' | 'countdown' | 'focus'
-  title: string
-  fireAts: string[]
-  customMessage?: string
-}
-
-function computeFireAts(dateStr: string, timeStr: string): string[] {
-  const timeNorm = /^\d{2}:\d{2}:\d{2}$/.test(timeStr) ? timeStr : `${timeStr}:00`
-  const eventMs  = new Date(`${dateStr}T${timeNorm}`).getTime()
-  const now      = Date.now()
-
-  if (isNaN(eventMs)) {
-    ERR('computeFireAts — invalid date/time:', dateStr, timeStr)
-    return []
+  return {
+    status,
+    swError,
+    loading,
+    serverSaved,
+    endpoint,
+    enable,
+    disable,
+    reconnect,
+    syncReminders,
   }
-
-  const dayBefore = new Date(`${dateStr}T${timeNorm}`)
-  dayBefore.setDate(dayBefore.getDate() - 1)
-  dayBefore.setHours(20, 0, 0, 0)
-
-  const candidates = [
-    { label: 'prev-day-8PM', ms: dayBefore.getTime() },
-    { label: '1h-before',    ms: eventMs - 60 * 60 * 1000 },
-    { label: '5min-before',  ms: eventMs - 5  * 60 * 1000 },
-  ]
-
-  const future  = candidates.filter(c => c.ms > now)
-  const skipped = candidates.filter(c => c.ms <= now)
-  if (skipped.length) {
-    LOG(`computeFireAts(${dateStr} ${timeStr}) — skipped past:`, skipped.map(c => c.label).join(', '))
-  }
-
-  return future.map(c => new Date(c.ms).toISOString())
-}
-
-function collectDatedItems(
-  store: ReturnType<typeof useAppStore.getState>,
-  userName: UserName
-): DatedItem[] {
-  void userName // items are shared; userName is used by the caller for per-user DB rows
-  const items: DatedItem[] = []
-
-  store.events.forEach(e => {
-    if (e.date && e.startTime) {
-      const fireAts = computeFireAts(e.date, e.startTime)
-      if (fireAts.length) items.push({ id: e.id, type: 'event', title: e.title, fireAts })
-    }
-  })
-  store.todos.forEach(t => {
-    if (!t.isCompleted && t.date && t.startTime) {
-      const fireAts = computeFireAts(t.date, t.startTime)
-      if (fireAts.length) items.push({ id: t.id, type: 'todo', title: t.title, fireAts })
-    }
-  })
-  store.goals.forEach(g => {
-    if (!g.isCompleted && g.targetDate && g.startTime) {
-      const fireAts = computeFireAts(g.targetDate, g.startTime)
-      if (fireAts.length) items.push({ id: g.id, type: 'goal', title: g.title, fireAts })
-    }
-  })
-  store.wishlistItems.forEach(w => {
-    if (!w.isCompleted && w.date && w.startTime) {
-      const fireAts = computeFireAts(w.date, w.startTime)
-      if (fireAts.length) items.push({ id: w.id, type: 'wishlist', title: w.title, fireAts })
-    }
-  })
-  store.countdowns.forEach(c => {
-    if (c.date) {
-      const fireAts = computeFireAts(c.date, c.time ?? '09:00')
-      if (fireAts.length) items.push({ id: c.id, type: 'countdown', title: c.title, fireAts })
-    }
-  })
-
-  // Focus activities: single explicit reminder fire time
-  const FOCUS_OFFSETS: Record<string, number> = {
-    at_time: 0,
-    '10min': 10 * 60 * 1000,
-    '30min': 30 * 60 * 1000,
-    '1h':    60 * 60 * 1000,
-  }
-  const FOCUS_LABELS: Record<string, string> = {
-    at_time: 'Now',
-    '10min': '10 min before',
-    '30min': '30 min before',
-    '1h':    '1 hour before',
-  }
-  ;(store.focusActivities ?? []).forEach(a => {
-    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
-    const offsetMs = FOCUS_OFFSETS[a.reminder]
-    if (offsetMs === undefined) return
-
-    const monday = getWeekStartDate(a.weekKey)
-    const actDate = new Date(monday)
-    actDate.setDate(actDate.getDate() + a.dayIndex)
-    const [h, m] = a.time.split(':').map(Number)
-    if (isNaN(h) || isNaN(m)) return
-    actDate.setHours(h, m, 0, 0)
-
-    const fireAtMs = actDate.getTime() - offsetMs
-    if (fireAtMs <= Date.now()) return
-
-    const fireAt = new Date(fireAtMs).toISOString()
-    const label = FOCUS_LABELS[a.reminder] ?? ''
-    const customMessage = label ? `${label}: ${a.title}` : a.title
-    items.push({ id: a.id, type: 'focus', title: a.title, fireAts: [fireAt], customMessage })
-  })
-
-  return items
 }

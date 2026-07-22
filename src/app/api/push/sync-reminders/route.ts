@@ -8,110 +8,185 @@ function adminClient() {
   )
 }
 
-const REMINDER_LABELS: Record<number, string> = {
-  0: '5 min before',
-  1: '1 hour before',
-  2: 'tomorrow',
+// Maps the stable offset label to a human-readable message prefix.
+// Labels match the ReminderEntry.label values produced by usePushNotifications.ts.
+const LABEL_PREFIX: Record<string, string> = {
+  prev_day_8pm: 'Tomorrow',
+  '1h_before':  '1 hour',
+  '5min_before': '5 min',
+  at_time:      '',       // no prefix — fire exactly at event time
+  '10min':      'In 10 min',
+  '30min':      'In 30 min',
+  '1h':         'In 1 hour',
+}
+
+function labelToMessage(label: string, title: string): string {
+  const prefix = LABEL_PREFIX[label]
+  if (prefix === undefined) return title               // unknown label — use title as-is
+  if (prefix === '')        return title               // at_time — no prefix
+  return `${prefix}: ${title}`
 }
 
 // POST — upsert push_reminders for a user based on their current dated items
-// Body: { userName, items: [{ id, type, title, fireAts: string[] }] }
+//
+// Body:
+//   userName:  string
+//   items:     { id, type, title, reminders: { fireAt: string, label: string }[] }[]
+//   endpoint?: string   (optional — current device's push endpoint for ownership check)
+//
+// Rate limit: 3 seconds per user (tracked in push_sync_log)
 export async function POST(req: NextRequest) {
   try {
-    const { userName: rawUserName, items } = await req.json()
+    const { userName: rawUserName, items, endpoint } = await req.json()
     const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
 
-    console.log('[sync-reminders POST] userName:', userName)
-    console.log('[sync-reminders POST] items received:', Array.isArray(items) ? items.length : 'NOT ARRAY')
-
     if (!userName || !Array.isArray(items)) {
-      console.error('[sync-reminders POST] Missing userName or items')
       return NextResponse.json({ error: 'Missing userName or items' }, { status: 400 })
     }
 
-    const now  = new Date().toISOString()
+    // Validate against the known user list — this is a private app with fixed users.
+    // Rejects attempts to create reminder rows for arbitrary user names.
+    const KNOWN_USERS = new Set(['mateo', 'seval'])
+    if (!KNOWN_USERS.has(userName)) {
+      console.warn('[sync-reminders] Rejected unknown userName:', userName)
+      return NextResponse.json({ error: 'Unknown user' }, { status: 403 })
+    }
+
+    const supabase  = adminClient()
+    const now       = new Date()
+    const nowIso    = now.toISOString()
+    const MIN_SYNC_INTERVAL_MS = 3000
+
+    // ── Rate limiting ──────────────────────────────────────────────────────────
+    const { data: syncLog } = await supabase
+      .from('push_sync_log')
+      .select('last_sync_at')
+      .eq('user_name', userName)
+      .single()
+
+    if (syncLog?.last_sync_at) {
+      const elapsed = now.getTime() - new Date(syncLog.last_sync_at).getTime()
+      if (elapsed < MIN_SYNC_INTERVAL_MS) {
+        const retryAfter = Math.ceil((MIN_SYNC_INTERVAL_MS - elapsed) / 1000)
+        console.log(`[sync-reminders] Rate limit hit for ${userName} — retry in ${retryAfter}s`)
+        return NextResponse.json({ error: 'Too many requests', retryAfter }, { status: 429 })
+      }
+    }
+
+    await supabase
+      .from('push_sync_log')
+      .upsert({ user_name: userName, last_sync_at: nowIso }, { onConflict: 'user_name' })
+
+    // ── Optional device ownership check ───────────────────────────────────────
+    if (endpoint) {
+      const { data: sub } = await supabase
+        .from('push_subscriptions')
+        .select('user_name')
+        .eq('endpoint', endpoint)
+        .single()
+
+      if (!sub || sub.user_name !== userName) {
+        console.warn(
+          `[sync-reminders] Endpoint ownership mismatch for ${userName} — proceeding with sync but logging`,
+          { claimed: userName, actual: sub?.user_name ?? 'not found' },
+        )
+        // Non-fatal: sync proceeds. The subscription may be unregistered on the client side.
+      }
+    }
+
+    // ── Build rows ─────────────────────────────────────────────────────────────
     const rows: Record<string, unknown>[] = []
 
     for (const item of items) {
-      const { id, type, title, fireAts, customMessage } = item
-      if (!id || !type || !title || !Array.isArray(fireAts)) {
-        console.warn('[sync-reminders POST] Skipping malformed item:', item)
+      const { id, type, title, reminders } = item as {
+        id:        string
+        type:      string
+        title:     string
+        reminders: { fireAt: string; label: string }[]
+      }
+
+      if (!id || !type || !title || !Array.isArray(reminders)) {
+        console.warn('[sync-reminders] Skipping malformed item:', item)
         continue
       }
 
-      for (let i = 0; i < fireAts.length; i++) {
-        const fireAt = fireAts[i]
-        if (!fireAt || fireAt < now) {
-          console.log(`[sync-reminders POST] Skipping past fireAt for "${title}":`, fireAt)
-          continue
-        }
+      for (const reminder of reminders) {
+        const { fireAt, label } = reminder
+        if (!fireAt || !label || fireAt <= nowIso) continue   // skip past or incomplete
 
-        const offsetIndex = fireAts.length - 1 - i
-        const suffix  = REMINDER_LABELS[offsetIndex] ?? ''
-        const message = (customMessage as string | undefined) ?? (suffix ? `${suffix}: ${title}` : title)
+        const reminderKey = `${userName}:${type}:${id}:${label}`
 
         rows.push({
-          couple_id: 'sema',
-          user_name: userName,
-          item_id:   id,
-          item_type: type,
-          fire_at:   fireAt,
-          title:     'SeMa 💕',
-          message,
+          couple_id:            'sema',
+          user_name:            userName,
+          item_id:              id,
+          item_type:            type,
+          reminder_key:         reminderKey,
+          fire_at:              fireAt,
+          title:                'SeMa 💕',
+          message:              labelToMessage(label, title),
+          // Reset delivery tracking so a resynced item gets fresh attempts.
+          // delivered_endpoints is reset to [] on every sync because fire_at may have changed
+          // (different event time = new effective reminder = previous deliveries no longer apply).
+          retry_count:          0,
+          last_error:           null,
+          failed_permanently_at: null,
+          delivered_endpoints:  [],
+          // sent_at intentionally omitted — never overwrite an already-sent row
         })
-        console.log(`[sync-reminders POST]   row: "${message}" fire_at: ${fireAt}`)
       }
     }
 
-    console.log('[sync-reminders POST] Total rows to insert:', rows.length)
+    console.log(`[sync-reminders] ${userName} — items: ${items.length}, future rows: ${rows.length}`)
 
-    const supabase = adminClient()
+    // ── Upsert on reminder_key ─────────────────────────────────────────────────
+    // ON CONFLICT (reminder_key) DO UPDATE SET ... (all columns in the row except sent_at)
+    if (rows.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('push_reminders')
+        .upsert(rows, { onConflict: 'reminder_key' })
 
-    // Delete unsent reminders for all items in this batch, scoped to this user and item_type
-    // so we don't touch the other user's reminder rows for the same items
-    const byType: Record<string, string[]> = {}
+      if (upsertErr) {
+        console.error('[sync-reminders] Upsert error:', upsertErr.message, upsertErr.details)
+        return NextResponse.json({ error: upsertErr.message }, { status: 500 })
+      }
+    }
+
+    // ── Orphan cleanup ─────────────────────────────────────────────────────────
+    // For each item in the batch, delete any unsent rows whose reminder_key was NOT
+    // just upserted. This covers:
+    //   - Offset labels removed (e.g., item type changed)
+    //   - All reminders now in the past (rows left over from a prior sync)
     for (const item of items) {
       const { id, type } = item as { id: string; type: string }
-      if (!byType[type]) byType[type] = []
-      byType[type].push(id)
-    }
-    let totalDeleted = 0
-    for (const [itemType, ids] of Object.entries(byType)) {
-      console.log(`[sync-reminders POST] Deleting unsent rows for type=${itemType} ids:`, ids)
-      const { error: delErr, count: delCount } = await supabase
+      const itemKeys = rows
+        .filter(r => r.item_id === id && r.item_type === type)
+        .map(r => r.reminder_key as string)
+
+      let q = supabase
         .from('push_reminders')
-        .delete({ count: 'exact' })
-        .eq('couple_id', 'sema')
+        .delete()
         .eq('user_name', userName)
-        .eq('item_type', itemType)
-        .in('item_id', ids)
+        .eq('item_id', id)
+        .eq('item_type', type)
         .is('sent_at', null)
+        .is('failed_permanently_at', null)
+
+      if (itemKeys.length > 0) {
+        // Keep rows that are in the current key set; delete the rest
+        q = q.not('reminder_key', 'in', `(${itemKeys.join(',')})`)
+      }
+      // If itemKeys is empty, delete ALL unsent rows for this item (all reminders past)
+
+      const { error: delErr } = await q
       if (delErr) {
-        console.error(`[sync-reminders POST] Delete error (type=${itemType}):`, delErr.message, delErr.details)
-      } else {
-        totalDeleted += delCount ?? 0
+        console.warn(`[sync-reminders] Orphan cleanup error (${id}):`, delErr.message)
       }
     }
-    console.log('[sync-reminders POST] Total deleted unsent rows:', totalDeleted)
 
-    if (rows.length === 0) {
-      console.log('[sync-reminders POST] No future rows — done')
-      return NextResponse.json({ ok: true, upserted: 0 })
-    }
-
-    const { error: insErr } = await supabase
-      .from('push_reminders')
-      .insert(rows)
-
-    if (insErr) {
-      console.error('[sync-reminders POST] Insert error:', insErr.message, insErr.details)
-      return NextResponse.json({ error: insErr.message }, { status: 500 })
-    }
-
-    console.log('[sync-reminders POST] Inserted', rows.length, 'rows OK')
     return NextResponse.json({ ok: true, upserted: rows.length })
   } catch (err) {
-    console.error('[sync-reminders POST] Unexpected error:', err)
+    console.error('[sync-reminders] Unexpected error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

@@ -15,43 +15,80 @@ function adminClient() {
   )
 }
 
-function isAuthorized(req: NextRequest) {
+// Authorization matrix — same rules as /api/push/send:
+//   production + secret set     → check Bearer token
+//   production + secret missing → reject 503 (misconfiguration; fail closed)
+//   development + secret set    → check Bearer token
+//   development + secret missing → allow with warning
+type AuthResult =
+  | { ok: true }
+  | { ok: false; statusCode: 401 | 503; message: string }
+
+function isAuthorized(req: NextRequest): AuthResult {
   const secret = process.env.CRON_SECRET
+
   if (!secret) {
-    console.warn('[process] CRON_SECRET not set — allowing request (dev mode)')
-    return true
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[process] CRON_SECRET not configured in production — all requests rejected')
+      return { ok: false, statusCode: 503, message: 'Service unavailable — server misconfiguration' }
+    }
+    console.warn('[process] CRON_SECRET not set — allowing request (development only)')
+    return { ok: true }
   }
+
   const auth = req.headers.get('authorization') ?? ''
-  const ok   = auth === `Bearer ${secret}`
-  if (!ok) console.warn('[process] Unauthorized request — wrong or missing Bearer token')
-  return ok
+  if (auth !== `Bearer ${secret}`) {
+    console.warn('[process] Unauthorized — wrong or missing Bearer token')
+    return { ok: false, statusCode: 401, message: 'Unauthorized' }
+  }
+
+  return { ok: true }
 }
 
+const MAX_RETRIES = 5
+
+// ── Per-subscription delivery tracking ────────────────────────────────────────
+//
+// Each push_reminders row carries a `delivered_endpoints` JSONB array (added by
+// migration 0003).  On each cron run we:
+//
+//   1. Build deliveredSet from r.delivered_endpoints (already successfully sent)
+//   2. Filter userSubs to pendingSubs (not yet delivered)
+//   3. Attempt delivery only to pendingSubs
+//   4. On success/stale: add endpoint to deliveredSet (stale = resolved, not retried)
+//   5. If all pendingSubs resolved: mark sent_at on the reminder row
+//   6. If any transient failure: update delivered_endpoints + retry_count (leave sent_at null)
+//
+// This guarantees:
+//   - Device A does NOT receive the same reminder twice (already in deliveredSet)
+//   - Device B remains retryable until resolved or permanently failed
+//   - sent_at is set only once all active subscriptions are resolved
+
 // GET — called by external cron (cron-job.org) every 5 minutes
-// Finds due reminders, sends pushes, marks as sent
 export async function GET(req: NextRequest) {
   const runAt = new Date().toISOString()
   console.log('[process GET] Run at:', runAt)
 
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = isAuthorized(req)
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.message }, { status: auth.statusCode })
   }
 
-  // Verify env vars present
-  console.log('[process GET] VAPID_SUBJECT present:',          !!process.env.VAPID_SUBJECT)
-  console.log('[process GET] NEXT_PUBLIC_VAPID_PUBLIC_KEY:',   !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
-  console.log('[process GET] VAPID_PRIVATE_KEY present:',      !!process.env.VAPID_PRIVATE_KEY)
+  console.log('[process GET] VAPID_SUBJECT present:',            !!process.env.VAPID_SUBJECT)
+  console.log('[process GET] NEXT_PUBLIC_VAPID_PUBLIC_KEY:',     !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+  console.log('[process GET] VAPID_PRIVATE_KEY present:',        !!process.env.VAPID_PRIVATE_KEY)
   console.log('[process GET] SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
   const supabase = adminClient()
   const now      = new Date().toISOString()
 
-  // 1. Fetch due, unsent reminders
+  // 1. Fetch due, unsent reminders — exclude permanently failed rows
   const { data: reminders, error: remErr } = await supabase
     .from('push_reminders')
-    .select('id, couple_id, user_name, title, message, fire_at, item_type')
+    .select('id, user_name, title, message, fire_at, item_type, retry_count, delivered_endpoints')
     .lte('fire_at', now)
     .is('sent_at', null)
+    .is('failed_permanently_at', null)
     .order('fire_at', { ascending: true })
     .limit(100)
 
@@ -62,7 +99,11 @@ export async function GET(req: NextRequest) {
 
   console.log('[process GET] Due unsent reminders found:', reminders?.length ?? 0)
   reminders?.forEach(r => {
-    console.log(`[process GET]   reminder id=${r.id} user=${r.user_name} fire_at=${r.fire_at} msg="${r.message}"`)
+    console.log(
+      `[process GET]   id=${r.id} user=${r.user_name} fire_at=${r.fire_at}` +
+      ` retries=${r.retry_count} delivered=${JSON.stringify(r.delivered_endpoints ?? [])}` +
+      ` msg="${r.message}"`,
+    )
   })
 
   if (!reminders || reminders.length === 0) {
@@ -84,9 +125,6 @@ export async function GET(req: NextRequest) {
   }
 
   console.log('[process GET] Total subscriptions fetched:', subs?.length ?? 0)
-  subs?.forEach(s => {
-    console.log(`[process GET]   sub user=${s.user_name} endpoint=…${s.endpoint.slice(-30)}`)
-  })
 
   const subsByUser: Record<string, { endpoint: string; p256dh: string; auth: string }[]> = {}
   for (const s of (subs ?? [])) {
@@ -95,64 +133,106 @@ export async function GET(req: NextRequest) {
     subsByUser[key].push(s)
   }
 
-  // 3. Send notifications
-  const sentIds:       string[] = []
+  // 3. Per-reminder, per-subscription delivery
+  const sentIds:        string[] = []
   const staleEndpoints: string[] = []
+  const partialFails:   { id: string; retry_count: number; deliveredEndpoints: string[]; error: string }[] = []
 
   await Promise.all(
-    reminders.map(async (r: { id: string; user_name: string; title: string; message: string; fire_at: string; item_type?: string }) => {
+    reminders.map(async (r: {
+      id:                  string
+      user_name:           string
+      title:               string
+      message:             string
+      fire_at:             string
+      item_type?:          string
+      retry_count:         number
+      delivered_endpoints: string[] | null
+    }) => {
       const normalizedUser = r.user_name.toLowerCase()
       const userSubs = subsByUser[normalizedUser] ?? []
-      console.log(`[process GET] Processing reminder ${r.id} for ${normalizedUser} — subscriptions: ${userSubs.length}`)
+
+      // Build the set of endpoints that already received this reminder successfully
+      const deliveredSet = new Set<string>(r.delivered_endpoints ?? [])
+
+      // Only attempt subscriptions not yet delivered
+      const pendingSubs = userSubs.filter(s => !deliveredSet.has(s.endpoint))
+
+      console.log(
+        `[process GET] Reminder ${r.id} — user=${normalizedUser}` +
+        ` total_subs=${userSubs.length} already_delivered=${deliveredSet.size} pending=${pendingSubs.length}`,
+      )
 
       if (userSubs.length === 0) {
-        console.log(`[process GET]   No subscriptions for ${normalizedUser} — skipping (will retry when device connects)`)
-        // Do NOT mark as sent — leave unsent so it fires once the user subscribes
+        // No subscriptions at all — leave unsent for when user re-subscribes
+        console.log(`[process GET]   No subscriptions for ${normalizedUser} — leaving unsent`)
         return
       }
 
-      let allOk = true
+      if (pendingSubs.length === 0) {
+        // Every active subscription has already received this reminder
+        console.log(`[process GET]   All subscriptions already delivered for ${r.id} — marking sent`)
+        sentIds.push(r.id)
+        return
+      }
+
+      // Attempt delivery to pending subscriptions
+      const newlyDelivered: string[] = []
+      let anyTransientFail = false
+      let lastErr = ''
 
       await Promise.all(
-        userSubs.map(async sub => {
+        pendingSubs.map(async sub => {
           const notifUrl = r.item_type === 'finance-month-end' ? '/plans' : '/together'
-          const payload = JSON.stringify({
+          const payload  = JSON.stringify({
             title: r.title,
             body:  r.message,
             url:   notifUrl,
             tag:   `sema-${r.id}`,
           })
           try {
-            console.log(`[process GET]   Sending to …${sub.endpoint.slice(-30)} …`)
+            console.log(`[process GET]   → …${sub.endpoint.slice(-30)}`)
             await webpush.sendNotification(
               { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
               payload,
             )
-            console.log(`[process GET]   Sent OK to …${sub.endpoint.slice(-30)}`)
+            console.log(`[process GET]   ✓ …${sub.endpoint.slice(-30)}`)
+            newlyDelivered.push(sub.endpoint)
           } catch (err: unknown) {
             const httpStatus = (err as { statusCode?: number }).statusCode
-            const body       = (err as { body?: string }).body
-            console.error(`[process GET]   webpush error for …${sub.endpoint.slice(-30)}: status=${httpStatus} body=${body}`)
+            const errBody    = (err as { body?: string }).body
+            console.error(
+              `[process GET]   ✗ …${sub.endpoint.slice(-30)} status=${httpStatus} body=${errBody}`,
+            )
             if (httpStatus === 404 || httpStatus === 410) {
-              console.log(`[process GET]   Marking subscription stale (${httpStatus})`)
+              // Stale subscription — remove it and treat as "resolved" (no retry for this endpoint)
               staleEndpoints.push(sub.endpoint)
+              newlyDelivered.push(sub.endpoint)  // don't retry a removed subscription
             } else {
-              allOk = false
+              // Transient failure — will be retried on next cron run
+              anyTransientFail = true
+              lastErr = `status=${httpStatus}`
             }
           }
         })
       )
 
-      if (allOk) {
+      // Build the updated delivered set for this reminder
+      const updatedDelivered = Array.from(deliveredSet).concat(newlyDelivered)
+
+      if (!anyTransientFail) {
+        // All pending subs resolved (delivered or confirmed stale) — mark the reminder fully sent
         sentIds.push(r.id)
-        console.log(`[process GET]   Reminder ${r.id} marked for sent update`)
+        console.log(`[process GET]   Reminder ${r.id} fully resolved — marking sent`)
       } else {
-        console.warn(`[process GET]   Reminder ${r.id} NOT marked sent — at least one delivery failed`)
+        // At least one transient failure — update delivered_endpoints and increment retry
+        partialFails.push({ id: r.id, retry_count: r.retry_count, deliveredEndpoints: updatedDelivered, error: lastErr })
+        console.warn(`[process GET]   Reminder ${r.id} partial failure — retrying (count=${r.retry_count + 1})`)
       }
     })
   )
 
-  // 4. Mark sent
+  // 4. Mark fully-resolved reminders as sent
   if (sentIds.length) {
     console.log('[process GET] Marking sent:', sentIds.length, 'reminders')
     const { error: updErr } = await supabase
@@ -168,11 +248,35 @@ export async function GET(req: NextRequest) {
     await supabase.from('push_subscriptions').delete().in('endpoint', staleEndpoints)
   }
 
-  console.log(`[process GET] Done — sent: ${sentIds.length}, stale: ${staleEndpoints.length}`)
+  // 6. Update partial failures — increment retry_count, persist delivered_endpoints
+  for (const { id, retry_count, deliveredEndpoints, error: lastErr } of partialFails) {
+    const newCount = retry_count + 1
+    const updates: Record<string, unknown> = {
+      retry_count:         newCount,
+      last_error:          lastErr,
+      delivered_endpoints: deliveredEndpoints,
+    }
+    if (newCount >= MAX_RETRIES) {
+      updates.failed_permanently_at = now
+      console.warn(`[process GET] Reminder ${id} permanently failed after ${newCount} attempts`)
+    }
+    const { error: retryErr } = await supabase
+      .from('push_reminders')
+      .update(updates)
+      .eq('id', id)
+    if (retryErr) console.error(`[process GET] Retry-update error for ${id}:`, retryErr.message)
+  }
+
+  console.log(
+    `[process GET] Done — sent: ${sentIds.length}` +
+    ` stale: ${staleEndpoints.length}` +
+    ` partial-fails: ${partialFails.length}`,
+  )
   return NextResponse.json({
-    ok:        true,
-    processed: sentIds.length,
-    stale:     staleEndpoints.length,
-    checked_at: runAt,
+    ok:            true,
+    processed:     sentIds.length,
+    stale:         staleEndpoints.length,
+    partial_fails: partialFails.length,
+    checked_at:    runAt,
   })
 }
