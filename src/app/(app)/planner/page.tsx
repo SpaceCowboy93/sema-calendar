@@ -109,8 +109,8 @@ export default function PlannerPage() {
 
       {/* ── Header ── */}
       <div className="px-5 pt-12 pb-3">
-        <h1 className="text-2xl font-bold text-gray-800">Planner</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Plan your future together.</p>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Planner</h1>
+        <p className="text-sm text-gray-400 mt-1">Plan your future together.</p>
       </div>
 
       <WeeklyFocusSection />
@@ -120,8 +120,8 @@ export default function PlannerPage() {
             {/* ── Upcoming Important Dates ── */}
             {allUpcomingItems.length > 0 && (
               <section>
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                  Upcoming Important Dates
+                <h2 className="text-sm font-semibold text-gray-500 mb-3 px-1">
+                  Upcoming dates
                 </h2>
                 <div className="space-y-2">
                   <AnimatePresence initial={false}>
@@ -200,8 +200,8 @@ export default function PlannerPage() {
             {/* ── Needs Attention ── */}
             {needsAttention.length > 0 && (
               <section className="pb-2">
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                  Needs Attention
+                <h2 className="text-sm font-semibold text-gray-500 mb-3 px-1">
+                  Needs attention
                 </h2>
                 <div className="space-y-2">
                   {needsAttention.map((item, i) => (

@@ -207,12 +207,18 @@ function DayCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
-      className="rounded-2xl bg-white shadow-[0_1px_10px_rgba(0,0,0,0.07)] mb-3 overflow-hidden"
+      className={cn(
+        'rounded-2xl bg-white mb-3 overflow-hidden',
+        isToday
+          ? 'shadow-[0_4px_20px_rgba(0,0,0,0.10)]'
+          : 'shadow-[0_1px_6px_rgba(0,0,0,0.05)]',
+      )}
     >
       {/* Card header */}
       <div
         className={cn(
-          'px-4 pt-4 pb-3 flex items-center justify-between',
+          'flex items-center justify-between',
+          isToday ? 'px-4 pt-4 pb-3' : 'px-4 pt-3 pb-2.5',
           !isToday && 'cursor-pointer active:opacity-70 transition-opacity',
         )}
         onClick={isToday ? undefined : onToggleExpand}
@@ -220,8 +226,8 @@ function DayCard({
         <div className="flex items-baseline gap-2">
           <span
             className={cn(
-              'text-[11px] font-bold tracking-widest uppercase',
-              isToday ? 'text-gray-800' : 'text-gray-500',
+              'font-bold tracking-widest uppercase',
+              isToday ? 'text-[12px] text-gray-900' : 'text-[11px] text-gray-500',
             )}
           >
             {dayName}
@@ -326,15 +332,21 @@ function DayCard({
                 <p className="text-xs text-gray-400 pb-3">Nothing planned.</p>
               ) : (
                 <div className="divide-y divide-gray-50">
-                  {sorted.map(a => (
-                    <SwipeableRow
+                  {sorted.map((a, i) => (
+                    <motion.div
                       key={a.id}
-                      activity={a}
-                      primary={primary}
-                      onToggle={onToggle}
-                      onEdit={onEdit}
-                      onRequestDelete={onRequestDelete}
-                    />
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18, delay: i * 0.04, ease: 'easeOut' }}
+                    >
+                      <SwipeableRow
+                        activity={a}
+                        primary={primary}
+                        onToggle={onToggle}
+                        onEdit={onEdit}
+                        onRequestDelete={onRequestDelete}
+                      />
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -504,19 +516,27 @@ export function WeeklyFocusSection() {
     <div className="px-4 pb-6">
 
       {/* ── Profile filter ── */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-xl p-1">
+      <div className="flex mb-4 bg-gray-100 rounded-xl p-1">
         {(['both', 'mateo', 'seval'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilterUser(f)}
             className={cn(
-              'flex-1 py-1.5 rounded-lg text-xs font-medium transition-all',
-              filterUser === f
-                ? 'bg-white shadow-sm text-gray-800'
-                : 'text-gray-400',
+              'relative flex-1 py-1.5 rounded-lg text-xs font-semibold z-10 transition-colors duration-150',
+              filterUser === f ? 'text-gray-800' : 'text-gray-400',
             )}
           >
-            {f === 'both' ? 'Both' : USERS[f as UserName].displayName}
+            {filterUser === f && (
+              <motion.div
+                layoutId="filter-pill"
+                className="absolute inset-0 rounded-[7px] bg-white"
+                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
+                transition={{ type: 'spring', stiffness: 500, damping: 42 }}
+              />
+            )}
+            <span className="relative z-10">
+              {f === 'both' ? 'Both' : USERS[f as UserName].displayName}
+            </span>
           </button>
         ))}
       </div>
@@ -531,7 +551,7 @@ export function WeeklyFocusSection() {
         </button>
 
         <div className="text-center">
-          <p className="text-xs font-semibold text-gray-700">{getWeekLabel(viewWeekKey)}</p>
+          <p className="text-sm font-semibold text-gray-800">{getWeekLabel(viewWeekKey)}</p>
           {isCurrentWeek ? (
             <p className="text-[10px] text-gray-400 mt-0.5">This week</p>
           ) : (

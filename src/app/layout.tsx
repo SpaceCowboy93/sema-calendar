@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-jakarta',
   display: 'swap',
 })
 
@@ -32,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={jakarta.variable}>
       <body className="font-sans min-h-screen antialiased">
         {children}
       </body>
