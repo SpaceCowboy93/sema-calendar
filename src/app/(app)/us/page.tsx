@@ -13,6 +13,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 import {
   USERS, OTHER_USER,
   type Memory, type Countdown, type MoodType, type UserName,
@@ -581,6 +582,12 @@ export default function UsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-36">
+
+      <AnimatedBackground blobs={[
+        { color: '#f9a8d4', size: 300, top: '-60px', left: '-40px',  duration: 20, delay: 0   },
+        { color: '#fdba74', size: 220, top: '38%',   left: '55%',    duration: 25, delay: 5   },
+        { color: '#c4b5fd', size: 200, top: '72%',   left: '10%',    duration: 18, delay: 9   },
+      ]} />
 
       {/* Header */}
       <div

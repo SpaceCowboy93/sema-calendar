@@ -12,6 +12,7 @@ import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem 
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 
 const CURRENCY = '€'
 
@@ -188,6 +189,12 @@ export default function FinancePage() {
 
   return (
     <div className="min-h-screen pb-32 relative">
+
+      <AnimatedBackground blobs={[
+        { color: '#6ee7b7', size: 280, top: '-50px', left: '-40px',  duration: 19, delay: 0   },
+        { color: '#fcd34d', size: 220, top: '35%',   left: '58%',    duration: 23, delay: 6   },
+        { color: '#34d399', size: 190, top: '70%',   left: '20%',    duration: 15, delay: 10  },
+      ]} />
 
       <div className="relative z-10">
 

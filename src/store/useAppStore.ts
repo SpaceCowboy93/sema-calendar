@@ -10,7 +10,7 @@ import {
   type ShoppingList, type ShoppingItem, type ShoppingListInput,
   type BudgetItem, type SavingsGoal, type FinanceCategoryItem,
   type FinanceMonth, type FinanceMonthReport, type SavingsTransaction,
-  type FocusActivity, type FocusChecklistItem, type FocusReminder,
+  type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority,
   OTHER_USER,
 } from '@/types'
 
@@ -137,7 +137,7 @@ interface AppState {
     weekKey: string; dayIndex: number; title: string
     time?: string; notes?: string
     checklist?: FocusChecklistItem[]; photos?: string[]
-    reminder?: FocusReminder
+    reminder?: FocusReminder; priority?: FocusPriority
   }) => string
   updateFocusActivity: (id: string, updates: Partial<FocusActivity>) => void
   toggleFocusActivity: (id: string) => void
@@ -1097,6 +1097,7 @@ export const useAppStore = create<AppState>()(
           createdAt:   now,
           updatedAt:   now,
           reminder:    data.reminder,
+          priority:    data.priority,
         }
         set(s => ({ focusActivities: [...s.focusActivities, activity] }))
         return id

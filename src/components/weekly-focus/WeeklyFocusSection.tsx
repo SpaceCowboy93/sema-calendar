@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, History, Check, Plus } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { motion, AnimatePresence, useMotionValue, animate as animateX } from 'framer-motion'
+import { ChevronLeft, ChevronRight, ChevronDown, History, Check, Plus, Pencil, Trash2 } from 'lucide-react'
 import { format, addWeeks, subWeeks } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type UserName, type FocusActivity } from '@/types'
@@ -12,377 +12,348 @@ import {
 } from '@/lib/utils'
 import { FocusActivitySheet } from './FocusActivitySheet'
 import { WeekBrowserSheet } from './WeekBrowserSheet'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const PREVIEW_COUNT = 2
 type FilterUser = 'both' | UserName
 
-// ── Shared activity row ────────────────────────────────────────────────────────
+const PRIORITY_MARKS: Record<string, string> = {
+  low: '!',
+  medium: '!!',
+  high: '!!!',
+}
 
-function ActivityRow({
+const SWIPE_HINT_KEY = 'sema-swipe-hint-dismissed'
+
+// ── Swipeable activity row ────────────────────────────────────────────────────
+
+function SwipeableRow({
   activity,
   primary,
-  compact,
   onToggle,
   onEdit,
+  onRequestDelete,
 }: {
   activity: FocusActivity
   primary: string
-  compact?: boolean
   onToggle: (id: string) => void
   onEdit: (a: FocusActivity) => void
+  onRequestDelete: (id: string) => void
 }) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: activity.isCompleted ? 0.36 : 1, y: 0 }}
-      transition={{ duration: 0.18 }}
-      className={cn('flex items-center gap-3', compact ? 'py-1' : 'py-2')}
-    >
-      {/* Check circle */}
-      <motion.button
-        whileTap={{ scale: 0.8 }}
-        onClick={() => onToggle(activity.id)}
-        className="shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-colors"
-        style={{
-          borderColor: activity.isCompleted ? primary : '#d1d5db',
-          background:  activity.isCompleted ? primary : 'transparent',
-        }}
-      >
-        <AnimatePresence>
-          {activity.isCompleted && (
-            <motion.div
-              key="chk"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 0.13 }}
-            >
-              <Check size={9} strokeWidth={2.8} className="text-white" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
+  const x = useMotionValue(0)
 
-      {/* Title (left) + time (right) — whole area taps to edit */}
-      <button
-        onClick={() => onEdit(activity)}
-        className="flex-1 flex items-center justify-between gap-3 text-left min-w-0"
-      >
-        <div className="min-w-0">
-          <span className={cn(
-            'text-sm leading-snug block truncate',
-            activity.isCompleted ? 'line-through text-gray-400' : 'text-gray-800',
-          )}>
-            {activity.title}
-          </span>
-          {/* Subtle indicators — only when not completed */}
-          {!activity.isCompleted && (
-            <span className="flex gap-2">
-              {(activity.checklist?.length ?? 0) > 0 && (
-                <span className="text-[10px] text-gray-300">
-                  {activity.checklist!.filter(i => i.done).length}/{activity.checklist!.length}
-                </span>
-              )}
-              {(activity.photos?.length ?? 0) > 0 && (
-                <span className="text-[10px] text-gray-300">
-                  {activity.photos!.length} photo{activity.photos!.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </span>
-          )}
-        </div>
-        {/* Time — right-aligned, secondary */}
-        {activity.time && (
-          <span className="text-xs text-gray-400 shrink-0">{formatTime(activity.time)}</span>
-        )}
-      </button>
-    </motion.div>
-  )
-}
+  function handleDragEnd(_: unknown, info: { offset: { x: number } }) {
+    if (info.offset.x < -50) {
+      animateX(x, -110, { type: 'spring', stiffness: 400, damping: 38 })
+    } else {
+      animateX(x, 0, { type: 'spring', stiffness: 400, damping: 38 })
+    }
+  }
 
-// ── Today section (always fully expanded) ─────────────────────────────────────
+  function closeSwipe() {
+    animateX(x, 0, { type: 'spring', stiffness: 400, damping: 38 })
+  }
 
-function TodaySection({
-  dayName,
-  dateStr,
-  activities,
-  primary,
-  suggestion,
-  dismissed,
-  onDismiss,
-  onToggle,
-  onEdit,
-  onAdd,
-  onAddSuggestion,
-}: {
-  dayName: string
-  dateStr: string
-  activities: FocusActivity[]
-  primary: string
-  suggestion?: { title: string }
-  dismissed: Set<string>
-  onDismiss: (key: string) => void
-  onToggle: (id: string) => void
-  onEdit: (a: FocusActivity) => void
-  onAdd: () => void
-  onAddSuggestion: (title: string) => void
-}) {
-  const completed = activities.filter(a => a.isCompleted).length
-  const total     = activities.length
-  const allDone   = total > 0 && completed === total
-
-  const suggKey      = suggestion ? `today::${suggestion.title.toLowerCase().trim()}` : ''
-  const showSuggestion = !!suggestion && !dismissed.has(suggKey)
+  const mark = activity.priority ? PRIORITY_MARKS[activity.priority] : ''
 
   return (
-    <div className="rounded-2xl bg-white shadow-[0_1px_10px_rgba(0,0,0,0.07)] px-4 py-4 mb-1">
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-bold tracking-widest uppercase text-gray-700">
-            {dayName}
-          </span>
-          <span className="text-[11px] text-gray-400">
-            {format(new Date(dateStr + 'T00:00:00'), 'MMM d')}
-          </span>
-        </div>
-        <span
-          className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
-          style={{ background: primary }}
+    <div className="relative overflow-hidden">
+      {/* Action buttons behind */}
+      <div className="absolute right-0 top-0 bottom-0 flex">
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => { closeSwipe(); onEdit(activity) }}
+          className="w-14 flex items-center justify-center bg-blue-500 text-white"
         >
-          Today
-        </span>
+          <Pencil size={14} />
+        </button>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={() => { closeSwipe(); onRequestDelete(activity.id) }}
+          className="w-14 flex items-center justify-center bg-red-500 text-white"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
 
-      {/* Progress bar — only when there are activities */}
-      {total > 0 && (
-        <div className="mb-4">
-          <p className="text-[11px] text-gray-400 mb-1.5">
-            {completed} of {total} done
-          </p>
-          <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: primary }}
-              initial={{ width: 0 }}
-              animate={{ width: `${(completed / total) * 100}%` }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* All activities — always visible */}
-      <AnimatePresence initial={false}>
-        {activities.length > 0 && (
-          <div className="divide-y divide-gray-50">
-            {activities.map(a => (
-              <ActivityRow
-                key={a.id}
-                activity={a}
-                primary={primary}
-                onToggle={onToggle}
-                onEdit={onEdit}
-              />
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* All-done message */}
-      <AnimatePresence>
-        {allDone && (
-          <motion.p
-            key="done"
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-gray-400 text-center pt-3"
-          >
-            Everything for today is done ❤️
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      {/* Empty state */}
-      {total === 0 && (
-        <p className="text-xs text-gray-400 pb-1">Nothing planned today.</p>
-      )}
-
-      {/* Add activity */}
-      <button
-        onClick={onAdd}
-        className="w-full flex items-center gap-2.5 py-2 mt-2 border-t border-gray-50 active:opacity-60 transition-opacity"
+      {/* Draggable row */}
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: -110, right: 0 }}
+        dragElastic={{ left: 0.05, right: 0 }}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        className="relative bg-white flex items-center gap-3 py-2.5"
       >
-        <Plus size={15} strokeWidth={2} style={{ color: primary }} className="shrink-0" />
-        <span className="text-sm" style={{ color: primary }}>Add activity</span>
-      </button>
-
-      {/* Pattern suggestion */}
-      {showSuggestion && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5 bg-gray-50"
+        {/* Checkbox */}
+        <motion.button
+          whileTap={{ scale: 0.8 }}
+          onClick={() => onToggle(activity.id)}
+          className="shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-colors"
+          style={{
+            borderColor: activity.isCompleted ? primary : '#d1d5db',
+            background: activity.isCompleted ? primary : 'transparent',
+          }}
         >
-          <p className="text-[11px] text-gray-500 leading-snug flex-1">
-            You usually{' '}
-            <span className="font-semibold text-gray-700">{suggestion!.title}</span>{' '}
-            on {dayName}. Add it this week?
-          </p>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => onAddSuggestion(suggestion!.title)}
-              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg"
-              style={{ color: primary, background: `${primary}15` }}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => onDismiss(suggKey)}
-              className="text-[11px] text-gray-300 w-5 h-5 flex items-center justify-center active:text-gray-500"
-            >
-              ✕
-            </button>
-          </div>
-        </motion.div>
-      )}
+          <AnimatePresence>
+            {activity.isCompleted && (
+              <motion.div
+                key="chk"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ duration: 0.12 }}
+              >
+                <Check size={9} strokeWidth={2.8} className="text-white" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Title + time */}
+        <button
+          onClick={() => onEdit(activity)}
+          className="flex-1 flex items-center justify-between gap-2 text-left min-w-0"
+        >
+          <span
+            className={cn(
+              'text-sm leading-snug truncate',
+              activity.isCompleted ? 'line-through text-gray-400' : 'text-gray-800',
+            )}
+          >
+            {activity.title}
+            {mark && (
+              <span className="ml-1.5 text-[11px] font-medium text-gray-300">{mark}</span>
+            )}
+          </span>
+          {activity.time && (
+            <span className="text-xs text-gray-400 shrink-0">{formatTime(activity.time)}</span>
+          )}
+        </button>
+      </motion.div>
     </div>
   )
 }
 
-// ── Other day section (compact, collapsible) ───────────────────────────────────
+// ── Day card ──────────────────────────────────────────────────────────────────
 
-function OtherDaySection({
+function DayCard({
   dayName,
-  dayIndex,
   dateStr,
   activities,
   primary,
-  suggestion,
-  dismissed,
-  onDismiss,
-  expanded,
+  isToday,
+  isExpanded,
   onToggleExpand,
   onToggle,
   onEdit,
   onAdd,
-  onAddSuggestion,
+  onRequestDelete,
+  showHint,
+  onHintDismiss,
 }: {
   dayName: string
-  dayIndex: number
   dateStr: string
   activities: FocusActivity[]
   primary: string
-  suggestion?: { title: string }
-  dismissed: Set<string>
-  onDismiss: (key: string) => void
-  expanded: boolean
+  isToday: boolean
+  isExpanded: boolean
   onToggleExpand: () => void
   onToggle: (id: string) => void
   onEdit: (a: FocusActivity) => void
   onAdd: () => void
-  onAddSuggestion: (title: string) => void
+  onRequestDelete: (id: string) => void
+  showHint: boolean
+  onHintDismiss: () => void
 }) {
-  const visibleActivities = expanded ? activities : activities.slice(0, PREVIEW_COUNT)
-  const hiddenCount       = activities.length - PREVIEW_COUNT
+  const completed = activities.filter(a => a.isCompleted).length
+  const total = activities.length
+  const allDone = total > 0 && completed === total
 
-  const suggKey      = `${dayIndex}::${suggestion?.title.toLowerCase().trim() ?? ''}`
-  const showSuggestion = !!suggestion && !dismissed.has(suggKey)
+  // Incomplete first (sorted by time), completed last
+  const sorted = useMemo(() => {
+    const incomplete = activities
+      .filter(a => !a.isCompleted)
+      .sort((a, b) => {
+        if (a.time && b.time) return a.time.localeCompare(b.time)
+        if (a.time) return -1
+        if (b.time) return 1
+        return a.createdAt.localeCompare(b.createdAt)
+      })
+    const done = activities
+      .filter(a => a.isCompleted)
+      .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+    return [...incomplete, ...done]
+  }, [activities])
 
   return (
-    <div className="border-t border-gray-100 py-3">
-
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-1.5">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22 }}
+      className="rounded-2xl bg-white shadow-[0_1px_10px_rgba(0,0,0,0.07)] mb-3 overflow-hidden"
+    >
+      {/* Card header */}
+      <div
+        className={cn(
+          'px-4 pt-4 pb-3 flex items-center justify-between',
+          !isToday && 'cursor-pointer active:opacity-70 transition-opacity',
+        )}
+        onClick={isToday ? undefined : onToggleExpand}
+      >
         <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-bold tracking-widest uppercase text-gray-400">
+          <span
+            className={cn(
+              'text-[11px] font-bold tracking-widest uppercase',
+              isToday ? 'text-gray-800' : 'text-gray-500',
+            )}
+          >
             {dayName}
           </span>
-          <span className="text-[11px] text-gray-300">
+          <span className={cn('text-[11px]', isToday ? 'text-gray-500' : 'text-gray-300')}>
             {format(new Date(dateStr + 'T00:00:00'), 'MMM d')}
           </span>
         </div>
-        <button
-          onClick={onAdd}
-          className="w-6 h-6 flex items-center justify-center text-xl font-light active:opacity-50 transition-opacity"
-          style={{ color: `${primary}99` }}
-          aria-label={`Add activity to ${dayName}`}
-        >
-          +
-        </button>
+
+        <div className="flex items-center gap-2">
+          {isToday && (
+            <span
+              className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
+              style={{ background: primary }}
+            >
+              Today
+            </span>
+          )}
+          {!isToday && (
+            <>
+              {total > 0 && (
+                <span className="text-[11px] text-gray-400">
+                  {total} {total === 1 ? 'task' : 'tasks'}
+                </span>
+              )}
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown size={14} className="text-gray-300" />
+              </motion.div>
+            </>
+          )}
+          {/* Small + for non-today when collapsed */}
+          {!isToday && !isExpanded && (
+            <button
+              onClick={e => { e.stopPropagation(); onAdd() }}
+              className="w-6 h-6 flex items-center justify-center text-lg font-light active:opacity-50"
+              style={{ color: `${primary}99` }}
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Empty state */}
-      {activities.length === 0 ? (
-        <p className="text-[11px] text-gray-300">No plans</p>
-      ) : (
-        <>
-          <div className="divide-y divide-gray-50">
-            {visibleActivities.map(a => (
-              <ActivityRow
-                key={a.id}
-                activity={a}
-                primary={primary}
-                compact
-                onToggle={onToggle}
-                onEdit={onEdit}
-              />
-            ))}
-          </div>
+      {/* Expanded content */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-4 pb-1">
 
-          {/* Expand / collapse */}
-          {!expanded && hiddenCount > 0 && (
-            <button
-              onClick={onToggleExpand}
-              className="mt-1.5 text-[11px] text-gray-400 active:text-gray-600 transition-colors"
-            >
-              Show {hiddenCount} more
-            </button>
-          )}
-          {expanded && activities.length > PREVIEW_COUNT && (
-            <button
-              onClick={onToggleExpand}
-              className="mt-1.5 text-[11px] text-gray-400 active:text-gray-600 transition-colors"
-            >
-              Show less
-            </button>
-          )}
-        </>
-      )}
+              {/* Progress bar — today only */}
+              {isToday && total > 0 && (
+                <div className="mb-4">
+                  <p className="text-[11px] text-gray-400 mb-1.5">
+                    {completed} of {total} done
+                  </p>
+                  <div className="h-[3px] bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: primary }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(completed / total) * 100}%` }}
+                      transition={{ duration: 0.45, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
+              )}
 
-      {/* Pattern suggestion */}
-      {showSuggestion && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2 bg-gray-50"
-        >
-          <p className="text-[11px] text-gray-500 leading-snug flex-1">
-            Usually:{' '}
-            <span className="font-semibold text-gray-600">{suggestion!.title}</span>
-          </p>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => onAddSuggestion(suggestion!.title)}
-              className="text-[11px] font-semibold px-2 py-0.5 rounded-lg"
-              style={{ color: primary, background: `${primary}15` }}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => onDismiss(suggKey)}
-              className="text-[11px] text-gray-300 w-5 h-5 flex items-center justify-center active:text-gray-500"
-            >
-              ✕
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </div>
+              {/* One-time swipe hint */}
+              <AnimatePresence>
+                {showHint && total > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex items-center justify-between mb-2.5 px-3 py-2 rounded-xl bg-gray-50"
+                  >
+                    <span className="text-[10px] text-gray-400">
+                      Swipe an activity left to edit or delete
+                    </span>
+                    <button
+                      onClick={onHintDismiss}
+                      className="text-[10px] text-gray-300 ml-2 active:text-gray-500 shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Activities */}
+              {total === 0 ? (
+                <p className="text-xs text-gray-400 pb-3">Nothing planned.</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {sorted.map(a => (
+                    <SwipeableRow
+                      key={a.id}
+                      activity={a}
+                      primary={primary}
+                      onToggle={onToggle}
+                      onEdit={onEdit}
+                      onRequestDelete={onRequestDelete}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* All-done message */}
+              <AnimatePresence>
+                {allDone && (
+                  <motion.p
+                    key="done"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs text-gray-400 text-center py-2"
+                  >
+                    {isToday ? 'Everything for today is done ❤️' : 'All done!'}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              {/* Add activity */}
+              <button
+                onClick={onAdd}
+                className="w-full flex items-center gap-2 py-2.5 mt-1 border-t border-gray-50 active:opacity-60 transition-opacity"
+              >
+                <Plus size={14} strokeWidth={2} style={{ color: primary }} />
+                <span className="text-sm" style={{ color: primary }}>Add activity</span>
+              </button>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
 
@@ -393,26 +364,40 @@ export function WeeklyFocusSection() {
   const focusActivities     = useAppStore(s => s.focusActivities)
   const focusCarryOver      = useAppStore(s => s.focusCarryOver)
   const toggleFocusActivity = useAppStore(s => s.toggleFocusActivity)
+  const deleteFocusActivity = useAppStore(s => s.deleteFocusActivity)
   const carryOverToWeek     = useAppStore(s => s.carryOverToWeek)
 
   const isSeval = currentUser === 'seval'
   const primary = isSeval ? '#8b5cf6' : '#14b8a6'
 
-  const [filterUser, setFilterUser]           = useState<FilterUser>('both')
-  const [viewWeekKey, setViewWeekKey]         = useState(() => getWeekKey())
-  const [expandedDays, setExpandedDays]       = useState<Set<number>>(new Set())
-  const [dismissed, setDismissed]             = useState<Set<string>>(new Set())
-  const [sheetOpen, setSheetOpen]             = useState(false)
-  const [editingActivity, setEditingActivity] = useState<FocusActivity | null>(null)
-  const [addingDayIndex, setAddingDayIndex]   = useState<number | null>(null)
-  const [suggestedTitle, setSuggestedTitle]   = useState<string | undefined>()
-  const [weekBrowserOpen, setWeekBrowserOpen] = useState(false)
+  const [filterUser,       setFilterUser]       = useState<FilterUser>('both')
+  const [viewWeekKey,      setViewWeekKey]       = useState(() => getWeekKey())
+  const [expandedDays,     setExpandedDays]      = useState<Set<number>>(new Set())
+  const [sheetOpen,        setSheetOpen]         = useState(false)
+  const [editingActivity,  setEditingActivity]   = useState<FocusActivity | null>(null)
+  const [addingDayIndex,   setAddingDayIndex]    = useState<number | null>(null)
+  const [suggestedTitle,   setSuggestedTitle]    = useState<string | undefined>()
+  const [weekBrowserOpen,  setWeekBrowserOpen]   = useState(false)
+  const [deleteTarget,     setDeleteTarget]      = useState<string | null>(null)
+  const [hintDismissed,    setHintDismissed]     = useState(false)
 
   const carriedOverRef = useRef<Set<string>>(new Set())
 
   const today          = getTodayString()
   const currentWeekKey = getWeekKey()
   const weekStartDate  = getWeekStartDate(viewWeekKey)
+
+  // Load hint state from localStorage
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SWIPE_HINT_KEY)) setHintDismissed(true)
+    } catch { /* ignore */ }
+  }, [])
+
+  function dismissHint() {
+    setHintDismissed(true)
+    try { localStorage.setItem(SWIPE_HINT_KEY, '1') } catch { /* ignore */ }
+  }
 
   function getDateForDay(dayIndex: number): string {
     const d = new Date(weekStartDate)
@@ -432,43 +417,8 @@ export function WeeklyFocusSection() {
     const map: Record<number, FocusActivity[]> = {}
     for (let i = 0; i < 7; i++) map[i] = []
     weekActivities.forEach(a => { map[a.dayIndex].push(a) })
-    for (let i = 0; i < 7; i++) {
-      map[i].sort((a, b) => {
-        if (a.time && b.time) return a.time.localeCompare(b.time)
-        if (a.time) return -1
-        if (b.time) return 1
-        return a.createdAt.localeCompare(b.createdAt)
-      })
-    }
     return map
   }, [weekActivities])
-
-  // Pattern recognition: same title on same weekday >= 3 times in past weeks
-  const patternSuggestions = useMemo(() => {
-    const past = focusActivities.filter(a => a.weekKey !== viewWeekKey)
-    const counts: Record<string, number> = {}
-    past.forEach(a => {
-      const key = `${a.dayIndex}::${a.title.toLowerCase().trim()}`
-      counts[key] = (counts[key] ?? 0) + 1
-    })
-
-    const result: Record<number, { title: string }> = {}
-    Object.entries(counts).forEach(([key, count]) => {
-      if (count < 3) return
-      const [dayStr, rawTitle] = key.split('::')
-      const dayIndex = parseInt(dayStr, 10)
-      const alreadyIn = (activitiesByDay[dayIndex] ?? []).some(
-        a => a.title.toLowerCase().trim() === rawTitle,
-      )
-      if (!alreadyIn && !result[dayIndex]) {
-        const original = past.find(
-          a => a.dayIndex === dayIndex && a.title.toLowerCase().trim() === rawTitle,
-        )
-        result[dayIndex] = { title: original?.title ?? rawTitle }
-      }
-    })
-    return result
-  }, [focusActivities, viewWeekKey, activitiesByDay])
 
   function navigateWeek(dir: -1 | 1) {
     const base    = getWeekStartDate(viewWeekKey)
@@ -519,22 +469,25 @@ export function WeeklyFocusSection() {
     })
   }
 
+  function confirmDelete() {
+    if (!deleteTarget) return
+    deleteFocusActivity(deleteTarget)
+    setDeleteTarget(null)
+  }
+
   const isCurrentWeek = viewWeekKey === currentWeekKey
+
+  // Find today's dayIndex in the current week
+  const todayDayIndex = useMemo(() => {
+    for (let i = 0; i < 7; i++) {
+      if (getDateForDay(i) === today) return i
+    }
+    return -1
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewWeekKey, today])
 
   return (
     <div className="px-4 pb-6">
-
-      {/* ── Section header ── */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold text-gray-800">This Week</h2>
-        <button
-          onClick={() => setWeekBrowserOpen(true)}
-          className="flex items-center gap-1 text-xs text-gray-400 active:opacity-60"
-        >
-          <History size={13} />
-          History
-        </button>
-      </div>
 
       {/* ── Profile filter ── */}
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-xl p-1">
@@ -578,58 +531,46 @@ export function WeeklyFocusSection() {
           )}
         </div>
 
-        <button
-          onClick={() => navigateWeek(1)}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
-        >
-          <ChevronRight size={16} className="text-gray-500" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigateWeek(1)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
+          >
+            <ChevronRight size={16} className="text-gray-500" />
+          </button>
+          <button
+            onClick={() => setWeekBrowserOpen(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
+          >
+            <History size={14} className="text-gray-500" />
+          </button>
+        </div>
       </div>
 
-      {/* ── Days ── */}
+      {/* ── Day cards ── */}
       <div>
         {DAYS.map((dayName, dayIndex) => {
-          const dateStr   = getDateForDay(dayIndex)
-          const isToday   = dateStr === today
-          const dayActs   = activitiesByDay[dayIndex] ?? []
-          const suggestion = patternSuggestions[dayIndex]
-
-          if (isToday) {
-            return (
-              <TodaySection
-                key={dayIndex}
-                dayName={dayName}
-                dateStr={dateStr}
-                activities={dayActs}
-                primary={primary}
-                suggestion={suggestion}
-                dismissed={dismissed}
-                onDismiss={key => setDismissed(prev => { const s = new Set(prev); s.add(key); return s })}
-                onToggle={toggleFocusActivity}
-                onEdit={openEdit}
-                onAdd={() => openAdd(dayIndex)}
-                onAddSuggestion={title => openAdd(dayIndex, title)}
-              />
-            )
-          }
+          const dateStr  = getDateForDay(dayIndex)
+          const isToday  = dayIndex === todayDayIndex
+          const dayActs  = activitiesByDay[dayIndex] ?? []
+          const expanded = isToday || expandedDays.has(dayIndex)
 
           return (
-            <OtherDaySection
+            <DayCard
               key={dayIndex}
               dayName={dayName}
-              dayIndex={dayIndex}
               dateStr={dateStr}
               activities={dayActs}
               primary={primary}
-              suggestion={suggestion}
-              dismissed={dismissed}
-              onDismiss={key => setDismissed(prev => { const s = new Set(prev); s.add(key); return s })}
-              expanded={expandedDays.has(dayIndex)}
+              isToday={isToday}
+              isExpanded={expanded}
               onToggleExpand={() => toggleExpanded(dayIndex)}
               onToggle={toggleFocusActivity}
               onEdit={openEdit}
               onAdd={() => openAdd(dayIndex)}
-              onAddSuggestion={title => openAdd(dayIndex, title)}
+              onRequestDelete={setDeleteTarget}
+              showHint={isToday && !hintDismissed}
+              onHintDismiss={dismissHint}
             />
           )
         })}
@@ -652,6 +593,15 @@ export function WeeklyFocusSection() {
         onSelectWeek={key => { setViewWeekKey(key); setWeekBrowserOpen(false) }}
         currentWeekKey={viewWeekKey}
       />
+
+      <DeleteConfirmSheet
+        open={!!deleteTarget}
+        title="Delete Activity"
+        message="This activity will be permanently removed."
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+
     </div>
   )
 }

@@ -13,6 +13,7 @@ import {
 } from '@/lib/utils'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { WeeklyFocusSection } from '@/components/weekly-focus/WeeklyFocusSection'
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -105,6 +106,12 @@ export default function TogetherPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+
+      <AnimatedBackground blobs={[
+        { color: '#6ee7b7', size: 320, top: '-80px', left: '-60px',  duration: 18, delay: 0   },
+        { color: '#7dd3fc', size: 260, top: '30%',   left: '60%',    duration: 22, delay: 4   },
+        { color: '#a5f3fc', size: 200, top: '65%',   left: '-30px',  duration: 16, delay: 8   },
+      ]} />
 
       {/* ── Calendar header ── */}
       <div

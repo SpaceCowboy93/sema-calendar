@@ -12,6 +12,7 @@ import {
   CATEGORY_DEFS, type CategoryType,
   CategoryHubSheet, ShoppingHubSheet,
 } from '@/components/ui/CategoryHub'
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 
 export default function PlannerPage() {
   const currentUser  = useAppStore(s => s.currentUser)!
@@ -66,6 +67,11 @@ export default function PlannerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
+      <AnimatedBackground blobs={[
+        { color: '#93c5fd', size: 300, top: '-60px', left: '10%',    duration: 20, delay: 0   },
+        { color: '#c4b5fd', size: 240, top: '40%',   left: '55%',    duration: 24, delay: 5   },
+        { color: '#a5b4fc', size: 180, top: '70%',   left: '-20px',  duration: 17, delay: 9   },
+      ]} />
       {/* Header */}
       <div className="sticky top-0 z-30 bg-gray-50/90 backdrop-blur-sm px-5 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-gray-800">Planner</h1>

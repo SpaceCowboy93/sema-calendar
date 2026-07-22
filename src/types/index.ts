@@ -101,6 +101,7 @@ export interface ChecklistEntry {
 }
 
 export type FocusReminder = 'none' | 'at_time' | '10min' | '30min' | '1h'
+export type FocusPriority = 'low' | 'medium' | 'high'
 
 export interface Countdown {
   id: string
@@ -312,6 +313,7 @@ export interface FocusActivity {
   createdAt: string
   updatedAt: string
   reminder?: FocusReminder
+  priority?: FocusPriority
 }
 
 // ── Receipt scanner ───────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { type FocusActivity, type FocusChecklistItem, type FocusReminder } from '@/types'
+import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority } from '@/types'
 import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
@@ -20,6 +20,13 @@ interface Props {
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+const PRIORITY_OPTIONS: { value: FocusPriority | 'none'; label: string }[] = [
+  { value: 'none',   label: 'None' },
+  { value: 'low',    label: '!'    },
+  { value: 'medium', label: '!!'   },
+  { value: 'high',   label: '!!!'  },
+]
 
 const REMINDER_OPTIONS: { value: FocusReminder; label: string }[] = [
   { value: 'none',    label: 'None'          },
@@ -50,6 +57,7 @@ export function FocusActivitySheet({
   const [time,          setTime]          = useState('')
   const [reminder,      setReminder]      = useState<FocusReminder>('none')
   const [notes,         setNotes]         = useState('')
+  const [priority,      setPriority]      = useState<FocusPriority | 'none'>('none')
   const [checklist,     setChecklist]     = useState<FocusChecklistItem[]>([])
   const [newItem,       setNewItem]       = useState('')
   const [photos,        setPhotos]        = useState<string[]>([])
@@ -67,6 +75,7 @@ export function FocusActivitySheet({
       setTitle(activity.title)
       setTime(activity.time ?? '')
       setReminder(activity.reminder ?? 'none')
+      setPriority(activity.priority ?? 'none')
       setNotes(activity.notes ?? '')
       setChecklist(activity.checklist ? [...activity.checklist] : [])
       setPhotos(activity.photos ? [...activity.photos] : [])
@@ -74,6 +83,7 @@ export function FocusActivitySheet({
       setTitle(suggestedTitle ?? '')
       setTime('')
       setReminder('none')
+      setPriority('none')
       setNotes('')
       setChecklist([])
       setPhotos([])
@@ -133,11 +143,14 @@ export function FocusActivitySheet({
     const timeTrimmed   = time.trim() || undefined
     const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
 
+    const priorityVal = priority !== 'none' ? priority : undefined
+
     if (isEdit && activity) {
       updateFocusActivity(activity.id, {
         title:     titleTrimmed,
         time:      timeTrimmed,
         reminder:  reminderVal,
+        priority:  priorityVal,
         notes:     notes.trim() || undefined,
         checklist: checklistData,
       })
@@ -148,6 +161,7 @@ export function FocusActivitySheet({
         title:     titleTrimmed,
         time:      timeTrimmed,
         reminder:  reminderVal,
+        priority:  priorityVal,
         notes:     notes.trim() || undefined,
         checklist: checklistData,
       })
@@ -297,6 +311,31 @@ export function FocusActivitySheet({
                       ))}
                     </div>
                   )}
+                </div>
+
+                {/* Priority */}
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
+                    Priority{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional)</span>
+                  </label>
+                  <div className="flex gap-1.5">
+                    {PRIORITY_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setPriority(opt.value)}
+                        className={cn(
+                          'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
+                          priority === opt.value
+                            ? 'text-white'
+                            : 'bg-gray-100 text-gray-500 active:bg-gray-200',
+                        )}
+                        style={priority === opt.value ? { background: primary } : undefined}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Notes */}
