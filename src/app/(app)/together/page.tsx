@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO, differenceInCalendarDays } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Search, X, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Search, X, Send, Sun } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import {
   USERS, OTHER_USER, type UserName, type CalendarEvent, type Countdown,
@@ -22,6 +23,8 @@ import {
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
+import { briefingStorageKey, type BriefingItem } from '@/lib/briefing'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -35,6 +38,7 @@ type HomeSearchHit = {
 }
 
 export default function TogetherPage() {
+  const router          = useRouter()
   const currentUser     = useAppStore(s => s.currentUser)!
   const events          = useAppStore(s => s.events)
   const partnerNotes    = useAppStore(s => s.partnerNotes)
@@ -86,6 +90,58 @@ export default function TogetherPage() {
       lastTapRef.current = 0
     }
   }
+
+  // Daily briefing
+  const [briefingOpen,    setBriefingOpen]    = useState(false)
+  const [briefingChecked, setBriefingChecked] = useState(false)
+
+  // Auto-show the briefing once per profile per day.
+  // Reset both flags first so profile switches are handled cleanly.
+  useEffect(() => {
+    setBriefingOpen(false)
+    setBriefingChecked(false)
+    const key = briefingStorageKey(currentUser, getTodayString())
+    const alreadySeen = localStorage.getItem(key)
+    if (!alreadySeen) {
+      localStorage.setItem(key, '1')
+      setBriefingOpen(true)
+    }
+    setBriefingChecked(true)
+  }, [currentUser])
+
+  // Route a briefing row to the corresponding in-app destination
+  const handleBriefingItem = useCallback((item: BriefingItem) => {
+    switch (item.kind) {
+      case 'todo_urgent':
+        setOpenCategory('plans')
+        break
+      case 'event': {
+        const ev = events.find(e => e.id === item.sourceId)
+        if (ev) { setEditingEvent(ev); setModalOpen(true) }
+        break
+      }
+      case 'planner_activity':
+        router.push('/planner')
+        break
+      case 'partner_note':
+        setReadingNote(true)
+        break
+      case 'partner_mood':
+        // Partner mood is contextual — just let the briefing close
+        break
+      case 'countdown': {
+        const cd = countdowns.find(c => c.id === item.sourceId)
+        if (cd) setSelectedCountdown(cd)
+        break
+      }
+      case 'savings_goal':
+        router.push('/plans')
+        break
+      case 'shopping_list':
+        setOpenCategory('shopping')
+        break
+    }
+  }, [events, countdowns, router])
 
   // Note sheet
   const [noteOpen,    setNoteOpen]    = useState(false)
@@ -213,6 +269,23 @@ export default function TogetherPage() {
 
       {/* ── Page header ── */}
       <PageHeader />
+
+      {/* ── Today's Briefing reopen pill ── */}
+      {briefingChecked && !briefingOpen && (
+        <div className="px-5 pb-1 relative z-10">
+          <motion.button
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setBriefingOpen(true)}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-500 bg-white shadow-card"
+          >
+            <Sun size={12} style={{ color: primary }} />
+            Today's Briefing
+          </motion.button>
+        </div>
+      )}
 
       {/* ── Calendar header ── */}
       <div className="px-5 pb-3 relative z-10">
@@ -624,6 +697,13 @@ export default function TogetherPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Daily Briefing ── */}
+      <DailyBriefingSheet
+        open={briefingOpen}
+        onClose={() => setBriefingOpen(false)}
+        onItemPress={handleBriefingItem}
+      />
 
       {/* ── Read note modal ── */}
       <AnimatePresence>
