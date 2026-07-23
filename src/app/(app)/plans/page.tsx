@@ -6,6 +6,7 @@ import {
   Plus, X, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, Wallet, Trash2, Sparkles, Pencil,
 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
@@ -198,23 +199,7 @@ export default function FinancePage() {
 
       <div className="relative z-10">
 
-        {/* ── Hero ── */}
-        <div
-          className="px-5 pt-14 pb-5"
-          style={{ background: 'linear-gradient(135deg, #fef9ee 0%, #f0fdf4 60%, #fafafa 100%)' }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: '#10b98120' }}>
-                  💰
-                </div>
-                <h1 className="text-2xl font-bold text-gray-800">Our Finance</h1>
-              </div>
-              <p className="text-sm text-gray-400 ml-10">Planning our future together.</p>
-            </div>
-          </div>
-        </div>
+        <PageHeader pageLabel="Our Finances" />
 
         {/* ── Month Selector ── */}
         <div className="mx-4 mb-4 bg-white rounded-2xl shadow-card px-4 py-3 flex items-center justify-between">

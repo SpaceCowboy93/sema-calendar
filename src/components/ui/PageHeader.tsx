@@ -1,96 +1,79 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { type LucideIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { useAppStore } from '@/store/useAppStore'
+import { USERS } from '@/types'
+import { getDailyGreeting, msToNextPeriodBoundary } from '@/lib/greeting'
+import { getTodayString } from '@/lib/utils'
 
 export interface PageHeaderProps {
-  icon: LucideIcon
-  /** Icon stroke color, e.g. '#f59e0b' */
-  iconColor: string
-  /** Badge background — should be a translucent color, e.g. 'rgba(251,191,36,0.15)' */
-  iconBg: string
-  title: string
-  subtitle: string
-  /** Enables the one-time warm-glow bloom behind the badge (Home only). */
-  isHome?: boolean
+  /** Page name shown below the greeting, e.g. "Planner". Omit on the home page. */
+  pageLabel?: string
   /** Optional right-side content (e.g. Sign out button on Us). */
   action?: React.ReactNode
 }
 
 /**
- * Shared premium page header used across Home, Planner, Finances, and Us.
+ * Self-contained premium page header.
+ *
+ * Automatically computes the user's daily greeting (with emoji prefix, in
+ * Playfair Display) and shows it as the primary heading on every page.
+ * When pageLabel is supplied it appears below as "Planner · Thursday, July 23".
+ * On the home page (no pageLabel) just the date is shown as context.
  *
  * Transparent — sits naturally on animated page backgrounds.
  * Animates once on mount; respects prefers-reduced-motion.
  */
-export function PageHeader({
-  icon: Icon,
-  iconColor,
-  iconBg,
-  title,
-  subtitle,
-  isHome = false,
-  action,
-}: PageHeaderProps) {
+export function PageHeader({ pageLabel, action }: PageHeaderProps) {
+  const currentUser  = useAppStore(s => s.currentUser)!
   const shouldReduce = useReducedMotion()
+
+  const [greeting, setGreeting] = useState<string | null>(null)
+  const [date,     setDate]     = useState('')
+
+  useEffect(() => {
+    function update() {
+      const now  = new Date()
+      const name = USERS[currentUser].displayName
+      setGreeting(getDailyGreeting(name, getTodayString(), now))
+      setDate(format(now, 'EEEE, MMMM d'))
+      return msToNextPeriodBoundary(now)
+    }
+    const ms = update()
+    const timer = setTimeout(update, ms)
+    return () => clearTimeout(timer)
+  }, [currentUser])
+
+  const contextLine = date
+    ? pageLabel ? `${pageLabel} · ${date}` : date
+    : pageLabel ?? ''
 
   return (
     <div className="px-5 pt-14 pb-3 flex items-start justify-between relative z-10">
-      <div className="flex items-start gap-3.5 flex-1 min-w-0">
-
-        {/* ── Icon badge ── */}
-        <motion.div
-          initial={shouldReduce ? false : { opacity: 0, scale: 0.88 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.36, ease: [0.34, 1.2, 0.64, 1] }}
-          className="relative mt-0.5 shrink-0"
-        >
-          {/* One-time warm glow — Home sun only */}
-          {isHome && !shouldReduce && (
-            <motion.div
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                width: '100px',
-                height: '100px',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: 'radial-gradient(circle, rgba(251,191,36,0.40) 0%, rgba(251,191,36,0) 70%)',
-              }}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: [0, 1, 0], scale: [0.5, 1.6, 1.6] }}
-              transition={{ duration: 1.3, delay: 0.3, ease: 'easeOut', times: [0, 0.45, 1] }}
-            />
-          )}
-
-          <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center"
-            style={{ background: iconBg }}
-          >
-            <Icon size={21} color={iconColor} strokeWidth={1.8} />
-          </div>
-        </motion.div>
-
-        {/* ── Text block ── */}
-        <div className="min-w-0">
+      <div className="flex-1 min-w-0">
+        {greeting && (
           <motion.h1
-            initial={shouldReduce ? false : { opacity: 0, y: 8 }}
+            initial={shouldReduce ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.40, delay: 0.08, ease: 'easeOut' }}
-            className="text-2xl leading-tight text-gray-900 truncate"
+            transition={{ duration: 0.42, ease: 'easeOut' }}
+            className="text-2xl leading-snug text-gray-900"
             style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
           >
-            {title}
+            {greeting}
           </motion.h1>
+        )}
+        {contextLine && (
           <motion.p
             initial={shouldReduce ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.36, delay: 0.16, ease: 'easeOut' }}
-            className="text-sm text-gray-400 mt-0.5"
+            transition={{ duration: 0.36, delay: 0.14, ease: 'easeOut' }}
+            className="text-sm text-gray-400 mt-1"
           >
-            {subtitle}
+            {contextLine}
           </motion.p>
-        </div>
+        )}
       </div>
 
       {action && (

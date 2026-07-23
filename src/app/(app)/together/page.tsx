@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/CategoryHub'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -50,26 +51,6 @@ export default function TogetherPage() {
   const isSeval     = currentUser === 'seval'
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
   const lightBg     = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
-
-  // Greeting (once-daily animation)
-  const [greetingReady, setGreetingReady] = useState(false)
-  const [greetingAnim,  setGreetingAnim]  = useState(false)
-
-  useEffect(() => {
-    const today = getTodayString()
-    const seen  = localStorage.getItem('sema-greeting-date')
-    setGreetingReady(true)
-    setGreetingAnim(seen !== today)
-    if (seen !== today) localStorage.setItem('sema-greeting-date', today)
-  }, [])
-
-  function getGreeting() {
-    const h = new Date().getHours()
-    if (h >= 5 && h < 12) return 'Good morning'
-    if (h >= 12 && h < 18) return 'Good afternoon'
-    if (h >= 18 && h < 22) return 'Good evening'
-    return 'Good night'
-  }
 
   // Calendar state
   const [viewDate,      setViewDate]      = useState(new Date())
@@ -230,31 +211,11 @@ export default function TogetherPage() {
         { color: '#a5f3fc', size: 220, top: '65%',   left: '-30px',  duration: 9,  delay: 5 },
       ]} />
 
-      {/* ── Calendar header ── */}
-      <div
-        className="px-5 pt-14 pb-3 relative z-10"
-        style={{
-          background: isSeval
-            ? 'linear-gradient(135deg, #f5f3ff, #fafafa)'
-            : 'linear-gradient(135deg, #f0fdfa, #fafafa)',
-        }}
-      >
-        {/* Compact daily greeting */}
-        {greetingReady && (
-          <motion.div
-            initial={greetingAnim ? { opacity: 0, y: -6 } : { opacity: 1, y: 0 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="mb-4"
-          >
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">SeMa</p>
-            <p className="text-sm font-semibold text-gray-800">
-              {getGreeting()}, {USERS[currentUser].displayName} ❤️
-            </p>
-            <p className="text-[11px] text-gray-400">{format(new Date(), 'EEEE, MMMM d')}</p>
-          </motion.div>
-        )}
+      {/* ── Page header ── */}
+      <PageHeader />
 
+      {/* ── Calendar header ── */}
+      <div className="px-5 pb-3 relative z-10">
         {/* Notification prompt — visible only until this device is subscribed */}
         <NotificationPromptCard primary={primary} />
 

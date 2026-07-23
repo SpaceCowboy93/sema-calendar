@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/CategoryHub'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 import { WeeklyFocusSection } from '@/components/weekly-focus/WeeklyFocusSection'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function PlannerPage() {
   const currentUser     = useAppStore(s => s.currentUser)!
@@ -107,11 +108,7 @@ export default function PlannerPage() {
         { color: '#818cf8', size: 200, top: '70%',   left: '-20px',  duration: 9,  delay: 5 },
       ]} />
 
-      {/* ── Header ── */}
-      <div className="px-5 pt-12 pb-3">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Planner</h1>
-        <p className="text-sm text-gray-400 mt-1">Plan your future together.</p>
-      </div>
+      <PageHeader pageLabel="Planner" />
 
       <WeeklyFocusSection />
 

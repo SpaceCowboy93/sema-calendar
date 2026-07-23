@@ -7,7 +7,7 @@ import {
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
-import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from 'lucide-react'
+import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
@@ -598,11 +598,7 @@ export default function UsPage() {
       ]} />
 
       <PageHeader
-        icon={Heart}
-        iconColor="#ec4899"
-        iconBg="rgba(244,114,182,0.15)"
-        title="Us"
-        subtitle="Our story, our space"
+        pageLabel="Us"
         action={
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
