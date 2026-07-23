@@ -309,7 +309,7 @@ export interface FocusActivity {
   checklist?: FocusChecklistItem[]
   photos?: string[]           // Supabase Storage public URLs
   isCompleted: boolean
-  createdBy: UserName
+  createdBy: UserName | 'both'
   createdAt: string
   updatedAt: string
   reminder?: FocusReminder

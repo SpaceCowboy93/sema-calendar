@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority } from '@/types'
+import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority, type UserName } from '@/types'
 import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
@@ -17,6 +17,7 @@ interface Props {
   activity?: FocusActivity
   suggestedTitle?: string
   primary: string
+  owner?: UserName | 'both'
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -45,6 +46,7 @@ export function FocusActivitySheet({
   activity,
   suggestedTitle,
   primary,
+  owner,
 }: Props) {
   const addFocusActivity         = useAppStore(s => s.addFocusActivity)
   const updateFocusActivity      = useAppStore(s => s.updateFocusActivity)
@@ -165,6 +167,7 @@ export function FocusActivitySheet({
         priority:  priorityVal,
         notes:     notes.trim() || undefined,
         checklist: checklistData,
+        owner,
       })
 
       if (photos.length > 0 && newId) {

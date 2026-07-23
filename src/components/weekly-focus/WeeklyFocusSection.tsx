@@ -434,7 +434,6 @@ export function WeeklyFocusSection() {
   const weekActivities = useMemo(() => {
     return focusActivities.filter(a => {
       if (a.weekKey !== viewWeekKey) return false
-      if (filterUser === 'both') return true
       return a.createdBy === filterUser
     })
   }, [focusActivities, viewWeekKey, filterUser])
@@ -619,6 +618,7 @@ export function WeeklyFocusSection() {
         activity={editingActivity ?? undefined}
         suggestedTitle={suggestedTitle}
         primary={primary}
+        owner={filterUser}
       />
 
       <WeekBrowserSheet

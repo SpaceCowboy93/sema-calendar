@@ -138,6 +138,7 @@ interface AppState {
     time?: string; notes?: string
     checklist?: FocusChecklistItem[]; photos?: string[]
     reminder?: FocusReminder; priority?: FocusPriority
+    owner?: UserName | 'both'
   }) => string
   updateFocusActivity: (id: string, updates: Partial<FocusActivity>) => void
   toggleFocusActivity: (id: string) => void
@@ -1093,7 +1094,7 @@ export const useAppStore = create<AppState>()(
           checklist:   data.checklist,
           photos:      data.photos,
           isCompleted: false,
-          createdBy:   currentUser,
+          createdBy:   data.owner ?? currentUser,
           createdAt:   now,
           updatedAt:   now,
           reminder:    data.reminder,
