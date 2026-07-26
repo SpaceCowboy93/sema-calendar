@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
+import { CalendarDays } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { type Countdown, type CalendarEvent, USERS } from '@/types'
 import { getTodayString } from '@/lib/utils'
@@ -103,12 +104,16 @@ export default function PlannerPage() {
   return (
     <div className="min-h-screen pb-28 relative z-0">
       <AnimatedBackground blobs={[
-        { color: '#93c5fd', size: 320, top: '-60px', left: '10%',    duration: 11, delay: 0 },
-        { color: '#c4b5fd', size: 260, top: '40%',   left: '55%',    duration: 13, delay: 2 },
-        { color: '#818cf8', size: 200, top: '70%',   left: '-20px',  duration: 9,  delay: 5 },
+        { color: '#93AE90', size: 320, top: '-60px', left: '10%',   duration: 11, delay: 0 },
+        { color: '#B5C299', size: 260, top: '40%',   left: '55%',   duration: 13, delay: 2 },
+        { color: '#7A9478', size: 200, top: '70%',   left: '-20px', duration: 9,  delay: 5 },
       ]} />
 
-      <PageHeader pageLabel="Planner" />
+      <PageHeader
+        title="Planner"
+        subtitle="Plan your future together."
+        icon={<CalendarDays size={18} />}
+      />
 
       <WeeklyFocusSection />
 
@@ -117,7 +122,7 @@ export default function PlannerPage() {
             {/* ── Upcoming Important Dates ── */}
             {allUpcomingItems.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-gray-500 mb-3 px-1">
+                <h2 className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-3 px-1">
                   Upcoming dates
                 </h2>
                 <div className="space-y-2">
@@ -197,7 +202,7 @@ export default function PlannerPage() {
             {/* ── Needs Attention ── */}
             {needsAttention.length > 0 && (
               <section className="pb-2">
-                <h2 className="text-sm font-semibold text-gray-500 mb-3 px-1">
+                <h2 className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-3 px-1">
                   Needs attention
                 </h2>
                 <div className="space-y-2">
@@ -209,15 +214,12 @@ export default function PlannerPage() {
                       transition={{ delay: i * 0.05, duration: 0.2 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={item.onOpen}
-                      className="w-full bg-white rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 text-left"
+                      className="w-full bg-white/70 rounded-xl px-4 py-3 flex items-center gap-3 text-left"
+                      style={{ borderLeft: `3px solid ${item.accent}` }}
                     >
-                      <div
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: item.accent }}
-                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">{item.label}</p>
-                        <p className="text-xs" style={{ color: item.accent }}>{item.sub}</p>
+                        <p className="text-xs mt-0.5" style={{ color: item.accent }}>{item.sub}</p>
                       </div>
                     </motion.button>
                   ))}

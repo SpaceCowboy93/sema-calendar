@@ -192,14 +192,18 @@ export default function FinancePage() {
     <div className="min-h-screen pb-32 relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#6ee7b7', size: 300, top: '-50px', left: '-40px',  duration: 11, delay: 0   },
-        { color: '#fcd34d', size: 240, top: '35%',   left: '58%',    duration: 13, delay: 2   },
-        { color: '#34d399', size: 210, top: '70%',   left: '20%',    duration: 9,  delay: 5   },
+        { color: '#8FA68D', size: 300, top: '-50px', left: '-40px', duration: 11, delay: 0 },
+        { color: '#C9A96E', size: 240, top: '35%',   left: '58%',   duration: 13, delay: 2 },
+        { color: '#7A8C60', size: 210, top: '70%',   left: '20%',   duration: 9,  delay: 5 },
       ]} />
 
       <div className="relative z-10">
 
-        <PageHeader pageLabel="Our Finances" />
+        <PageHeader
+          title="Our Finances"
+          subtitle="Planning our future together."
+          icon={<Wallet size={18} />}
+        />
 
         {/* ── Month Selector ── */}
         <div className="mx-4 mb-4 bg-white rounded-2xl shadow-card px-4 py-3 flex items-center justify-between">

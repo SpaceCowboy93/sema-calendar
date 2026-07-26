@@ -15,9 +15,10 @@ import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
-  const currentUser = useAppStore(s => s.currentUser)
-  const isSeval     = currentUser === 'seval'
-  const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+  const currentUser  = useAppStore(s => s.currentUser)
+  const overlayCount = useAppStore(s => s.overlayCount)
+  const isSeval      = currentUser === 'seval'
+  const primary      = isSeval ? '#8b5cf6' : '#14b8a6'
 
   useSupabaseSync()
   useNotifications()
@@ -66,15 +67,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Floating action button */}
       <motion.button
-        whileTap={{ scale: 0.88 }}
-        animate={{ opacity: scrolling ? 0.35 : 1, rotate: quickAddOpen ? 45 : 0 }}
+        whileTap={overlayCount > 0 ? undefined : { scale: 0.88 }}
+        animate={{
+          opacity: overlayCount > 0 ? 0 : scrolling ? 0.35 : 1,
+          scale:   overlayCount > 0 ? 0.85 : 1,
+          rotate:  quickAddOpen ? 45 : 0,
+        }}
         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-        onClick={() => setQuickAddOpen(true)}
-        className="fixed bottom-20 right-5 z-30 w-14 h-14 rounded-full
+        onClick={() => { if (overlayCount === 0) setQuickAddOpen(true) }}
+        aria-hidden={overlayCount > 0}
+        tabIndex={overlayCount > 0 ? -1 : undefined}
+        className="fixed bottom-20 right-5 z-30 w-[52px] h-[52px] rounded-full
                    flex items-center justify-center text-white backdrop-blur-sm"
-        style={{ background: primary, boxShadow: `0 4px 20px ${primary}55` }}
+        style={{
+          background:    primary,
+          boxShadow:     `0 4px 16px ${primary}38`,
+          pointerEvents: overlayCount > 0 ? 'none' : 'auto',
+        }}
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <Plus size={24} strokeWidth={2.5} />
       </motion.button>
 
       <PartnerNoteNotification />

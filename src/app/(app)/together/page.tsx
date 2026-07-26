@@ -54,7 +54,6 @@ export default function TogetherPage() {
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
-  const lightBg     = isSeval ? 'bg-seval-50' : 'bg-mateo-50'
 
   // Calendar state
   const [viewDate,      setViewDate]      = useState(new Date())
@@ -262,9 +261,9 @@ export default function TogetherPage() {
     <div className="min-h-screen relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#6ee7b7', size: 340, top: '-80px', left: '-60px',  duration: 10, delay: 0 },
-        { color: '#7dd3fc', size: 280, top: '30%',   left: '60%',    duration: 13, delay: 2 },
-        { color: '#a5f3fc', size: 220, top: '65%',   left: '-30px',  duration: 9,  delay: 5 },
+        { color: '#A8C5A0', size: 340, top: '-80px', left: '-60px',  duration: 10, delay: 0 },
+        { color: '#F0DEC8', size: 280, top: '30%',   left: '60%',    duration: 13, delay: 2 },
+        { color: '#C5D5C3', size: 220, top: '65%',   left: '-30px',  duration: 9,  delay: 5 },
       ]} />
 
       {/* ── Page header ── */}
@@ -279,7 +278,7 @@ export default function TogetherPage() {
             transition={{ duration: 0.3, ease: 'easeOut' }}
             whileTap={{ scale: 0.96 }}
             onClick={() => setBriefingOpen(true)}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-gray-500 bg-white shadow-card"
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-500 bg-white shadow-card"
           >
             <Sun size={12} style={{ color: primary }} />
             Today's Briefing
@@ -293,25 +292,23 @@ export default function TogetherPage() {
         <NotificationPromptCard primary={primary} />
 
         {/* Month navigation */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">{format(viewDate, 'MMMM')}</h1>
-            <p className="text-xs text-gray-400">{format(viewDate, 'yyyy')}</p>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1">
+            <span className="text-xl font-bold text-gray-800">{format(viewDate, 'MMMM')}</span>
+            <span className="ml-1.5 text-sm font-normal text-gray-400">{format(viewDate, 'yyyy')}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <ChevronLeft size={18} className="text-gray-500" />
-            </button>
-            <button
-              onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
-            >
-              <ChevronRight size={18} className="text-gray-500" />
-            </button>
-          </div>
+          <button
+            onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            className="w-8 h-8 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <ChevronLeft size={16} className="text-gray-500" />
+          </button>
+          <button
+            onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            className="w-8 h-8 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <ChevronRight size={16} className="text-gray-500" />
+          </button>
         </div>
 
         {/* Day-of-week headers */}
@@ -375,7 +372,7 @@ export default function TogetherPage() {
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-5">
         {/* ── Unread partner note banner ── */}
         <AnimatePresence>
           {unreadNote && !readingNote && (
@@ -400,13 +397,11 @@ export default function TogetherPage() {
 
         {/* ── Calendar events for selected date ── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">
-              {selectedDate === getTodayString()
-                ? "Today's Events"
-                : format(parseISO(selectedDate), 'EEEE, MMM d')}
-            </h2>
-          </div>
+          <h2 className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-3">
+            {selectedDate === getTodayString()
+              ? 'Today'
+              : format(parseISO(selectedDate), 'EEEE, MMM d')}
+          </h2>
 
           <AnimatePresence mode="popLayout">
             {selectedEvents.length === 0 ? (
@@ -414,7 +409,7 @@ export default function TogetherPage() {
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className={cn('rounded-2xl py-5 px-4 text-center', lightBg)}
+                className="py-3 px-1 text-center"
               >
                 <p className="text-xs text-gray-400">A quiet day 🌙</p>
               </motion.div>
@@ -427,7 +422,7 @@ export default function TogetherPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   onClick={() => { setEditingEvent(ev); setModalOpen(true) }}
-                  className="w-full text-left rounded-2xl mb-2 shadow-card overflow-hidden relative
+                  className="w-full text-left rounded-2xl mb-1.5 shadow-card overflow-hidden relative
                              active:scale-[0.98] transition-transform"
                   style={ev.backgroundPhoto ? {
                     backgroundImage: `url(${ev.backgroundPhoto})`,
@@ -562,18 +557,16 @@ export default function TogetherPage() {
                   transition={{ delay: i * 0.05, duration: 0.2, ease: 'easeOut' }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setOpenCategory(cat.id)}
-                  className="rounded-2xl px-3.5 py-3 text-left overflow-hidden"
+                  className="rounded-2xl pl-4 pr-3.5 py-4 text-left overflow-hidden bg-white/80"
                   style={{
-                    background: `${cat.hex}12`,
-                    boxShadow: `0 2px 12px ${cat.hex}1a`,
+                    borderLeft: `3px solid ${cat.hex}`,
+                    boxShadow: '0 2px 12px rgba(45,41,38,0.05)',
                   }}
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.hex }} />
-                    <p className="text-[13px] font-bold text-gray-800 leading-none">{cat.label}</p>
-                  </div>
-                  <p className="text-xs font-semibold leading-tight" style={{ color: cat.hex }}>{st.line1}</p>
-                  {st.line2 && <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{st.line2}</p>}
+                  <p className="text-lg leading-none mb-2">{cat.emoji}</p>
+                  <p className="text-[13px] font-semibold text-gray-700 leading-tight mb-1">{cat.label}</p>
+                  <p className="text-xs font-medium leading-tight" style={{ color: cat.hex }}>{st.line1}</p>
+                  {st.line2 && <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{st.line2}</p>}
                 </motion.button>
               )
             })}

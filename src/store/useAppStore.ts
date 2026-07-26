@@ -34,6 +34,13 @@ interface AppState {
   currentUser: UserName | null
   setCurrentUser: (user: UserName | null) => void
 
+  // Global overlay tracking (transient — not persisted)
+  // Any full-screen sheet/modal should call openOverlay() on open and closeOverlay() on close.
+  // The FAB hides whenever overlayCount > 0.
+  overlayCount: number
+  openOverlay: () => void
+  closeOverlay: () => void
+
   // Events
   events: CalendarEvent[]
   addEvent: (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt' | 'linkedTodoId'>) => string
@@ -292,6 +299,11 @@ export const useAppStore = create<AppState>()(
       // ── Session ─────────────────────────────────────────────────────────────
       currentUser: null,
       setCurrentUser: (user) => set({ currentUser: user }),
+
+      // ── Overlay tracking (transient) ─────────────────────────────────────────
+      overlayCount: 0,
+      openOverlay:  () => set(s => ({ overlayCount: s.overlayCount + 1 })),
+      closeOverlay: () => set(s => ({ overlayCount: Math.max(0, s.overlayCount - 1) })),
 
       // ── Events ──────────────────────────────────────────────────────────────
       events: [],
@@ -1201,6 +1213,6 @@ export const useAppStore = create<AppState>()(
         }))
       },
     }),
-    { name: 'semacalendar-v1', partialize: (s) => { const { currentUser, ...rest } = s; return rest } }
+    { name: 'semacalendar-v1', partialize: (s) => { const { currentUser, overlayCount, openOverlay, closeOverlay, ...rest } = s; return rest } }
   )
 )

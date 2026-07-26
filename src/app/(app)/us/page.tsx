@@ -7,7 +7,7 @@ import {
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
-import { Plus, X, Trash2, Check, Camera, LogOut, Pencil } from 'lucide-react'
+import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
@@ -592,13 +592,15 @@ export default function UsPage() {
     <div className="min-h-screen pb-36 relative z-0">
 
       <AnimatedBackground blobs={[
-        { color: '#f9a8d4', size: 320, top: '-60px', left: '-40px',  duration: 11, delay: 0   },
-        { color: '#fdba74', size: 240, top: '38%',   left: '55%',    duration: 14, delay: 2   },
-        { color: '#c4b5fd', size: 220, top: '72%',   left: '10%',    duration: 10, delay: 5   },
+        { color: '#E8C4B8', size: 320, top: '-60px', left: '-40px', duration: 11, delay: 0 },
+        { color: '#D4C8E0', size: 240, top: '38%',   left: '55%',   duration: 14, delay: 2 },
+        { color: '#C5D5C3', size: 220, top: '72%',   left: '10%',   duration: 10, delay: 5 },
       ]} />
 
       <PageHeader
-        pageLabel="Us"
+        title="Us"
+        subtitle="Our story, our space"
+        icon={<Heart size={18} />}
         action={
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
@@ -616,7 +618,7 @@ export default function UsPage() {
 
         {/* ── 2. Mood ── */}
         <section>
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">💕 How we feel today</h2>
+          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">💕 How we feel today</h2>
 
           <motion.button
             whileTap={{ scale: 0.985 }}
@@ -687,7 +689,7 @@ export default function UsPage() {
         {/* ── 3. Milestones & Anniversaries ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">🎉 Milestones & Anniversaries</h2>
+            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">🎉 Milestones & Anniversaries</h2>
             <motion.button
               whileTap={{ scale: 0.93 }}
               onClick={() => setAddCdOpen(true)}
@@ -756,7 +758,7 @@ export default function UsPage() {
         {/* ── 5. Timeline ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">📖 Timeline</h2>
+            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">📖 Timeline</h2>
             <motion.button
               whileTap={{ scale: 0.93 }}
               onClick={() => setMemorySheet('new')}
@@ -854,7 +856,7 @@ export default function UsPage() {
         {/* ── 6. Memory Highlights ── */}
         {memoriesWithPhotos.length > 0 && (
           <section>
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">⭐ Memory Highlights</h2>
+            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">⭐ Memory Highlights</h2>
             <div
               className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5"
               onPointerDown={e => { highlightDragX.current = e.clientX; highlightScrolling.current = false }}
@@ -883,7 +885,7 @@ export default function UsPage() {
 
         {/* ── 7. Relationship Stats ── */}
         <section className="pb-8">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">📊 Relationship Stats</h2>
+          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">📊 Relationship Stats</h2>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="bg-white rounded-2xl shadow-card p-4 text-center">
               <p className="text-2xl font-bold" style={{ color: primary }}>{pastCountdowns.length}</p>

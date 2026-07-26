@@ -17,6 +17,8 @@ interface Props {
 
 export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
   const currentUser     = useAppStore(s => s.currentUser)!
+  const openOverlay     = useAppStore(s => s.openOverlay)
+  const closeOverlay    = useAppStore(s => s.closeOverlay)
   const events          = useAppStore(s => s.events)
   const todos           = useAppStore(s => s.todos)
   const focusActivities = useAppStore(s => s.focusActivities)
@@ -43,14 +45,19 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
      moods, countdowns, savingsGoals, shoppingLists],
   )
 
-  // Android back-button support — push a history entry when open, pop = close
+  // Register with the global overlay counter so the layout FAB hides while open.
+  // Also push a history entry for Android back-button support.
   useEffect(() => {
     if (!open) return
+    openOverlay()
     history.pushState({ semaBriefing: true }, '')
     const onPop = () => onClose()
     window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [open, onClose])
+    return () => {
+      closeOverlay()
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [open, onClose, openOverlay, closeOverlay])
 
   const handleItemPress = useCallback((item: BriefingItem) => {
     onClose()

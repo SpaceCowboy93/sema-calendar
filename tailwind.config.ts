@@ -32,11 +32,43 @@ const config: Config = {
           500: '#14b8a6',
           600: '#0d9488',
         },
+        // ── Botanical Journal palette ──────────────────────────────────────
+        cream:   '#FDFAF5',
+        sage: {
+          50:  '#F2F5F1',
+          100: '#DCE6DB',
+          200: '#C5D5C3',
+          300: '#A8C5A0',
+          400: '#8FA68D',
+          500: '#6B8A6B',
+          600: '#527052',
+        },
+        olive: {
+          50:  '#F4F5EF',
+          100: '#E3E6D6',
+          200: '#B5C299',
+          300: '#93AE90',
+          400: '#7A8C60',
+          500: '#5E6B47',
+        },
+        blush: {
+          50:  '#FDF7F5',
+          100: '#F7EAE5',
+          200: '#EED5CB',
+          300: '#E8C4B8',
+          400: '#D9A896',
+        },
+        charcoal: {
+          DEFAULT: '#2D2926',
+          warm:    '#4A4540',
+        },
       },
       boxShadow: {
-        soft: '0 4px 24px rgba(0,0,0,0.06)',
-        card: '0 2px 12px rgba(0,0,0,0.04)',
-        modal: '0 -4px 40px rgba(0,0,0,0.12)',
+        // Warm charcoal shadows (not pure black) for organic, non-clinical feel
+        soft:  '0 4px 24px rgba(45,41,38,0.07)',
+        card:  '0 2px 12px rgba(45,41,38,0.05)',
+        warm:  '0 4px 28px rgba(45,41,38,0.08)',
+        modal: '0 -4px 40px rgba(45,41,38,0.13)',
       },
       borderRadius: {
         '4xl': '2rem',

@@ -32,7 +32,7 @@ export function AnimatedBackground({ blobs, className }: Props) {
             borderRadius: '50%',
             background: blob.color,
             filter: `blur(${Math.round(blob.size * 0.42)}px)`,
-            opacity: 0.28,
+            opacity: 0.20,
             animation: `bgBlob ${blob.duration}s ease-in-out ${blob.delay ?? 0}s infinite alternate`,
             willChange: 'transform',
           }}
