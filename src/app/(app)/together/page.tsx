@@ -20,7 +20,7 @@ import {
   CATEGORY_DEFS, type CategoryType,
   CategoryHubSheet,
 } from '@/components/ui/CategoryHub'
-import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
+import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
@@ -266,11 +266,7 @@ export default function TogetherPage() {
   return (
     <div className="min-h-screen relative z-0">
 
-      <AnimatedBackground blobs={[
-        { color: '#A8C5A0', size: 340, top: '-80px', left: '-60px',  duration: 10, delay: 0 },
-        { color: '#F0DEC8', size: 280, top: '30%',   left: '60%',    duration: 13, delay: 2 },
-        { color: '#C5D5C3', size: 220, top: '65%',   left: '-30px',  duration: 9,  delay: 5 },
-      ]} />
+      <C2PageBackground />
 
       {/* ── Page header ── */}
       <PageHeader contextSubtitle={living.homeSubtitle || undefined} />
@@ -300,7 +296,7 @@ export default function TogetherPage() {
         {/* Month navigation */}
         <div className="flex items-center gap-2 mb-3">
           <div className="flex-1">
-            <span className="text-xl font-bold text-gray-800">{format(viewDate, 'MMMM')}</span>
+            <span className="text-lg font-semibold text-gray-700">{format(viewDate, 'MMMM')}</span>
             <span className="ml-1.5 text-sm font-normal text-gray-400">{format(viewDate, 'yyyy')}</span>
           </div>
           <button
@@ -550,32 +546,36 @@ export default function TogetherPage() {
           </AnimatePresence>
         </div>
 
-        {/* ── Category Dashboard ── */}
+        {/* ── Category Rooms ── */}
         {!isSearching && (
-          <div className="grid grid-cols-2 gap-2.5 pt-1 pb-2">
-            {CATEGORY_DEFS.map((cat, i) => {
-              const st = catStats[cat.id]
-              return (
-                <motion.button
-                  key={cat.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.2, ease: 'easeOut' }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => cat.id === 'shopping' ? router.push('/shopping') : setOpenCategory(cat.id)}
-                  className="rounded-2xl pl-4 pr-3.5 py-4 text-left overflow-hidden bg-white/80"
-                  style={{
-                    borderLeft: `3px solid ${cat.hex}`,
-                    boxShadow: '0 2px 12px rgba(45,41,38,0.05)',
-                  }}
-                >
-                  <p className="text-lg leading-none mb-2">{cat.emoji}</p>
-                  <p className="text-[13px] font-semibold text-gray-700 leading-tight mb-1">{cat.label}</p>
-                  <p className="text-xs font-medium leading-tight" style={{ color: cat.hex }}>{st.line1}</p>
-                  {st.line2 && <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{st.line2}</p>}
-                </motion.button>
-              )
-            })}
+          <div className="pt-1 pb-2">
+            <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-4">Rooms</p>
+            <div className="space-y-0.5">
+              {CATEGORY_DEFS.map((cat, i) => {
+                const st = catStats[cat.id]
+                return (
+                  <motion.button
+                    key={cat.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.22, ease: 'easeOut' }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => cat.id === 'shopping' ? router.push('/shopping') : setOpenCategory(cat.id)}
+                    className="w-full rounded-xl px-4 py-3.5 text-left flex items-center gap-3 active:bg-gray-50/60 transition-colors"
+                    style={{ borderLeft: `2px solid ${cat.hex}55` }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700 leading-tight">{cat.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">{st.line1}</p>
+                    </div>
+                    {st.line2 && (
+                      <p className="text-[11px] text-gray-400 shrink-0">{st.line2}</p>
+                    )}
+                    <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                  </motion.button>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>

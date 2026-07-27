@@ -14,7 +14,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
-import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
+import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import {
   USERS, OTHER_USER,
   type Memory, type Countdown, type MoodType, type UserName,
@@ -116,21 +116,17 @@ function RelationshipHero({ primary }: { primary: string }) {
       onClick={handleTap}
       className="relative overflow-hidden rounded-3xl cursor-pointer select-none"
       style={{
-        background: `linear-gradient(145deg, ${primary}10 0%, ${primary}04 60%, transparent 100%)`,
-        border: `1px solid ${primary}20`,
-        boxShadow: `0 2px 24px ${primary}12`,
+        background: 'rgba(255,255,255,0.72)',
+        border: '1px solid rgba(45,41,38,0.07)',
+        boxShadow: '0 2px 16px rgba(45,41,38,0.06)',
       }}
     >
-      <div
-        className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 pointer-events-none"
-        style={{ background: `radial-gradient(circle, ${primary}, transparent 70%)` }}
-      />
       <div className="px-5 pt-5 pb-4 relative z-10">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: `${primary}90` }}>
+          <span className="text-[10px] font-medium tracking-widest uppercase" style={{ color: '#9B9590' }}>
             Seval &amp; Mateo
           </span>
-          <div className="flex-1 h-px" style={{ background: `${primary}20` }} />
+          <div className="flex-1 h-px" style={{ background: 'rgba(45,41,38,0.07)' }} />
           <motion.span
             animate={pulse && !prefersReduced ? { scale: [1, 1.5, 1] } : {}}
             transition={{ duration: 0.5 }}
@@ -151,14 +147,14 @@ function RelationshipHero({ primary }: { primary: string }) {
             { value: dur.days,   label: dur.days   === 1 ? 'day'   : 'days'   },
           ].map(({ value, label }) => (
             <div key={label} className="flex-1 text-center">
-              <div className="rounded-2xl py-3" style={{ background: `${primary}12` }}>
+              <div className="rounded-2xl py-3" style={{ background: 'rgba(45,41,38,0.04)' }}>
                 <motion.p
                   key={value}
                   initial={prefersReduced ? {} : { opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 600, damping: 30 }}
                   className="text-2xl font-bold tabular-nums leading-none"
-                  style={{ color: primary }}
+                  style={{ color: '#2D2926' }}
                 >
                   {value}
                 </motion.p>
@@ -169,7 +165,7 @@ function RelationshipHero({ primary }: { primary: string }) {
         </div>
         <div
           className="flex items-center justify-center gap-0.5 rounded-2xl py-2 px-4"
-          style={{ background: `${primary}08` }}
+          style={{ background: 'rgba(45,41,38,0.03)' }}
         >
           {[
             { value: pad(dur.hours), label: 'h' },
@@ -184,7 +180,7 @@ function RelationshipHero({ primary }: { primary: string }) {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.15 }}
                 className="text-sm font-bold tabular-nums"
-                style={{ color: `${primary}cc` }}
+                style={{ color: '#6B6458' }}
               >
                 {value}
               </motion.span>
@@ -610,16 +606,11 @@ export default function UsPage() {
   return (
     <div className="min-h-screen pb-36 relative z-0">
 
-      <AnimatedBackground blobs={[
-        { color: '#E8C4B8', size: 320, top: '-60px', left: '-40px', duration: 11, delay: 0 },
-        { color: '#D4C8E0', size: 240, top: '38%',   left: '55%',   duration: 14, delay: 2 },
-        { color: '#C5D5C3', size: 220, top: '72%',   left: '10%',   duration: 10, delay: 5 },
-      ]} />
+      <C2PageBackground />
 
       <PageHeader
         title="Us"
         subtitle="Our story, our space"
-        icon={<Heart size={18} />}
         action={
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}
@@ -637,22 +628,21 @@ export default function UsPage() {
 
         {/* ── 2. Mood ── */}
         <section>
-          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">💕 How we feel today</h2>
+          <h2 className="text-[11px] font-medium tracking-widest uppercase mb-4" style={{ color: '#9B9590' }}>How we feel today</h2>
 
           <motion.button
             whileTap={{ scale: 0.985 }}
             onClick={() => setMoodVisible(v => !v)}
-            className="w-full text-left rounded-3xl overflow-hidden mb-3"
-            style={{ border: `1px solid ${primary}15` }}
+            className="w-full text-left rounded-2xl overflow-hidden mb-3"
+            style={{ background: 'rgba(255,255,255,0.72)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
           >
-            <div className="grid grid-cols-2 gap-3 p-3">
+            <div className="grid grid-cols-2 gap-2 p-3">
               {([currentUser, partnerUser] as UserName[]).map(uid => {
                 const u    = USERS[uid]
                 const mood = getMood(uid)
                 const isMe = uid === currentUser
-                const bg   = uid === 'seval' ? 'bg-seval-50' : 'bg-mateo-50'
                 return (
-                  <div key={uid} className={cn('rounded-2xl p-4 text-center', bg)}>
+                  <div key={uid} className="rounded-xl p-4 text-center" style={{ background: 'rgba(45,41,38,0.03)' }}>
                     <div className="text-2xl mb-1">{u.emoji}</div>
                     <p className="text-xs font-semibold text-gray-600 mb-2">{isMe ? 'You' : u.displayName}</p>
                     {mood ? (
@@ -692,7 +682,7 @@ export default function UsPage() {
                     onClick={() => openMoodPopup(type)}
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all',
-                      myMood?.mood === type ? 'text-white shadow-sm' : 'bg-white text-gray-600 shadow-card'
+                      myMood?.mood === type ? 'text-white shadow-sm' : 'text-gray-600'
                     )}
                     style={myMood?.mood === type ? { background: primary } : {}}
                   >
@@ -708,7 +698,7 @@ export default function UsPage() {
         {/* ── 3. Milestones & Anniversaries ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">🎉 Milestones & Anniversaries</h2>
+            <h2 className="text-[11px] font-medium uppercase tracking-widest" style={{ color: '#9B9590' }}>Milestones & Anniversaries</h2>
             <motion.button
               whileTap={{ scale: 0.93 }}
               onClick={() => setAddCdOpen(true)}
@@ -722,10 +712,11 @@ export default function UsPage() {
           {pastCountdowns.length === 0 ? (
             <button
               onClick={() => setAddCdOpen(true)}
-              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-8 text-center"
+              className="w-full rounded-2xl py-8 text-center"
+              style={{ border: '1.5px dashed rgba(45,41,38,0.10)', background: 'rgba(255,255,255,0.5)' }}
             >
-              <span className="text-3xl block mb-2">🎉</span>
-              <p className="text-sm text-gray-400">Add your first milestone or anniversary</p>
+              <Heart size={24} className="mx-auto mb-2" style={{ color: '#c8cfbf' }} />
+              <p className="text-sm" style={{ color: '#a8b0a0' }}>Add your first milestone or anniversary</p>
             </button>
           ) : (
             <div className="space-y-2">
@@ -745,7 +736,7 @@ export default function UsPage() {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => setSelectedCountdown(c)}
                     className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
-                    style={{ background: `${primary}0d`, border: `1.5px solid ${primary}25` }}
+                    style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
                   >
                     <div
                       className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
@@ -777,7 +768,7 @@ export default function UsPage() {
         {/* ── 5. Timeline ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest">📖 Timeline</h2>
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#a8b0a0' }}>Timeline</h2>
             <motion.button
               whileTap={{ scale: 0.93 }}
               onClick={() => setMemorySheet('new')}
@@ -791,10 +782,11 @@ export default function UsPage() {
           {sortedMemories.length === 0 ? (
             <button
               onClick={() => setMemorySheet('new')}
-              className="w-full rounded-2xl border-2 border-dashed border-gray-200 py-10 text-center"
+              className="w-full rounded-2xl py-10 text-center"
+              style={{ border: '1.5px dashed rgba(45,41,38,0.10)', background: 'rgba(255,255,255,0.5)' }}
             >
-              <span className="text-3xl block mb-2">📖</span>
-              <p className="text-sm text-gray-400">Start your story — add your first memory</p>
+              <Heart size={28} className="mx-auto mb-2" style={{ color: '#c8cfbf' }} />
+              <p className="text-sm" style={{ color: '#a8b0a0' }}>Start your story — add your first memory</p>
             </button>
           ) : (
             <div className="relative pl-10">
@@ -821,7 +813,8 @@ export default function UsPage() {
                         <motion.button
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setMemorySheet(memory)}
-                          className="w-full bg-white rounded-2xl shadow-card overflow-hidden text-left"
+                          className="w-full rounded-2xl overflow-hidden text-left"
+                          style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
                         >
                           {memory.photos && memory.photos.length > 0 && (
                             <img
@@ -875,7 +868,7 @@ export default function UsPage() {
         {/* ── 6. Memory Highlights ── */}
         {memoriesWithPhotos.length > 0 && (
           <section>
-            <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">⭐ Memory Highlights</h2>
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#a8b0a0' }}>Memory Highlights</h2>
             <div
               className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5"
               onPointerDown={e => { highlightDragX.current = e.clientX; highlightScrolling.current = false }}
@@ -904,40 +897,55 @@ export default function UsPage() {
 
         {/* ── 7. Relationship Stats ── */}
         <section className="pb-8">
-          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-3">📊 Relationship Stats</h2>
+          <h2 className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#a8b0a0' }}>Relationship Stats</h2>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+            <div className="rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
               <p className="text-2xl font-bold" style={{ color: primary }}>{pastCountdowns.length}</p>
-              <p className="text-[10px] text-gray-400 mt-1">milestones</p>
+              <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>milestones</p>
             </div>
-            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+            <div className="rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
               <p className="text-2xl font-bold" style={{ color: primary }}>{loveNotes.length}</p>
-              <p className="text-[10px] text-gray-400 mt-1">love notes</p>
+              <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>love notes</p>
             </div>
-            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+            <div className="rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
               <p className="text-2xl font-bold" style={{ color: primary }}>
                 {goals.filter(g => g.categoryId === 'travel').length}
               </p>
-              <p className="text-[10px] text-gray-400 mt-1">trips</p>
+              <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>trips</p>
             </div>
-            <div className="bg-white rounded-2xl shadow-card p-4 text-center">
+            <div className="rounded-2xl p-4 text-center"
+              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
               <p className="text-2xl font-bold" style={{ color: primary }}>
                 {goals.filter(g => g.isCompleted).length}
               </p>
-              <p className="text-[10px] text-gray-400 mt-1">dreams achieved</p>
+              <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>dreams achieved</p>
             </div>
           </div>
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setBoomBoomSheet(true)}
-            className="w-full bg-white rounded-2xl shadow-card p-4 flex items-center justify-between"
+            className="w-full rounded-2xl p-4 flex items-center justify-between"
+            style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🛏️</span>
-              <p className="text-sm font-semibold text-gray-700">Boom Boom</p>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                style={{ background: `${primary}12` }}>
+                <Heart size={18} style={{ color: primary }} />
+              </div>
+              <p className="text-sm font-semibold" style={{ color: '#1a1f18' }}>Boom Boom</p>
             </div>
             <p className="text-2xl font-bold" style={{ color: primary }}>{boomBoomCount}</p>
           </motion.button>
+
+          {/* Closing copy */}
+          <div className="flex items-center justify-center gap-2 mt-6" style={{ color: '#c8cfbf' }}>
+            <Heart size={11} style={{ color: primary, opacity: 0.4 }} />
+            <p className="text-xs italic">Every day a little more.</p>
+            <Heart size={11} style={{ color: primary, opacity: 0.4 }} />
+          </div>
         </section>
 
       </div>

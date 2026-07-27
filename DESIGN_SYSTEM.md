@@ -5,7 +5,10 @@ Read this before making any visual change.
 
 ---
 
-## Concept
+## Concept — C2 Botanical Journal (Final Phase 1 Specification)
+
+The C2 Botanical Journal is the official, final visual specification for SeMa Phase 1.
+All visual decisions must align with this system. Do not mix styles from C1, C3, or C4.
 
 The Botanical Journal concept treats SeMa as a warm, handcrafted record of two people's shared life.
 
@@ -364,7 +367,7 @@ Changes do NOT extend to:
 
 1. Identical white card stacks on every page
 2. Color-tinted backgrounds on every tile (replaces with left-border accent)
-3. Purple-blue glowing gradients
+3. Purple-blue glowing gradients — use sage/olive instead
 4. Oversized icon badges everywhere
 5. Generic dashboard tiles for emotional content
 6. Too many emojis in UI chrome (reserved for content)
@@ -374,6 +377,10 @@ Changes do NOT extend to:
 10. Card-inside-card layouts
 11. Random botanical decorations on every component
 12. Equal visual weight across all content (no hierarchy)
+13. Blue (#3b82f6 / bg-blue-*) as a decorative color — use sage `#4a7c5e` or olive instead
+14. Grain overlays, turbulence SVG filters, or paper texture effects
+15. AnimatedBackground blob colors not matching DESIGN_SYSTEM page palette
+16. Multiple competing botanical SVG implementations on the same page
 
 ---
 

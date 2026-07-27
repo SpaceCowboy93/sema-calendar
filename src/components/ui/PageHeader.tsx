@@ -14,10 +14,13 @@ export interface PageHeaderProps {
    * When omitted the component switches to greeting mode (Home only).
    */
   title?: string
+  /**
+   * Optional editorial eyebrow shown above the title in static mode.
+   * Small caps, muted, 11px. E.g. "Our kitchen", "Weekly view".
+   */
+  eyebrow?: string
   /** Subtitle shown below the title in static mode. */
   subtitle?: string
-  /** Icon element for the badge in static mode. Pass a Lucide icon at size 18. */
-  icon?: React.ReactNode
   /** Optional right-side content (e.g. Sign out button on Us). */
   action?: React.ReactNode
   /**
@@ -42,16 +45,10 @@ export interface PageHeaderProps {
  *
  * Both modes respect prefers-reduced-motion and animate once on mount.
  */
-export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, subtitle, action, contextSubtitle }: PageHeaderProps) {
   const currentUser  = useAppStore(s => s.currentUser)!
   const shouldReduce = useReducedMotion()
-  const primary      = currentUser === 'seval' ? '#8b5cf6' : '#14b8a6'
   const isGreeting   = !title
-
-  // Botanical badge accent — softer, profile-appropriate alternative to the primary accent.
-  // Used only on the static-mode icon badge; does not affect buttons or controls.
-  const badgeBg    = currentUser === 'seval' ? 'rgba(196,186,212,0.18)' : 'rgba(107,138,107,0.14)'
-  const badgeColor = currentUser === 'seval' ? '#9B8CAE'                 : '#527052'
 
   const [greeting, setGreeting] = useState<string | null>(null)
   const [date,     setDate]     = useState('')
@@ -81,14 +78,14 @@ export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: P
   // ── Greeting mode — Home only ────────────────────────────────────────────
   if (isGreeting) {
     return (
-      <div className="px-5 pt-14 pb-3 flex items-start justify-between relative z-10">
+      <div className="px-5 pt-16 pb-8 flex items-start justify-between relative z-10">
         <div className="flex-1 min-w-0">
           {greeting && (
             <motion.h1
               initial={shouldReduce ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.42, ease: 'easeOut' }}
-              className="text-2xl leading-snug text-gray-900"
+              className="text-3xl leading-snug text-gray-900"
               style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
             >
               {greeting}
@@ -100,7 +97,7 @@ export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: P
               initial={shouldReduce ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.36, delay: 0.14, ease: 'easeOut' }}
-              className={contextSubtitle ? 'text-sm text-gray-500 mt-1' : 'text-sm text-gray-400 mt-1'}
+              className={contextSubtitle ? 'text-sm text-gray-500 mt-2' : 'text-sm text-gray-400 mt-2'}
             >
               {contextSubtitle || date}
             </motion.p>
@@ -113,25 +110,24 @@ export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: P
 
   // ── Static page identity mode — Planner / Finances / Us ─────────────────
   return (
-    <div className="px-5 pt-14 pb-3 flex items-start justify-between relative z-10">
+    <div className="px-5 pt-16 pb-8 flex items-start justify-between relative z-10">
       <div className="flex-1 min-w-0">
-        {icon && (
-          <motion.div
-            initial={shouldReduce ? false : { opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+        {eyebrow && (
+          <motion.p
+            initial={shouldReduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
-            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-            style={{ background: badgeBg, color: badgeColor }}
+            className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-1.5"
           >
-            {icon}
-          </motion.div>
+            {eyebrow}
+          </motion.p>
         )}
 
         <motion.h1
           initial={shouldReduce ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, delay: icon ? 0.06 : 0, ease: 'easeOut' }}
-          className="text-2xl leading-snug text-gray-900"
+          transition={{ duration: 0.32, delay: eyebrow ? 0.06 : 0, ease: 'easeOut' }}
+          className="text-3xl leading-snug text-gray-900"
           style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
         >
           {title}
@@ -141,8 +137,8 @@ export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: P
           <motion.p
             initial={shouldReduce ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: icon ? 0.12 : 0.06, ease: 'easeOut' }}
-            className="text-sm text-gray-500 mt-0.5"
+            transition={{ duration: 0.28, delay: 0.08, ease: 'easeOut' }}
+            className="text-sm text-gray-500 mt-1.5"
           >
             {subtitle}
           </motion.p>
@@ -152,7 +148,7 @@ export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: P
           <motion.p
             initial={shouldReduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.25, delay: 0.18, ease: 'easeOut' }}
+            transition={{ duration: 0.25, delay: 0.16, ease: 'easeOut' }}
             className="text-xs text-gray-400 mt-1"
           >
             {date}

@@ -69,7 +69,8 @@ function SwipeableRow({
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={() => { closeSwipe(); onEdit(activity) }}
-          className="w-14 flex items-center justify-center bg-blue-500 text-white"
+          className="w-14 flex items-center justify-center text-white"
+          style={{ background: '#4a7c5e' }}
         >
           <Pencil size={14} />
         </button>
@@ -208,10 +209,10 @@ function DayCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
       className={cn(
-        'rounded-2xl bg-white mb-3 overflow-hidden',
+        'mb-2 overflow-hidden',
         isToday
-          ? 'shadow-[0_4px_20px_rgba(0,0,0,0.10)]'
-          : 'shadow-[0_1px_6px_rgba(0,0,0,0.05)]',
+          ? 'rounded-2xl bg-white shadow-[0_2px_12px_rgba(45,41,38,0.07)]'
+          : 'rounded-xl bg-white/50',
       )}
     >
       {/* Card header */}

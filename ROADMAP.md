@@ -24,11 +24,9 @@ Features fully implemented and deployed to production.
 
 ## 🟡 In Progress
 
-- 🟡 **Botanical Journal design system** — C2 visual direction, applied to main pages and Shopping Room
-- 🟡 **Profile-aware botanical accents** — icon badges, page backgrounds per profile
-- 🟡 **Main-page visual pass** — Home, Planner, Finances, Us (first pass complete; review pending)
+- 🟡 **C2 Botanical Journal — Phase 1 complete** — All 5 main pages (Home, Planner, Shopping, Finances, Us) aligned with C2 design system. Blob colors match DESIGN_SYSTEM spec. Non-C2 blue/purple accents removed. Finances savings card made more prominent.
 - 🟡 **Living Moments** — `getLivingMoment()` helper implemented; Home subtitle + Shopping eyebrow/subtitle adapt to real app data
-- 🟡 **Category Rooms** — Shopping Room pilot locally implemented; awaiting review
+- 🟡 **Category Rooms** — Shopping Room implemented as full-page C2 Botanical Journal room
 - 🟡 Notification improvements
 
 ---
