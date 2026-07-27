@@ -89,7 +89,7 @@ function SwipeableRow({
         dragDirectionLock
         dragConstraints={{ left: -110, right: 0 }}
         dragElastic={{ left: 0.05, right: 0 }}
-        style={{ x, background: 'transparent' }}
+        style={{ x, background: 'var(--bj-cream)' }}
         onDragEnd={handleDragEnd}
         className="relative flex items-center gap-3 py-2.5"
       >
