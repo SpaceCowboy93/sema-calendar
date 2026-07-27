@@ -377,6 +377,137 @@ Changes do NOT extend to:
 
 ---
 
+## Category Rooms
+
+Each category (Shopping, Plans, Dreams, Wishes, Moments) is a "room" inside SeMa —
+a distinct space with its own identity, but clearly part of the same shared world.
+
+Category Rooms must not feel like separate apps or generic dashboards.
+
+### Architecture
+
+Category Rooms are bottom sheets (not separate routes) rendered from the Home page.
+They follow the shared mobile-safe sheet pattern: flex column, scrollable interior,
+fixed header and footer, safe-area padding.
+
+### Room Header Pattern
+
+Every category room uses the same editorial header structure:
+
+```
+[drag handle]
+[eyebrow — 11px, tracking-widest, uppercase, gray-400]
+[title — Playfair Display, text-2xl, gray-900]
+[subtitle — text-sm, gray-500]
+```
+
+The title is the room's fixed editorial identity. It does not change.
+The eyebrow adapts contextually via Living Moments (see getLivingMoment()).
+The subtitle adapts to show a dynamic item count or contextual copy.
+
+### Botanical decoration in Room Headers
+
+Each room may use a single, very subtle SVG leaf/branch decoration:
+- Positioned near the outer edge of the header (top right corner)
+- Opacity: 0.07–0.09
+- `aria-hidden="true"`
+- Never behind important text
+- Never repeated on individual cards within the room
+
+### Shopping Room
+
+Identity: "Home, one item at a time"
+
+```
+eyebrow:  Shopping together  (changes via Living Moments)
+title:    Home,
+          one item at a time
+subtitle: N things left to bring home.  (dynamic)
+```
+
+Primary actions:
+- Scan receipt — opens ReceiptScannerSheet (honest: attaches photo, future: OCR + AI)
+- New list — opens ShoppingListEditorSheet
+
+List presentation: flat rows, not card-per-list.
+Active lists: white card with thin progress line. No per-item icons.
+Completed lists: collapsible section with chevron.
+Estimated total: shown only when item prices are set; otherwise omitted.
+Closing copy: "Good food, good mood, better together."
+
+Receipt scanning — current vs future:
+- Current: photo attachment only. Receipt photos are stored but not parsed.
+- Future: OCR + AI item matching. Items identified, matched against shopping list,
+  found items marked complete, unplanned items listed separately.
+  Total spending recorded in Finances. Partner notified on completion.
+  Future copy: "Coffee wasn't found. Keep it on the list?"
+
+### Future Rooms
+
+| Room | Title | Feeling |
+|------|-------|---------|
+| Plans | What we're building together | Forward-looking, calm |
+| Dreams | Someday... | Open, inspiring |
+| Wishes | Little wishes | Hopeful, gentle |
+| Moments | Moments worth keeping | Nostalgic, warm |
+| Notes | Little thoughts | Journal-like, personal |
+
+Do not redesign these during the Shopping pilot.
+Prepare the architecture so they can adopt the same room pattern later.
+
+---
+
+## Living Moments System
+
+Living Moments are contextual text adaptations that make SeMa feel quietly aware
+of what is happening in the couple's life.
+
+### Source of truth
+
+`src/lib/livingMoment.ts` — `getLivingMoment(input: LivingMomentInput): LivingMoment`
+
+Pure function. Never duplicated into individual pages. Future pages must reuse this.
+
+### LivingMoment shape
+
+```ts
+interface LivingMoment {
+  homeSubtitle: string      // replaces date below Home greeting
+  shoppingTitle: string     // eyebrow above Shopping room title
+  shoppingSubtitle: string  // dynamic count / contextual sentence
+}
+```
+
+### Priority order (first match wins)
+
+1. Birthday today
+2. Anniversary today
+3. Trip / vacation starts today
+4. Trip tomorrow
+5. Anniversary tomorrow
+6. Birthday tomorrow
+7. Christmas week (Dec 22–26)
+8. New Year's Eve / Day
+9. Dinner event today or tomorrow
+10. Picnic today or tomorrow
+11. BBQ today or tomorrow
+12. Movie night today or tomorrow
+13. Busy day (3+ events + todos)
+14. Unread partner note
+15. Shopping lists pending
+16. Quiet day (nothing scheduled)
+17. Default (empty string = show date)
+
+### Rules
+
+- Never fake context. Only real app data triggers a moment.
+- One moment at a time — first match wins.
+- Typography is the hero — only words change, no heavy visual decorations.
+- Emoji used only once per moment, in `homeSubtitle` when appropriate.
+- `shoppingTitle` / `shoppingSubtitle` change contextually without replacing the main title.
+
+---
+
 ## Usage Rules
 
 1. Read SEMA_PHILOSOPHY.md before any design decision.
@@ -389,3 +520,5 @@ Changes do NOT extend to:
 8. Every animation must have a UX purpose.
 9. Profile personality changes are subtle — do not stereotype.
 10. Living Moments follow the documented visual language.
+11. Category Rooms follow the Room Header Pattern above.
+12. `getLivingMoment()` is the single source of truth for contextual text.

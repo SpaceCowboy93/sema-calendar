@@ -24,10 +24,11 @@ Features fully implemented and deployed to production.
 
 ## 🟡 In Progress
 
-- 🟡 **Botanical Journal design system** — C2 visual direction, first pass applied to main pages
+- 🟡 **Botanical Journal design system** — C2 visual direction, applied to main pages and Shopping Room
 - 🟡 **Profile-aware botanical accents** — icon badges, page backgrounds per profile
 - 🟡 **Main-page visual pass** — Home, Planner, Finances, Us (first pass complete; review pending)
-- 🟡 **Living Moments foundation** — design language documented, not yet implemented
+- 🟡 **Living Moments** — `getLivingMoment()` helper implemented; Home subtitle + Shopping eyebrow/subtitle adapt to real app data
+- 🟡 **Category Rooms** — Shopping Room pilot locally implemented; awaiting review
 - 🟡 Notification improvements
 
 ---
