@@ -195,7 +195,7 @@ export default function PlannerPage() {
   }, [todos, shoppingLists, todayStr, router])
 
   /* ── Subtitle ─────────────────────────────────────────────────────────── */
-  const plannerSubtitle = living.homeSubtitle || 'Plan your future together.'
+  const plannerSubtitle = living.plannerSubtitle || 'Plan your future together.'
 
   /* ── Render ───────────────────────────────────────────────────────────── */
   return (
