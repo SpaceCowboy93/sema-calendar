@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
@@ -15,6 +15,14 @@ interface Props {
 
 export function WeekBrowserSheet({ open, onClose, onSelectWeek, currentWeekKey }: Props) {
   const focusActivities = useAppStore(s => s.focusActivities)
+  const openOverlay     = useAppStore(s => s.openOverlay)
+  const closeOverlay    = useAppStore(s => s.closeOverlay)
+
+  useEffect(() => {
+    if (!open) return
+    openOverlay()
+    return () => closeOverlay()
+  }, [open, openOverlay, closeOverlay])
   const thisWeekKey     = getWeekKey()
 
   // Collect all unique week keys that have activities, sorted newest-first

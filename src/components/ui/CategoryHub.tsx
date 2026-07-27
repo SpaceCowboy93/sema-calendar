@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Camera, Check, Trash2, Pencil, ScanLine } from 'lucide-react'
+import {
+  Plus, X, Camera, Check, Trash2, Pencil, ScanLine, ChevronDown, ChevronRight,
+} from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
@@ -10,9 +12,7 @@ import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
 import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
-import {
-  WISHLIST_CATEGORY_CONFIG, cn, formatTime, getTodayString,
-} from '@/lib/utils'
+import { WISHLIST_CATEGORY_CONFIG, cn, formatTime } from '@/lib/utils'
 import {
   USERS,
   type UserName, type WishlistCategory, type GoalCategory,
@@ -21,6 +21,7 @@ import {
 } from '@/types'
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
+
 export const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
   ['travel',     { emoji: '✈️', label: 'Travel'     }],
   ['money',      { emoji: '💰', label: 'Money'      }],
@@ -33,16 +34,19 @@ export const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][]
 
 export type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments' | 'plans'
 
-export const CATEGORY_DEFS: { id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor }[] = [
+export const CATEGORY_DEFS: {
+  id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor
+}[] = [
   { id: 'plans',    emoji: '💚', label: 'Plans',    hex: '#34d399', color: 'green'  },
   { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
   { id: 'wishes',   emoji: '💜', label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
-  { id: 'shopping', emoji: '❤️', label: 'Shopping', hex: '#ef4444'                  },
+  { id: 'shopping', emoji: '🛍️', label: 'Shopping', hex: '#ef4444'                  },
   { id: 'moments',  emoji: '💛', label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
 ]
 
 /* ── Helpers ────────────────────────────────────────────────────────────────── */
-function listTotal(list: ShoppingList) {
+
+function listTotal(list: ShoppingList): number {
   return list.items.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0)
 }
 
@@ -64,7 +68,35 @@ function resizeImage(file: File, maxPx = 800): Promise<string> {
   })
 }
 
+/* ── Botanical leaf decoration ──────────────────────────────────────────────── */
+
+function BotanicalLeaf({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 120 130"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn('pointer-events-none', className)}
+    >
+      <path
+        d="M68 118 Q72 72 102 16"
+        stroke="#8FA68D" strokeWidth="1.4" strokeLinecap="round"
+      />
+      <ellipse cx="90" cy="44" rx="15" ry="8.5"
+        transform="rotate(-42 90 44)" fill="#8FA68D" />
+      <ellipse cx="103" cy="23" rx="12" ry="7"
+        transform="rotate(-58 103 23)" fill="#8FA68D" />
+      <ellipse cx="79" cy="68" rx="13.5" ry="7.5"
+        transform="rotate(-28 79 68)" fill="#8FA68D" />
+      <ellipse cx="70" cy="92" rx="10.5" ry="6"
+        transform="rotate(-16 70 92)" fill="#8FA68D" />
+    </svg>
+  )
+}
+
 /* ── CategoryHubSheet ───────────────────────────────────────────────────────── */
+
 export function CategoryHubSheet({
   type, primary, currentUser, onClose, onEditMoment,
 }: {
@@ -87,11 +119,17 @@ export function CategoryHubSheet({
   const updateTodoDo   = useAppStore(s => s.updateTodo)
   const deleteTodoDo   = useAppStore(s => s.deleteTodo)
   const sendNote       = useAppStore(s => s.sendPartnerNote)
+  const openOverlay    = useAppStore(s => s.openOverlay)
+  const closeOverlay   = useAppStore(s => s.closeOverlay)
+
+  useEffect(() => {
+    openOverlay()
+    return () => closeOverlay()
+  }, [openOverlay, closeOverlay])
 
   const def    = CATEGORY_DEFS.find(d => d.id === type)!
   const catHex = def.hex
 
-  // Add-form state
   const [addOpen, setAddOpen] = useState(false)
 
   const addLabel = type === 'dreams' ? 'Dream' : type === 'wishes' ? 'Wish' : type === 'plans' ? 'Plan' : 'Moment'
@@ -128,12 +166,11 @@ export function CategoryHubSheet({
     }
   }, [type, goals, wishlist, todos, events])
 
-  // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editNotes, setEditNotes] = useState('')
-  const [editDate,  setEditDate]  = useState('')
-  const [editTime,  setEditTime]  = useState('')
+  const [editingId, setEditingId]   = useState<string | null>(null)
+  const [editTitle, setEditTitle]   = useState('')
+  const [editNotes, setEditNotes]   = useState('')
+  const [editDate,  setEditDate]    = useState('')
+  const [editTime,  setEditTime]    = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   function openEdit(id: string) {
@@ -194,39 +231,47 @@ export function CategoryHubSheet({
         className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
+        role="dialog" aria-modal="true" aria-label={def.label}
       >
+        {/* Header */}
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="drag-handle mb-3" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{def.emoji}</span>
+              <span className="text-3xl" aria-hidden="true">{def.emoji}</span>
               <div>
                 <h2 className="text-base font-bold text-gray-800">{def.label}</h2>
                 <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
-            <button onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+            >
               <X size={16} />
             </button>
           </div>
         </div>
         <div className="h-px bg-gray-100 mx-5 shrink-0" />
 
+        {/* Add button */}
         <div className="px-4 py-2.5 shrink-0">
           <button
             onClick={() => setAddOpen(true)}
             className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-sm font-semibold"
             style={{ background: `${catHex}20`, color: catHex }}
           >
-            <Plus size={15} strokeWidth={2.5} /> Add New {addLabel}
+            <Plus size={15} strokeWidth={2.5} aria-hidden="true" />
+            Add New {addLabel}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        {/* Scrollable list */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-2">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-5xl mb-3 opacity-30">{def.emoji}</span>
+              <span className="text-5xl mb-3 opacity-30" aria-hidden="true">{def.emoji}</span>
               <p className="text-sm text-gray-400">Nothing here yet</p>
             </div>
           ) : (
@@ -239,18 +284,19 @@ export function CategoryHubSheet({
                       onClick={() => handleToggle(item.id, item.title, item.done)}
                       className="w-6 h-6 rounded-full border-2 shrink-0 transition-all"
                       style={{ borderColor: catHex }}
+                      aria-label={`Mark "${item.title}" complete`}
                     />
                   )}
                   <button onClick={() => openEdit(item.id)} className="flex-1 text-left min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
                     {item.sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{item.sub}</p>}
                   </button>
-                  <span className="text-gray-300 text-lg shrink-0">›</span>
+                  <span className="text-gray-300 text-lg shrink-0" aria-hidden="true">›</span>
                 </div>
               ))}
               {completed.length > 0 && (
                 <>
-                  <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider pt-2 px-1">
+                  <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest pt-2 px-1">
                     Completed ({completed.length})
                   </p>
                   {completed.map(item => (
@@ -260,8 +306,9 @@ export function CategoryHubSheet({
                         onClick={() => handleToggle(item.id, item.title, item.done)}
                         className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold"
                         style={{ background: catHex }}
+                        aria-label={`Unmark "${item.title}" complete`}
                       >
-                        ✓
+                        <Check size={11} />
                       </motion.button>
                       <button onClick={() => openEdit(item.id)} className="flex-1 text-left min-w-0">
                         <p className="text-sm text-gray-400 line-through truncate">{item.title}</p>
@@ -283,7 +330,6 @@ export function CategoryHubSheet({
         onConfirm={() => { handleDelete(); setShowDeleteConfirm(false) }}
       />
 
-      {/* Add — full creation sheet */}
       <FullCreateSheet
         open={addOpen}
         onClose={() => setAddOpen(false)}
@@ -291,7 +337,6 @@ export function CategoryHubSheet({
         initialType={createTypeMap[type]}
       />
 
-      {/* Edit sub-sheet */}
       <AnimatePresence>
         {editingId && (
           <>
@@ -303,14 +348,16 @@ export function CategoryHubSheet({
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+                         max-w-lg mx-auto flex flex-col"
               style={{ maxHeight: 'calc(100dvh - 48px)' }}
+              role="dialog" aria-modal="true" aria-label={`Edit ${addLabel}`}
             >
               <div className="px-5 pt-4 pb-3 shrink-0">
                 <div className="drag-handle mb-4" />
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-gray-800">Edit {def.label.slice(0, -1)}</h3>
-                  <button onClick={() => setEditingId(null)}
+                  <h3 className="text-base font-bold text-gray-800">Edit {addLabel}</h3>
+                  <button onClick={() => setEditingId(null)} aria-label="Close"
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
                     <X size={16} />
                   </button>
@@ -319,24 +366,24 @@ export function CategoryHubSheet({
               <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
                 <div className="space-y-3">
                   <div className="bg-gray-50 rounded-2xl px-4 py-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</p>
+                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Title</p>
                     <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
                       className="w-full text-sm text-gray-800 bg-transparent outline-none" placeholder="Title..." />
                   </div>
                   <div className="bg-gray-50 rounded-2xl px-4 py-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
+                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Notes</p>
                     <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3}
                       className="w-full text-sm text-gray-700 bg-transparent outline-none resize-none placeholder:text-gray-300"
                       placeholder="Add notes..." />
                   </div>
                   <div className="flex gap-2">
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Date</p>
                       <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
                         className="w-full text-sm text-gray-700 bg-transparent outline-none" />
                     </div>
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Time</p>
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Time</p>
                       <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
                         className="w-full text-sm text-gray-700 bg-transparent outline-none" />
                     </div>
@@ -364,15 +411,25 @@ export function CategoryHubSheet({
   )
 }
 
-/* ── ShoppingHubSheet ───────────────────────────────────────────────────────── */
-const RED = '#ef4444'
+/* ── ShoppingHubSheet ────────────────────────────────────────────────────────
+ * Editorial "kitchen" identity — Botanical Journal design.
+ * Header: eyebrow (contextual) + Playfair title + dynamic item count.
+ * List: flat rows, not card-per-list.
+ * Completed: collapsible section.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const SHOP_RED = '#ef4444'
 
 export function ShoppingHubSheet({
-  primary, currentUser, onClose,
+  primary, currentUser, onClose, shoppingTitle, shoppingSubtitle,
 }: {
   primary: string
   currentUser: UserName
   onClose: () => void
+  /** Contextual eyebrow text from Living Moments. Defaults to "Shopping together". */
+  shoppingTitle?: string
+  /** Contextual subtitle from Living Moments. Defaults to item-count sentence. */
+  shoppingSubtitle?: string
 }) {
   const lists      = useAppStore(s => s.shoppingLists)
   const createList = useAppStore(s => s.createShoppingList)
@@ -382,133 +439,354 @@ export function ShoppingHubSheet({
   const toggleItem = useAppStore(s => s.toggleShoppingItem)
   const deleteItem = useAppStore(s => s.deleteShoppingItem)
   const updateItem = useAppStore(s => s.updateShoppingItem)
+  const openOverlay  = useAppStore(s => s.openOverlay)
+  const closeOverlay = useAppStore(s => s.closeOverlay)
+  const openLightbox = useLightboxStore(s => s.open)
 
-  const [view, setView] = useState<null | 'new' | string>(null)
-  const openLightbox    = useLightboxStore(s => s.open)
+  // FAB overlay tracking
+  useEffect(() => {
+    openOverlay()
+    return () => closeOverlay()
+  }, [openOverlay, closeOverlay])
+
+  const [view, setView]   = useState<null | 'new' | string>(null)
+  const [completedOpen, setCompletedOpen] = useState(false)
+
+  // Hub-level receipt scanning: scan → review → create new list with receipt
+  const [hubScannerOpen, setHubScannerOpen]   = useState(false)
+  const [hubScanResult,  setHubScanResult]    = useState<ReceiptResult | null>(null)
+  const [hubScanPhotos,  setHubScanPhotos]    = useState<string[]>([])
+
+  function handleHubScanSave(result: ReceiptResult) {
+    const now     = new Date().toISOString()
+    const name    = result.store
+      ? `${result.store} receipt`
+      : `Shopping ${result.date || new Date().toLocaleDateString()}`
+    const receipt: ShoppingListReceipt = {
+      ...result,
+      photos: hubScanPhotos.length ? hubScanPhotos : undefined,
+    }
+    const newId = createList({ name })
+    // updateList is async-safe — receipt attaches on next render cycle
+    setTimeout(() => updateList(newId, { receipt }), 0)
+    setHubScanResult(null)
+    setHubScanPhotos([])
+    setView(newId)
+  }
 
   const incompleteLists = lists.filter(l => !l.isCompleted)
   const completedLists  = lists.filter(l =>  l.isCompleted)
-  const totalPending    = incompleteLists.reduce((a, l) => a + l.items.filter(i => !i.isChecked).length, 0)
-  const activeList      = typeof view === 'string' ? lists.find(l => l.id === view) ?? null : null
+
+  const totalPending = incompleteLists.reduce(
+    (a, l) => a + l.items.filter(i => !i.isChecked).length, 0,
+  )
+
+  const activeList = typeof view === 'string' ? lists.find(l => l.id === view) ?? null : null
+
+  // Derive the item count subtitle if no Living Moment override
+  const defaultSubtitle = totalPending === 0
+    ? (incompleteLists.length === 0 ? 'A fresh list starts here.' : 'Everything is home.')
+    : `${totalPending} thing${totalPending !== 1 ? 's' : ''} left to bring home.`
+
+  const eyebrow  = shoppingTitle    || 'Shopping together'
+  const subtitle = shoppingSubtitle || defaultSubtitle
 
   return (
     <>
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
       />
+
+      {/* Sheet */}
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto flex flex-col"
-        style={{ maxHeight: 'calc(100dvh - 48px)' }}
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[2rem] shadow-modal
+                   max-w-lg mx-auto flex flex-col overflow-hidden"
+        style={{ maxHeight: 'calc(100dvh - 48px)', background: '#FDFAF5' }}
+        role="dialog" aria-modal="true" aria-label="Shopping"
       >
-        <div className="px-5 pt-4 pb-3 shrink-0">
-          <div className="drag-handle mb-3" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl" style={{ background: '#fff0f0' }}>❤️</div>
-              <div>
-                <h2 className="text-base font-bold text-gray-800">Shopping</h2>
-                <p className="text-xs text-gray-400">{totalPending} item{totalPending !== 1 ? 's' : ''} to get</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setView('new')}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold text-white"
-                style={{ background: RED }}
-              >
-                <Plus size={12} /> New List
-              </button>
-              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="h-px bg-gray-100 mx-5 shrink-0" />
+        {/* ── Editorial header ── */}
+        <div className="relative px-5 pt-5 pb-4 shrink-0 overflow-hidden">
+          {/* Botanical decoration — far right, aria-hidden */}
+          <BotanicalLeaf className="absolute right-0 top-0 w-28 h-28 opacity-[0.08]" />
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {/* Drag handle */}
+          <div className="drag-handle mb-4" />
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            aria-label="Close shopping"
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center
+                       rounded-full bg-white/80 text-gray-500 shadow-card z-10"
+          >
+            <X size={16} />
+          </button>
+
+          {/* Eyebrow */}
+          <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-2">
+            {eyebrow}
+          </p>
+
+          {/* Title — Playfair Display, fixed editorial identity */}
+          <h2
+            className="text-2xl leading-tight text-gray-900 mb-3"
+            style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
+          >
+            Home,<br />one item at a time
+          </h2>
+
+          {/* Dynamic subtitle */}
+          <p className="text-sm text-gray-500">{subtitle}</p>
+        </div>
+
+        {/* Hairline divider */}
+        <div className="mx-5 h-px bg-gray-200/60 shrink-0" />
+
+        {/* ── Action row ── */}
+        <div className="px-5 py-3.5 shrink-0 grid grid-cols-2 gap-2.5">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setHubScannerOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-white
+                       border border-gray-100 text-left shadow-card"
+            style={{ boxShadow: '0 2px 10px rgba(45,41,38,0.05)' }}
+          >
+            <ScanLine size={16} className="text-gray-500 shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-gray-700 leading-tight">Scan receipt</p>
+              <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Attach a photo</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setView('new')}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-white
+                       border border-gray-100 text-left shadow-card"
+            style={{ boxShadow: '0 2px 10px rgba(45,41,38,0.05)' }}
+          >
+            <Plus size={16} className="text-gray-500 shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-gray-700 leading-tight">New list</p>
+              <p className="text-[10px] text-gray-400 leading-tight mt-0.5">Start fresh</p>
+            </div>
+          </motion.button>
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6">
+
           {lists.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <span className="text-5xl mb-3 opacity-30">🛍️</span>
-              <p className="text-sm font-semibold text-gray-500 mb-1">No shopping lists yet</p>
-              <p className="text-xs text-gray-400 mb-5">Create one or scan a receipt to get started</p>
-              <button
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center py-14 text-center px-8">
+              <p className="text-sm font-medium text-gray-500 mb-1.5">A fresh list starts here.</p>
+              <p className="text-xs text-gray-400 mb-6">Create your first list.</p>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setView('new')}
                 className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold"
-                style={{ background: RED }}
+                style={{ background: SHOP_RED }}
               >
-                <Plus size={14} /> Create a list
-              </button>
+                <Plus size={14} aria-hidden="true" /> Create a list
+              </motion.button>
             </div>
           ) : (
-            [...incompleteLists, ...completedLists].map((list, idx) => {
-              const checked = list.items.filter(i => i.isChecked).length
-              const total   = list.items.length
-              const pct     = total > 0 ? (checked / total) * 100 : 0
-              const cost    = listTotal(list)
-              return (
-                <motion.button
-                  key={list.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: list.isCompleted ? 0.72 : 1, y: 0 }}
-                  transition={{ delay: idx * 0.04 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setView(list.id)}
-                  className="w-full text-left rounded-2xl overflow-hidden bg-white shadow-card"
-                >
-                  {effectivePhotos(list)[0] && (
-                    <div
-                      className="w-full h-28 overflow-hidden cursor-pointer"
-                      onClick={e => { e.stopPropagation(); openLightbox(effectivePhotos(list)) }}
-                    >
-                      <img src={effectivePhotos(list)[0]} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-gray-800 truncate">{list.name}</p>
-                          {list.isCompleted && (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">✓ Completed</span>
-                          )}
-                        </div>
-                        {list.storeName && <p className="text-[11px] text-gray-400 mt-0.5">📍 {list.storeName}</p>}
-                        {list.date && <p className="text-[10px] text-gray-300 mt-0.5">🗓 {list.date}</p>}
-                      </div>
-                      <div className="text-right shrink-0">
-                        {cost > 0 && <p className="text-sm font-bold text-gray-800">€{cost.toFixed(2)}</p>}
-                        <p className="text-[10px] text-gray-400">{total} item{total !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                    {total > 0 && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ background: list.isCompleted ? '#10b981' : RED }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-gray-400 shrink-0">{checked}/{total}</span>
-                      </div>
-                    )}
+            <>
+              {/* Active list section */}
+              {incompleteLists.length > 0 && (
+                <div className="px-5 pt-2 pb-1">
+                  {/* Section label */}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase">
+                      Active list
+                    </p>
+                    <span className="text-[11px] text-gray-400 tabular-nums">
+                      {totalPending} pending
+                    </span>
                   </div>
-                </motion.button>
-              )
-            })
+
+                  {/* Flat list rows */}
+                  <div className="space-y-px">
+                    {incompleteLists.map((list, idx) => {
+                      const checked  = list.items.filter(i => i.isChecked).length
+                      const total    = list.items.length
+                      const unchecked = total - checked
+                      const pct      = total > 0 ? (checked / total) * 100 : 0
+                      const cost     = listTotal(list)
+                      const hasPhotos = effectivePhotos(list).length > 0
+
+                      return (
+                        <motion.button
+                          key={list.id}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.04, duration: 0.22 }}
+                          whileTap={{ scale: 0.985 }}
+                          onClick={() => setView(list.id)}
+                          className="w-full text-left rounded-2xl px-4 py-3.5 bg-white
+                                     border border-gray-100/80 mb-2"
+                          style={{ boxShadow: '0 1px 8px rgba(45,41,38,0.04)' }}
+                        >
+                          {/* Cover photo strip */}
+                          {hasPhotos && (
+                            <div
+                              className="w-full h-20 rounded-xl overflow-hidden mb-3 cursor-pointer"
+                              onClick={e => {
+                                e.stopPropagation()
+                                openLightbox(effectivePhotos(list))
+                              }}
+                            >
+                              <img
+                                src={effectivePhotos(list)[0]}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[15px] font-semibold text-gray-800 truncate leading-tight">
+                                {list.name}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {list.storeName && (
+                                  <span className="text-[11px] text-gray-400">{list.storeName}</span>
+                                )}
+                                {list.date && (
+                                  <span className="text-[11px] text-gray-400">{list.date}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {cost > 0 && (
+                                <p className="text-sm font-semibold text-gray-700">
+                                  €{cost.toFixed(2)}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {unchecked} of {total} left
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Thin progress line */}
+                          {total > 0 && (
+                            <div className="mt-3 h-[2px] bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ background: SHOP_RED, opacity: 0.55 }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ type: 'spring', stiffness: 80, damping: 18 }}
+                              />
+                            </div>
+                          )}
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Completed section — collapsible */}
+              {completedLists.length > 0 && (
+                <div className="px-5 pt-1">
+                  <button
+                    onClick={() => setCompletedOpen(c => !c)}
+                    className="w-full flex items-center justify-between py-3 text-left
+                               active:opacity-70 transition-opacity"
+                    aria-expanded={completedOpen}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <Check size={10} className="text-emerald-500" />
+                      </div>
+                      <span className="text-[11px] font-medium text-gray-400 tracking-widest uppercase">
+                        Completed
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-gray-400">{completedLists.length}</span>
+                      {completedOpen
+                        ? <ChevronDown size={14} className="text-gray-400" aria-hidden="true" />
+                        : <ChevronRight size={14} className="text-gray-400" aria-hidden="true" />
+                      }
+                    </div>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {completedOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-2 pb-2">
+                          {completedLists.map((list, idx) => {
+                            const checked = list.items.filter(i => i.isChecked).length
+                            const total   = list.items.length
+                            const cost    = listTotal(list)
+                            return (
+                              <motion.button
+                                key={list.id}
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                whileTap={{ scale: 0.985 }}
+                                onClick={() => setView(list.id)}
+                                className="w-full text-left rounded-2xl px-4 py-3 bg-white/60
+                                           border border-gray-100/60 opacity-65"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-600 truncate">
+                                      {list.name}
+                                    </p>
+                                    {list.completedAt && (
+                                      <p className="text-[10px] text-gray-400 mt-0.5">
+                                        {new Date(list.completedAt).toLocaleDateString(undefined, {
+                                          month: 'short', day: 'numeric'
+                                        })}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    {cost > 0 && (
+                                      <p className="text-xs font-medium text-gray-500">€{cost.toFixed(2)}</p>
+                                    )}
+                                    <p className="text-[10px] text-gray-400">
+                                      {checked}/{total} done
+                                    </p>
+                                  </div>
+                                </div>
+                              </motion.button>
+                            )
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Closing human copy */}
+              <p className="text-center text-xs text-gray-400/70 italic px-8 pt-6 pb-2 leading-relaxed">
+                Good food, good mood,<br />better together.
+              </p>
+            </>
           )}
         </div>
       </motion.div>
 
+      {/* New list editor */}
       <AnimatePresence>
         {view === 'new' && (
           <ShoppingListEditorSheet
@@ -519,6 +797,7 @@ export function ShoppingHubSheet({
         )}
       </AnimatePresence>
 
+      {/* List detail */}
       <AnimatePresence>
         {activeList && (
           <ShoppingDetailSheet
@@ -534,11 +813,39 @@ export function ShoppingHubSheet({
         )}
       </AnimatePresence>
 
+      {/* Hub-level receipt scanner */}
+      <AnimatePresence>
+        {hubScannerOpen && (
+          <ReceiptScannerSheet
+            onClose={() => setHubScannerOpen(false)}
+            onResultReady={(result, photos) => {
+              setHubScanResult(result)
+              setHubScanPhotos(photos)
+              setHubScannerOpen(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Hub-level receipt review */}
+      <AnimatePresence>
+        {hubScanResult && (
+          <ReceiptReviewSheet
+            result={hubScanResult}
+            photos={hubScanPhotos}
+            onClose={() => { setHubScanResult(null); setHubScanPhotos([]) }}
+            onSave={handleHubScanSave}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
 
-/* ── ShoppingDetailSheet ────────────────────────────────────────────────────── */
+/* ── ShoppingDetailSheet ─────────────────────────────────────────────────────
+ * Individual shopping list view — items, receipt, progress, completion.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
 export function ShoppingDetailSheet({
   list, onUpdate, onDelete, onAddItem, onToggleItem, onDeleteItem, onUpdateItem, onClose,
 }: {
@@ -551,49 +858,64 @@ export function ShoppingDetailSheet({
   onUpdateItem: (itemId: string, updates: Partial<ShoppingItem>) => void
   onClose: () => void
 }) {
+  const openOverlay  = useAppStore(s => s.openOverlay)
+  const closeOverlay = useAppStore(s => s.closeOverlay)
+
+  // FAB overlay tracking
+  useEffect(() => {
+    openOverlay()
+    return () => closeOverlay()
+  }, [openOverlay, closeOverlay])
+
   const [itemName,  setItemName]  = useState('')
   const [itemQty,   setItemQty]   = useState('1')
   const [itemPrice, setItemPrice] = useState('')
-  const photoRef = useRef<HTMLInputElement>(null)
-
+  const photoRef    = useRef<HTMLInputElement>(null)
   const itemNameRef = useRef<HTMLInputElement>(null)
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
 
-  // Receipt scanning
-  const [scannerOpen,   setScannerOpen]   = useState(false)
-  const [scanResult,    setScanResult]    = useState<ReceiptResult | null>(null)
-  const [scanPhotos,    setScanPhotos]    = useState<string[]>([])
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editName,  setEditName]  = useState('')
   const [editQty,   setEditQty]   = useState('1')
   const [editPrice, setEditPrice] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
-  const [completionDialog, setCompletionDialog] = useState(false)
-  const [leaveNoteMode,    setLeaveNoteMode]    = useState(false)
-  const [completionNote,   setCompletionNote]   = useState(list.completionNote ?? '')
-  const [showDeleteListConfirm, setShowDeleteListConfirm] = useState(false)
-  const [deleteItemId, setDeleteItemId]         = useState<string | null>(null)
-  const prevCompletedRef = useRef(list.isCompleted ?? false)
+  // Receipt scanning (from within detail view)
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [scanResult,  setScanResult]  = useState<ReceiptResult | null>(null)
+  const [scanPhotos,  setScanPhotos]  = useState<string[]>([])
 
+  const [completionDialog,     setCompletionDialog]     = useState(false)
+  const [leaveNoteMode,        setLeaveNoteMode]        = useState(false)
+  const [completionNote,       setCompletionNote]       = useState(list.completionNote ?? '')
+  const [showDeleteListConfirm, setShowDeleteListConfirm] = useState(false)
+  const [deleteItemId,         setDeleteItemId]         = useState<string | null>(null)
+
+  const prevCompletedRef = useRef(list.isCompleted ?? false)
   useEffect(() => {
-    if (list.isCompleted && !prevCompletedRef.current) {
-      setCompletionDialog(true)
-    }
+    if (list.isCompleted && !prevCompletedRef.current) setCompletionDialog(true)
     prevCompletedRef.current = list.isCompleted ?? false
   }, [list.isCompleted])
 
   const openLightbox = useLightboxStore(s => s.open)
+
   const checked = list.items.filter(i => i.isChecked).length
   const total   = list.items.length
   const pct     = total > 0 ? (checked / total) * 100 : 0
   const cost    = listTotal(list)
   const photos  = effectivePhotos(list)
 
+  // Item count summary for header
+  const remaining = total - checked
+  const listStatus = list.isCompleted
+    ? 'Everything is home.'
+    : remaining === 0 && total > 0
+    ? 'All checked off.'
+    : `${remaining} of ${total} left`
+
   function handleAddItem() {
     if (!itemName.trim()) return
     onAddItem(itemName.trim(), parseInt(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
     setItemName(''); setItemQty('1'); setItemPrice('')
-    // Refocus the name input so the user can keep typing the next item
     requestAnimationFrame(() => itemNameRef.current?.focus())
   }
 
@@ -647,109 +969,174 @@ export function ShoppingDetailSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+        className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto flex flex-col"
-        style={{ maxHeight: 'calc(100dvh - 48px)' }}
+        style={{ maxHeight: 'calc(100dvh - 48px)', background: '#FDFAF5' }}
+        role="dialog" aria-modal="true" aria-label={`${list.name} shopping list`}
       >
-        <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoPick} />
+        <input
+          ref={photoRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoPick}
+          aria-label="Add photo"
+        />
 
+        {/* ── Header ── */}
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="drag-handle mb-3" />
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <h3 className="text-base font-bold text-gray-800 truncate">{list.name}</h3>
+                <h3
+                  className="text-base font-semibold text-gray-800 truncate"
+                  style={{ fontFamily: 'var(--font-playfair)' }}
+                >
+                  {list.name}
+                </h3>
                 {list.isCompleted && (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">✓ Done</span>
+                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                    Done
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-3 text-[11px] text-gray-400 flex-wrap">
-                {list.storeName && <span>📍 {list.storeName}</span>}
-                {list.date     && <span>🗓 {list.date}</span>}
-                {cost > 0      && <span className="font-semibold text-gray-600">€{cost.toFixed(2)} total</span>}
+                {list.storeName && <span>{list.storeName}</span>}
+                {list.date     && <span>{list.date}</span>}
+                <span>{listStatus}</span>
+                {cost > 0      && (
+                  <span className="font-medium text-gray-500">€{cost.toFixed(2)}</span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <button onClick={() => photoRef.current?.click()}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 active:bg-gray-200">
-                <Camera size={14} />
+              <button
+                onClick={() => photoRef.current?.click()}
+                aria-label="Add photo"
+                className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400"
+              >
+                <Camera size={14} aria-hidden="true" />
               </button>
-              <button onClick={onClose}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:bg-gray-200">
-                <X size={16} />
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-500"
+              >
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="px-5 pb-3 shrink-0 border-b border-gray-100">
+        {/* Progress bar */}
+        <div className="px-5 pb-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
                 className="h-full rounded-full"
-                style={{ background: list.isCompleted ? '#10b981' : RED }}
+                style={{ background: list.isCompleted ? '#10b981' : SHOP_RED }}
                 animate={{ width: `${pct}%` }}
                 transition={{ type: 'spring', stiffness: 100, damping: 18 }}
               />
             </div>
-            <span className="text-xs font-bold shrink-0 tabular-nums"
-              style={{ color: list.isCompleted ? '#10b981' : '#9ca3af' }}>
+            <span
+              className="text-xs font-medium shrink-0 tabular-nums"
+              style={{ color: list.isCompleted ? '#10b981' : '#9ca3af' }}
+            >
               {checked}/{total}
             </span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        <div className="h-px bg-gray-200/60 mx-5 shrink-0" />
+
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-3">
+
+          {/* Completion banner */}
           {list.isCompleted && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className="rounded-2xl px-4 py-3"
+              initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              className="rounded-2xl px-4 py-3.5"
               style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0' }}
             >
-              <p className="text-sm font-bold text-emerald-600">🎉 Shopping completed!</p>
+              <p className="text-sm font-semibold text-emerald-600">Shopping complete!</p>
               {list.completedAt && (
                 <p className="text-[10px] text-emerald-400 mt-0.5">
-                  {new Date(list.completedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {new Date(list.completedAt).toLocaleDateString(undefined, {
+                    weekday: 'short', month: 'short', day: 'numeric',
+                  })}
                   {list.completedBy ? ` · by ${list.completedBy}` : ''}
                 </p>
               )}
               {list.completionNote ? (
                 <div className="mt-2 pt-2 border-t border-emerald-100">
-                  <p className="text-[11px] text-emerald-700 leading-relaxed italic">"{list.completionNote}"</p>
+                  <p className="text-[11px] text-emerald-700 leading-relaxed italic">
+                    &ldquo;{list.completionNote}&rdquo;
+                  </p>
                   <button
                     onClick={() => { setLeaveNoteMode(true); setCompletionDialog(true) }}
                     className="text-[10px] text-emerald-500 font-semibold mt-1 active:opacity-70"
-                  >Edit note</button>
+                  >
+                    Edit note
+                  </button>
                 </div>
               ) : (
                 <button
                   onClick={() => { setLeaveNoteMode(true); setCompletionDialog(true) }}
                   className="mt-1.5 text-[10px] text-emerald-500 font-semibold active:opacity-70"
-                >+ Add a note about this trip</button>
+                >
+                  + Add a note about this trip
+                </button>
               )}
             </motion.div>
           )}
 
-          <div className="bg-gray-50 rounded-2xl p-3">
+          {/* Add item row */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-3">
             <div className="flex items-center gap-2">
               <input
                 ref={itemNameRef}
-                type="text" value={itemName} onChange={e => setItemName(e.target.value)}
+                type="text"
+                value={itemName}
+                onChange={e => setItemName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
                 placeholder="Add item..."
-                className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100"
+                aria-label="New item name"
+                className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2 outline-none border border-gray-100 placeholder:text-gray-300"
               />
-              <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
+              <input
+                type="number"
+                value={itemQty}
+                onChange={e => setItemQty(e.target.value)}
+                min="1"
+                aria-label="Quantity"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
-                className="w-10 text-xs text-center bg-white rounded-xl px-1.5 py-2 outline-none border border-gray-100" />
-              <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+                className="w-10 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-2 outline-none border border-gray-100"
+              />
+              <input
+                type="number"
+                value={itemPrice}
+                onChange={e => setItemPrice(e.target.value)}
+                placeholder="€"
+                aria-label="Price"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
-                className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100" />
+                className="w-14 text-xs bg-gray-50 rounded-xl px-2 py-2 outline-none border border-gray-100"
+              />
             </div>
           </div>
 
+          {/* Section label */}
+          {list.items.length > 0 && (
+            <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase px-1 pt-1">
+              Active list · {list.items.filter(i => !i.isChecked).length} remaining
+            </p>
+          )}
+
+          {/* Item rows */}
           <AnimatePresence initial={false}>
             {list.items.map(item => (
               <motion.div
@@ -761,67 +1148,128 @@ export function ShoppingDetailSheet({
                 transition={{ duration: 0.15 }}
               >
                 {editingItemId === item.id ? (
-                  <div className="bg-white rounded-2xl border-2 p-2.5 space-y-2" style={{ borderColor: RED + '40' }}>
+                  /* Inline edit form */
+                  <div
+                    className="bg-white rounded-2xl border-2 p-2.5 space-y-2"
+                    style={{ borderColor: SHOP_RED + '40' }}
+                  >
                     <div className="flex gap-1.5">
-                      <input type="text" value={editName} onChange={e => setEditName(e.target.value)} autoFocus
-                        className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-1.5 outline-none min-w-0" />
-                      <input type="number" value={editQty} onChange={e => setEditQty(e.target.value)} min="1"
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        autoFocus
+                        aria-label="Edit item name"
+                        className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-1.5 outline-none min-w-0"
+                      />
+                      <input
+                        type="number"
+                        value={editQty}
+                        onChange={e => setEditQty(e.target.value)}
+                        min="1"
+                        aria-label="Edit quantity"
                         onFocus={e => e.target.select()}
-                        className="w-12 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-1.5 outline-none shrink-0" />
-                      <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="€"
-                        className="w-16 text-xs bg-gray-50 rounded-xl px-2 py-1.5 outline-none shrink-0" />
+                        className="w-12 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-1.5 outline-none shrink-0"
+                      />
+                      <input
+                        type="number"
+                        value={editPrice}
+                        onChange={e => setEditPrice(e.target.value)}
+                        placeholder="€"
+                        aria-label="Edit price"
+                        className="w-16 text-xs bg-gray-50 rounded-xl px-2 py-1.5 outline-none shrink-0"
+                      />
                     </div>
-                    <input type="text" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Note (optional)"
-                      className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-1.5 outline-none" />
+                    <input
+                      type="text"
+                      value={editNotes}
+                      onChange={e => setEditNotes(e.target.value)}
+                      placeholder="Note (optional)"
+                      aria-label="Edit notes"
+                      className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-1.5 outline-none"
+                    />
                     <div className="flex gap-1.5">
-                      <button onClick={saveItemEdit} disabled={!editName.trim()}
-                        className="flex-1 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold disabled:opacity-40">
+                      <button
+                        onClick={saveItemEdit}
+                        disabled={!editName.trim()}
+                        className="flex-1 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold disabled:opacity-40"
+                      >
                         Save
                       </button>
-                      <button onClick={() => setEditingItemId(null)}
-                        className="flex-1 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold">
+                      <button
+                        onClick={() => setEditingItemId(null)}
+                        className="flex-1 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold"
+                      >
                         Cancel
                       </button>
-                      <button onClick={() => setDeleteItemId(item.id)}
-                        className="w-8 py-1.5 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
-                        <Trash2 size={12} />
+                      <button
+                        onClick={() => setDeleteItemId(item.id)}
+                        aria-label="Delete item"
+                        className="w-8 py-1.5 rounded-xl bg-red-50 text-red-400 flex items-center justify-center"
+                      >
+                        <Trash2 size={12} aria-hidden="true" />
                       </button>
                     </div>
                   </div>
                 ) : (
+                  /* Normal item row — flat, no card border on each item */
                   <div className={cn(
-                    'flex items-center gap-3 px-3 py-3 rounded-2xl border transition-colors',
-                    item.isChecked ? 'opacity-55 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
+                    'flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors',
+                    item.isChecked
+                      ? 'opacity-50 bg-white/50'
+                      : 'bg-white border border-gray-100/80',
                   )}>
                     <button
                       onClick={() => onToggleItem(item.id)}
+                      aria-label={item.isChecked ? `Uncheck ${item.name}` : `Check off ${item.name}`}
                       className={cn(
                         'w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
-                        item.isChecked ? 'bg-emerald-400 border-emerald-400' : 'border-gray-300'
+                        item.isChecked
+                          ? 'bg-emerald-400 border-emerald-400'
+                          : 'border-gray-300',
                       )}
                     >
-                      {item.isChecked && <Check size={10} color="white" strokeWidth={3} />}
+                      {item.isChecked && <Check size={10} color="white" strokeWidth={3} aria-hidden="true" />}
                     </button>
+
                     <button className="flex-1 min-w-0 text-left" onClick={() => startEditItem(item)}>
-                      <p className={cn('text-sm font-medium leading-tight', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
+                      <p className={cn(
+                        'text-sm font-medium leading-tight',
+                        item.isChecked ? 'line-through text-gray-400' : 'text-gray-800',
+                      )}>
                         {item.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
+                        {item.quantity > 1 && (
+                          <span className="text-[10px] text-gray-400">×{item.quantity}</span>
+                        )}
                         {item.price != null && item.price > 0 && (
                           <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
                         )}
                         {item.quantity > 1 && item.price != null && item.price > 0 && (
-                          <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="text-[10px] font-medium text-gray-500">
+                            = €{(item.price * item.quantity).toFixed(2)}
+                          </span>
                         )}
-                        {item.notes && <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>}
+                        {item.notes && (
+                          <span className="text-[10px] text-gray-400 italic truncate">{item.notes}</span>
+                        )}
                       </div>
                     </button>
-                    <button onClick={() => startEditItem(item)} className="text-gray-300 active:text-blue-400 p-1 shrink-0">
-                      <Pencil size={12} />
+
+                    <button
+                      onClick={() => startEditItem(item)}
+                      aria-label={`Edit ${item.name}`}
+                      className="text-gray-300 active:text-blue-400 p-1 shrink-0"
+                    >
+                      <Pencil size={12} aria-hidden="true" />
                     </button>
-                    <button onClick={() => setDeleteItemId(item.id)} className="text-gray-200 active:text-red-400 p-0.5 shrink-0">
-                      <X size={13} />
+                    <button
+                      onClick={() => setDeleteItemId(item.id)}
+                      aria-label={`Remove ${item.name}`}
+                      className="text-gray-200 active:text-red-400 p-0.5 shrink-0"
+                    >
+                      <X size={13} aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -830,37 +1278,69 @@ export function ShoppingDetailSheet({
           </AnimatePresence>
 
           {list.items.length === 0 && (
-            <p className="text-center text-xs text-gray-400 py-6">No items yet — add one above</p>
+            <p className="text-center text-xs text-gray-400 py-6">
+              Nothing here yet — add the first item above
+            </p>
           )}
 
-          {/* ── Purchased / Receipt section ── */}
+          {/* ── Estimated total ── (only when prices are set) */}
+          {(() => {
+            const itemsWithPrice = list.items.filter(i => i.price != null && i.price > 0)
+            if (itemsWithPrice.length === 0) return null
+            return (
+              <div className="rounded-2xl bg-white border border-gray-100 px-4 py-3.5 mt-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-700">Estimated total</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      Based on {itemsWithPrice.length} priced item{itemsWithPrice.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-800">€{cost.toFixed(2)}</p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Receipt / photo section ── */}
           {list.receipt ? (
-            <div className="mt-2 rounded-2xl overflow-hidden border border-gray-100">
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+            <div className="mt-1 rounded-2xl overflow-hidden border border-gray-100 bg-white">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">🧾 Purchased</p>
+                  <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase">
+                    Receipt
+                  </p>
                   {(list.receipt.store || list.receipt.date) && (
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {list.receipt.store}{list.receipt.store && list.receipt.date ? ' · ' : ''}{list.receipt.date}
+                      {list.receipt.store}
+                      {list.receipt.store && list.receipt.date ? ' · ' : ''}
+                      {list.receipt.date}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => setScannerOpen(true)}
-                  className="text-[10px] font-semibold text-gray-400 active:opacity-70"
+                  className="text-[10px] font-medium text-gray-400 active:opacity-70"
                 >
-                  Re-scan
+                  Update
                 </button>
               </div>
 
               {list.receipt.photos && list.receipt.photos.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-gray-100 scrollbar-hide">
+                <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-gray-50 scrollbar-hide">
                   {list.receipt.photos.map((src, i) => (
-                    <img
-                      key={i} src={src} alt=""
+                    <button
+                      key={i}
                       onClick={() => openLightbox(list.receipt!.photos!, i)}
-                      className="w-16 h-20 object-cover rounded-xl shrink-0 border border-gray-100 cursor-pointer active:opacity-80"
-                    />
+                      aria-label={`View receipt photo ${i + 1}`}
+                      className="relative shrink-0"
+                    >
+                      <img
+                        src={src}
+                        alt={`Receipt photo ${i + 1}`}
+                        className="w-16 h-20 object-cover rounded-xl border border-gray-100 active:opacity-80"
+                      />
+                    </button>
                   ))}
                 </div>
               )}
@@ -879,14 +1359,14 @@ export function ShoppingDetailSheet({
                 ))}
               </div>
 
-              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 space-y-1">
+              <div className="px-4 py-3 bg-gray-50/60 border-t border-gray-100 space-y-1">
                 {list.receipt.tax > 0 && (
                   <div className="flex justify-between text-xs text-gray-400">
                     <span>Tax</span>
                     <span>{list.receipt.currency} {list.receipt.tax.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm font-bold text-gray-800">
+                <div className="flex justify-between text-sm font-semibold text-gray-800">
                   <span>Total paid</span>
                   <span>{list.receipt.currency} {list.receipt.grandTotal.toFixed(2)}</span>
                 </div>
@@ -895,26 +1375,37 @@ export function ShoppingDetailSheet({
           ) : (
             <button
               onClick={() => setScannerOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-medium text-gray-400 active:border-gray-300 active:text-gray-500 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl
+                         border-2 border-dashed border-gray-200 text-sm font-medium text-gray-400
+                         active:border-gray-300 active:text-gray-500 transition-colors"
             >
-              <ScanLine size={16} /> Scan Receipt
+              <ScanLine size={16} aria-hidden="true" />
+              Scan receipt
             </button>
           )}
 
+          {/* List photos */}
           {photos.length > 0 && (
-            <div className="pt-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Photos</p>
-                <button onClick={() => photoRef.current?.click()}
-                  className="text-[10px] font-semibold text-gray-400 active:opacity-70 flex items-center gap-0.5">
-                  <Camera size={11} /> Add
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase">Photos</p>
+                <button
+                  onClick={() => photoRef.current?.click()}
+                  aria-label="Add another photo"
+                  className="text-[10px] font-medium text-gray-400 active:opacity-70 flex items-center gap-0.5"
+                >
+                  <Camera size={11} aria-hidden="true" /> Add
                 </button>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {photos.map((p, i) => (
-                  <button key={i} onClick={() => openLightbox(photos, i)}
-                    className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden active:opacity-80">
-                    <img src={p} alt="" className="w-full h-full object-cover" />
+                  <button
+                    key={i}
+                    onClick={() => openLightbox(photos, i)}
+                    aria-label={`View photo ${i + 1}`}
+                    className="relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden active:opacity-80"
+                  >
+                    <img src={p} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -922,16 +1413,19 @@ export function ShoppingDetailSheet({
           )}
         </div>
 
+        {/* ── Footer ── */}
         <div className="px-5 pt-3 shrink-0 border-t border-gray-100 pb-sheet-footer">
           <button
             onClick={() => setShowDeleteListConfirm(true)}
-            className="w-full py-3 rounded-2xl text-red-400 text-sm font-medium flex items-center justify-center gap-2 bg-red-50"
+            className="w-full py-3 rounded-2xl text-red-400 text-sm font-medium
+                       flex items-center justify-center gap-2 bg-red-50/60"
           >
-            <Trash2 size={14} /> Delete list
+            <Trash2 size={14} aria-hidden="true" /> Delete list
           </button>
         </div>
       </motion.div>
 
+      {/* Delete list confirmation */}
       <DeleteConfirmSheet
         open={showDeleteListConfirm}
         title="Delete this list?"
@@ -939,6 +1433,8 @@ export function ShoppingDetailSheet({
         onCancel={() => setShowDeleteListConfirm(false)}
         onConfirm={() => { onDelete(); setShowDeleteListConfirm(false) }}
       />
+
+      {/* Delete item confirmation */}
       <DeleteConfirmSheet
         open={!!deleteItemId}
         title="Remove this item?"
@@ -988,7 +1484,8 @@ export function ShoppingDetailSheet({
               className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6"
             />
             <motion.div
-              initial={{ scale: 0.88, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', damping: 24, stiffness: 320 }}
               className="fixed inset-0 z-[70] flex items-center justify-center p-6 pointer-events-none"
@@ -1004,8 +1501,11 @@ export function ShoppingDetailSheet({
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ repeat: 2, duration: 0.45 }}
                         className="text-4xl mb-3"
-                      >🎉</motion.div>
-                      <h3 className="text-base font-bold text-gray-800 mb-1">Shopping completed!</h3>
+                        aria-hidden="true"
+                      >
+                        🎉
+                      </motion.div>
+                      <h3 className="text-base font-bold text-gray-800 mb-1">Shopping complete!</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">
                         Would you like to leave a note about this shopping trip?
                       </p>
@@ -1014,37 +1514,47 @@ export function ShoppingDetailSheet({
                       <button
                         onClick={() => setCompletionDialog(false)}
                         className="flex-1 py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold active:opacity-80"
-                      >Not Now</button>
+                      >
+                        Not now
+                      </button>
                       <button
                         onClick={() => setLeaveNoteMode(true)}
                         className="flex-1 py-3.5 rounded-2xl text-white text-sm font-semibold active:opacity-80"
-                        style={{ background: RED }}
-                      >Leave Note</button>
+                        style={{ background: SHOP_RED }}
+                      >
+                        Leave note
+                      </button>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-base font-bold text-gray-800">Trip note 🛍️</h3>
-                      <button onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
-                        className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                        <X size={14} />
+                      <h3 className="text-base font-bold text-gray-800">Trip note</h3>
+                      <button
+                        onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
+                        aria-label="Close"
+                        className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                      >
+                        <X size={14} aria-hidden="true" />
                       </button>
                     </div>
                     <textarea
                       value={completionNote}
                       onChange={e => setCompletionNote(e.target.value)}
-                      placeholder="How did the trip go? Any notes for next time..."
+                      placeholder="How did the trip go?"
                       rows={4}
                       autoFocus
-                      className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-2xl px-4 py-3 outline-none resize-none mb-4 leading-relaxed"
+                      className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50
+                                 rounded-2xl px-4 py-3 outline-none resize-none mb-4 leading-relaxed"
                     />
                     <motion.button
                       whileTap={{ scale: 0.97 }}
                       onClick={saveCompletionNote}
                       className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
-                      style={{ background: RED }}
-                    >Save Note</motion.button>
+                      style={{ background: SHOP_RED }}
+                    >
+                      Save note
+                    </motion.button>
                   </>
                 )}
               </div>

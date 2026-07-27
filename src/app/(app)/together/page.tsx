@@ -18,13 +18,14 @@ import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import {
   CATEGORY_DEFS, type CategoryType,
-  CategoryHubSheet, ShoppingHubSheet,
+  CategoryHubSheet,
 } from '@/components/ui/CategoryHub'
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
 import { briefingStorageKey, type BriefingItem } from '@/lib/briefing'
+import { getLivingMoment } from '@/lib/livingMoment'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -54,6 +55,11 @@ export default function TogetherPage() {
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
   const primary     = isSeval ? '#8b5cf6' : '#14b8a6'
+
+  const living = useMemo(() => getLivingMoment({
+    events, countdowns, shoppingLists, todos, partnerNotes, currentUser,
+    today: getTodayString(),
+  }), [events, countdowns, shoppingLists, todos, partnerNotes, currentUser])
 
   // Calendar state
   const [viewDate,      setViewDate]      = useState(new Date())
@@ -137,7 +143,7 @@ export default function TogetherPage() {
         router.push('/plans')
         break
       case 'shopping_list':
-        setOpenCategory('shopping')
+        router.push('/shopping')
         break
     }
   }, [events, countdowns, router])
@@ -207,7 +213,7 @@ export default function TogetherPage() {
         () => setOpenCategory('wishes')))
     shoppingLists.forEach(l =>
       push(l.id, 'Shopping', '#ef4444', l.name, l.storeName ?? l.notes ?? '',
-        () => setOpenCategory('shopping')))
+        () => router.push('/shopping')))
     countdowns.forEach(c =>
       push(c.id, 'Countdown', '#ec4899', c.title, c.notes ?? c.date,
         () => setSelectedCountdown(c)))
@@ -267,7 +273,7 @@ export default function TogetherPage() {
       ]} />
 
       {/* ── Page header ── */}
-      <PageHeader />
+      <PageHeader contextSubtitle={living.homeSubtitle || undefined} />
 
       {/* ── Today's Briefing reopen pill ── */}
       {briefingChecked && !briefingOpen && (
@@ -556,7 +562,7 @@ export default function TogetherPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.2, ease: 'easeOut' }}
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setOpenCategory(cat.id)}
+                  onClick={() => cat.id === 'shopping' ? router.push('/shopping') : setOpenCategory(cat.id)}
                   className="rounded-2xl pl-4 pr-3.5 py-4 text-left overflow-hidden bg-white/80"
                   style={{
                     borderLeft: `3px solid ${cat.hex}`,
@@ -592,7 +598,7 @@ export default function TogetherPage() {
 
       {/* ── Category hub sheets (opened from search) ── */}
       <AnimatePresence>
-        {openCategory && openCategory !== 'shopping' && (
+        {openCategory && (
           <CategoryHubSheet
             key={openCategory}
             type={openCategory as 'wishes' | 'dreams' | 'moments' | 'plans'}
@@ -600,16 +606,6 @@ export default function TogetherPage() {
             currentUser={currentUser}
             onClose={() => setOpenCategory(null)}
             onEditMoment={ev => { setEditingEvent(ev); setModalOpen(true); setOpenCategory(null) }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {openCategory === 'shopping' && (
-          <ShoppingHubSheet
-            primary={primary}
-            currentUser={currentUser}
-            onClose={() => setOpenCategory(null)}
           />
         )}
       </AnimatePresence>

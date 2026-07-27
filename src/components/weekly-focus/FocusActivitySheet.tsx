@@ -52,6 +52,8 @@ export function FocusActivitySheet({
   const updateFocusActivity      = useAppStore(s => s.updateFocusActivity)
   const deleteFocusActivity      = useAppStore(s => s.deleteFocusActivity)
   const uploadFocusActivityPhoto = useAppStore(s => s.uploadFocusActivityPhoto)
+  const openOverlay              = useAppStore(s => s.openOverlay)
+  const closeOverlay             = useAppStore(s => s.closeOverlay)
 
   const isEdit = !!activity
 
@@ -70,6 +72,12 @@ export function FocusActivitySheet({
 
   const titleRef    = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    openOverlay()
+    return () => closeOverlay()
+  }, [open, openOverlay, closeOverlay])
 
   // Sync form when sheet opens
   useEffect(() => {

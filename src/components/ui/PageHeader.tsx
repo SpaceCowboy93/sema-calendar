@@ -20,6 +20,12 @@ export interface PageHeaderProps {
   icon?: React.ReactNode
   /** Optional right-side content (e.g. Sign out button on Us). */
   action?: React.ReactNode
+  /**
+   * Greeting mode only. When provided, replaces the plain date line with a
+   * Living Moment contextual subtitle (e.g. "✈️ Adventure starts tomorrow.").
+   * Falls back to the date when empty or omitted.
+   */
+  contextSubtitle?: string
 }
 
 /**
@@ -36,7 +42,7 @@ export interface PageHeaderProps {
  *
  * Both modes respect prefers-reduced-motion and animate once on mount.
  */
-export function PageHeader({ title, subtitle, icon, action }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, icon, action, contextSubtitle }: PageHeaderProps) {
   const currentUser  = useAppStore(s => s.currentUser)!
   const shouldReduce = useReducedMotion()
   const primary      = currentUser === 'seval' ? '#8b5cf6' : '#14b8a6'
@@ -88,14 +94,15 @@ export function PageHeader({ title, subtitle, icon, action }: PageHeaderProps) {
               {greeting}
             </motion.h1>
           )}
-          {date && (
+          {(contextSubtitle || date) && (
             <motion.p
+              key={contextSubtitle || 'date'}
               initial={shouldReduce ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.36, delay: 0.14, ease: 'easeOut' }}
-              className="text-sm text-gray-400 mt-1"
+              className={contextSubtitle ? 'text-sm text-gray-500 mt-1' : 'text-sm text-gray-400 mt-1'}
             >
-              {date}
+              {contextSubtitle || date}
             </motion.p>
           )}
         </div>

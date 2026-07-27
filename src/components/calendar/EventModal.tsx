@@ -29,6 +29,8 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const updateEvent       = useAppStore(s => s.updateEvent)
   const deleteEvent       = useAppStore(s => s.deleteEvent)
   const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
+  const openOverlay       = useAppStore(s => s.openOverlay)
+  const closeOverlay      = useAppStore(s => s.closeOverlay)
 
   const [title, setTitle]           = useState('')
   const [selectedDate, setDate]     = useState(date)
@@ -49,6 +51,12 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
 
   const photoInputRef = useRef<HTMLInputElement>(null)
   const isEdit = !!event
+
+  useEffect(() => {
+    if (!isOpen) return
+    openOverlay()
+    return () => closeOverlay()
+  }, [isOpen, openOverlay, closeOverlay])
 
   useEffect(() => {
     if (event) {

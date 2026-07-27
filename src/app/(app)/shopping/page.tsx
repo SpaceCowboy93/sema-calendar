@@ -1,250 +1,801 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Trash2, ShoppingBag, ChevronDown, RefreshCw } from 'lucide-react'
+import {
+  Camera, Plus, ChevronDown, ChevronRight, ChevronUp,
+  Check, X, Trash2, AlignJustify, ShoppingBag,
+  CheckCircle2, Leaf, Pencil,
+  Coffee, Milk, Beef, Croissant, Egg, Banana, Apple,
+  Wine, Beer, Fish, Citrus, Droplets, Carrot, Cherry,
+  Grape, Salad,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
-import { USERS } from '@/types'
-import { cn } from '@/lib/utils'
-import { useSyncStatus, triggerPull } from '@/hooks/useSupabaseSync'
-import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
-import { useLightboxStore } from '@/store/useLightboxStore'
+import { getLivingMoment } from '@/lib/livingMoment'
+import { getTodayString, cn } from '@/lib/utils'
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground'
+import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
+import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
+import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { type ShoppingItem, type ShoppingList, type ReceiptResult, type ShoppingListReceipt } from '@/types'
 
+/* ── Botanical leaf ─────────────────────────────────────────────────────────── */
+function BotanicalLeaf({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 120 130" fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn('pointer-events-none', className)}>
+      <path d="M68 118 Q72 72 102 16" stroke="#8FA68D" strokeWidth="1.4" strokeLinecap="round" />
+      <ellipse cx="90" cy="44" rx="15" ry="8.5" transform="rotate(-42 90 44)" fill="#8FA68D" />
+      <ellipse cx="103" cy="23" rx="12" ry="7" transform="rotate(-58 103 23)" fill="#8FA68D" />
+      <ellipse cx="79" cy="68" rx="13.5" ry="7.5" transform="rotate(-28 79 68)" fill="#8FA68D" />
+      <ellipse cx="70" cy="92" rx="10.5" ry="6" transform="rotate(-16 70 92)" fill="#8FA68D" />
+    </svg>
+  )
+}
+
+/* ── Category icon ──────────────────────────────────────────────────────────── */
+function getCategoryIcon(name: string): LucideIcon {
+  const n = name.toLowerCase()
+  if (/chicken|turkey|poult|meat|beef|pork|lamb/.test(n)) return Beef
+  if (/banana/.test(n))                                    return Banana
+  if (/coffee|espresso|cappuc/.test(n))                    return Coffee
+  if (/tomato|citrus|lemon|lime/.test(n))                  return Citrus
+  if (/olive|oil/.test(n))                                 return Droplets
+  if (/milk|lait|cream/.test(n))                           return Milk
+  if (/bread|baguette|croissant|toast/.test(n))            return Croissant
+  if (/egg/.test(n))                                       return Egg
+  if (/apple/.test(n))                                     return Apple
+  if (/orange/.test(n))                                    return Citrus
+  if (/wine/.test(n))                                      return Wine
+  if (/beer/.test(n))                                      return Beer
+  if (/fish|salmon|tuna|cod/.test(n))                      return Fish
+  if (/carrot/.test(n))                                    return Carrot
+  if (/salad|lettuce|greens/.test(n))                      return Salad
+  if (/cherry/.test(n))                                    return Cherry
+  if (/grape/.test(n))                                     return Grape
+  return ShoppingBag
+}
+
+function CategoryBadge({ name, dim = false }: { name: string; dim?: boolean }) {
+  const Icon = getCategoryIcon(name)
+  return (
+    <div
+      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center"
+      style={{ background: dim ? '#f0f0ee' : '#E6EFE6' }}
+    >
+      <Icon size={13} strokeWidth={1.6} style={{ color: dim ? '#b0b0aa' : '#3F6B4F' }} />
+    </div>
+  )
+}
+
+/* ── Page ───────────────────────────────────────────────────────────────────── */
 export default function ShoppingPage() {
-  const currentUser     = useAppStore(s => s.currentUser)!
-  const lists           = useAppStore(s => s.shoppingLists)
-  const deleteList      = useAppStore(s => s.deleteShoppingList)
-  const toggleItem      = useAppStore(s => s.toggleShoppingItem)
+  const currentUser  = useAppStore(s => s.currentUser)!
+  const lists        = useAppStore(s => s.shoppingLists)
+  const events       = useAppStore(s => s.events)
+  const countdowns   = useAppStore(s => s.countdowns)
+  const todos        = useAppStore(s => s.todos)
+  const partnerNotes = useAppStore(s => s.partnerNotes)
+  const createList   = useAppStore(s => s.createShoppingList)
+  const updateList   = useAppStore(s => s.updateShoppingList)
+  const deleteList   = useAppStore(s => s.deleteShoppingList)
+  const addItem      = useAppStore(s => s.addShoppingItem)
+  const toggleItem   = useAppStore(s => s.toggleShoppingItem)
+  const deleteItem   = useAppStore(s => s.deleteShoppingItem)
+  const updateItem   = useAppStore(s => s.updateShoppingItem)
+  const openOverlay  = useAppStore(s => s.openOverlay)
+  const closeOverlay = useAppStore(s => s.closeOverlay)
 
-  const isSeval  = currentUser === 'seval'
-  const primary  = isSeval ? '#8b5cf6' : '#14b8a6'
-  const { status: syncStatus } = useSyncStatus()
+  const today = getTodayString()
 
-  const [openListId, setOpenListId] = useState<string | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [editListId, setEditListId] = useState<string | null>(null)
+  const living = useMemo(() => getLivingMoment({
+    events, countdowns, shoppingLists: lists, todos, partnerNotes, currentUser, today,
+  }), [events, countdowns, lists, todos, partnerNotes, currentUser, today])
+
+  /* ── Derived lists ──────────────────────────────────────────────────────── */
+  const incompleteLists = useMemo(
+    () => [...lists.filter(l => !l.isCompleted)].sort(
+      (a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+    ),
+    [lists]
+  )
+  const completedLists = useMemo(
+    () => [...lists.filter(l => l.isCompleted)].sort(
+      (a, b) => (b.completedAt ?? b.updatedAt ?? b.createdAt ?? '').localeCompare(
+                  a.completedAt ?? a.updatedAt ?? a.createdAt ?? '')
+    ),
+    [lists]
+  )
+
+  const listCount    = incompleteLists.length
+  const totalPending = incompleteLists.reduce(
+    (acc, l) => acc + l.items.filter(i => !i.isChecked).length, 0
+  )
+
+  const eyebrow = living.shoppingTitle || 'Shopping together'
+
+  const subtitle = listCount === 0
+    ? 'Everything is home.'
+    : listCount === 1
+      ? `1 active list · ${totalPending} thing${totalPending !== 1 ? 's' : ''} left to bring home.`
+      : `${listCount} active lists · ${totalPending} thing${totalPending !== 1 ? 's' : ''} left altogether.`
+
+  /* ── UI state ───────────────────────────────────────────────────────────── */
+  const [expandedListId,   setExpandedListId]   = useState<string | null>(null)
+  const [completedSubOpen, setCompletedSubOpen] = useState(false)
+  const [pastListsOpen,    setPastListsOpen]    = useState(false)
+
+  // Reset completed-sub state whenever a different list is expanded
+  const prevExpandedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (expandedListId !== prevExpandedRef.current) {
+      setCompletedSubOpen(false)
+      prevExpandedRef.current = expandedListId
+    }
+  }, [expandedListId])
+
+  function toggleExpand(id: string) {
+    setExpandedListId(prev => prev === id ? null : id)
+    setAddFocused(false)
+    setAddName('')
+    setAddQty('1')
+    setEditingItem(null)
+  }
+
+  /* ── Sheet state ────────────────────────────────────────────────────────── */
+  const [scannerOpen,  setScannerOpen]  = useState(false)
+  const [scanResult,   setScanResult]   = useState<ReceiptResult | null>(null)
+  const [scanPhotos,   setScanPhotos]   = useState<string[]>([])
+  const [editorMode,   setEditorMode]   = useState<'create' | 'edit' | null>(null)
+  const [editListId,   setEditListId]   = useState<string | null>(null)
   const [deleteListId, setDeleteListId] = useState<string | null>(null)
-  const openLightbox = useLightboxStore(s => s.open)
 
   const editList = editListId ? lists.find(l => l.id === editListId) ?? null : null
 
+  const anySheetOpen = scannerOpen || !!scanResult || editorMode !== null || !!deleteListId
+  useEffect(() => {
+    if (!anySheetOpen) return
+    openOverlay()
+    return () => closeOverlay()
+  }, [anySheetOpen, openOverlay, closeOverlay])
+
+  /* ── Inline add ─────────────────────────────────────────────────────────── */
+  const [addFocused,      setAddFocused]      = useState(false)
+  const [addTargetListId, setAddTargetListId] = useState<string | null>(null)
+  const [addName,         setAddName]         = useState('')
+  const [addQty,          setAddQty]          = useState('1')
+  const addInputRef = useRef<HTMLInputElement>(null)
+
+  function openAdd(listId: string) {
+    setExpandedListId(listId)
+    setAddTargetListId(listId)
+    setAddFocused(true)
+    requestAnimationFrame(() => addInputRef.current?.focus())
+  }
+
+  function confirmAdd() {
+    if (!addName.trim() || !addTargetListId) return
+    addItem(addTargetListId, addName.trim(), parseInt(addQty) || 1)
+    setAddName('')
+    setAddQty('1')
+    requestAnimationFrame(() => addInputRef.current?.focus())
+  }
+
+  function cancelAdd() {
+    setAddFocused(false)
+    setAddName('')
+    setAddQty('1')
+  }
+
+  /* ── Inline item edit ───────────────────────────────────────────────────── */
+  const [editingItem, setEditingItem] = useState<{ listId: string; itemId: string } | null>(null)
+  const [editName,    setEditName]    = useState('')
+  const [editQty,     setEditQty]     = useState('1')
+  const [editPrice,   setEditPrice]   = useState('')
+  const [editNotes,   setEditNotes]   = useState('')
+
+  function startEdit(listId: string, item: ShoppingItem) {
+    setEditingItem({ listId, itemId: item.id })
+    setEditName(item.name)
+    setEditQty(String(item.quantity))
+    setEditPrice(item.price != null ? String(item.price) : '')
+    setEditNotes(item.notes ?? '')
+  }
+
+  function saveEdit() {
+    if (!editingItem || !editName.trim()) return
+    updateItem(editingItem.listId, editingItem.itemId, {
+      name:     editName.trim(),
+      quantity: parseInt(editQty)     || 1,
+      price:    parseFloat(editPrice) || undefined,
+      notes:    editNotes.trim()      || undefined,
+    })
+    setEditingItem(null)
+  }
+
+  /* ── Receipt ────────────────────────────────────────────────────────────── */
+  function handleScanSave(result: ReceiptResult) {
+    const name = result.store
+      ? `${result.store} receipt`
+      : `Receipt ${result.date || new Date().toLocaleDateString()}`
+    const receipt: ShoppingListReceipt = {
+      ...result,
+      photos: scanPhotos.length ? scanPhotos : undefined,
+    }
+    const newId = createList({ name })
+    setTimeout(() => updateList(newId, { receipt }), 0)
+    setScanResult(null)
+    setScanPhotos([])
+    setExpandedListId(newId)
+  }
+
+  /* ── Helpers ────────────────────────────────────────────────────────────── */
+  function listEstTotal(list: ShoppingList): { total: number; count: number } {
+    let total = 0, count = 0
+    for (const item of list.items) {
+      if (!item.isChecked && item.price != null && item.price > 0) {
+        total += item.price * item.quantity
+        count++
+      }
+    }
+    return { total, count }
+  }
+
+  /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-50 pt-14 pb-32">
-      <div
-        className="px-5 pb-4"
-        style={{ background: isSeval ? 'linear-gradient(135deg, #f5f3ff, #fafafa)' : 'linear-gradient(135deg, #f0fdfa, #fafafa)' }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Shopping</h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className={cn('w-2 h-2 rounded-full', {
-                'bg-emerald-400': syncStatus === 'ok',
-                'bg-yellow-400 animate-pulse': syncStatus === 'syncing',
-                'bg-red-400': syncStatus === 'error',
-                'bg-gray-300': syncStatus === 'idle',
-              })} />
-              <p className="text-xs text-gray-400">
-                {syncStatus === 'ok' ? 'synced' : syncStatus === 'syncing' ? 'syncing…' : syncStatus === 'error' ? 'sync error' : 'connecting'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={() => triggerPull()}
-              className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center"
-            >
-              <RefreshCw size={16} className={cn('text-gray-400', syncStatus === 'syncing' && 'animate-spin')} />
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-white text-sm font-semibold"
-              style={{ background: primary }}
-            >
-              <Plus size={15} strokeWidth={2.5} /> New list
-            </motion.button>
-          </div>
-        </div>
+    <div className="min-h-screen pb-44 relative z-0" style={{ background: '#FDFAF5' }}>
+
+      <AnimatedBackground blobs={[
+        { color: '#A8C5A0', size: 300, top: '-60px', left: '-40px',  duration: 11, delay: 0 },
+        { color: '#F0DEC8', size: 220, top: '38%',   left: '58%',    duration: 14, delay: 2 },
+        { color: '#C5D5C3', size: 180, top: '72%',   left: '4%',     duration: 10, delay: 5 },
+      ]} />
+
+      {/* ── Header ── */}
+      <div className="relative px-5 pt-14 pb-6 overflow-hidden">
+        <BotanicalLeaf className="absolute right-[-8px] top-4 w-40 h-40 opacity-[0.08]" />
+
+        <p style={{ fontSize: 10, letterSpacing: '0.20em', textTransform: 'uppercase', fontWeight: 500, color: '#9ca3af', marginBottom: 10 }}>
+          {eyebrow}
+        </p>
+        <h1 style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600, fontSize: '2rem', lineHeight: 1.15, color: '#111827', marginBottom: 10 }}>
+          Home,<br />one item at a time
+        </h1>
+        <p style={{ fontSize: 13, color: '#6b7280' }}>{subtitle}</p>
       </div>
 
-      {/* Create list sheet */}
+      {/* Divider */}
+      <div className="mx-5 flex items-center gap-2.5 mb-1">
+        <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.07)' }} />
+        <div className="w-1 h-1 rounded-full" style={{ background: 'rgba(0,0,0,0.12)' }} />
+        <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.07)' }} />
+      </div>
+
+      {/* ── Action row ── */}
+      <div className="px-5 pt-4 pb-5 grid grid-cols-2 gap-3">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setScannerOpen(true)}
+          className="flex items-center gap-3 px-4 rounded-[20px] bg-white text-left"
+          style={{ height: 64, boxShadow: '0 1px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          <Camera size={18} strokeWidth={1.5} style={{ color: '#9ca3af', flexShrink: 0 }} />
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', lineHeight: 1.3 }}>Scan receipt</p>
+            <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>Attach a photo</p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { setEditorMode('create'); setEditListId(null) }}
+          className="flex items-center gap-3 px-4 rounded-[20px] bg-white text-left"
+          style={{ height: 64, boxShadow: '0 1px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}
+        >
+          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: '#3F6B4F' }}>
+            <Plus size={13} strokeWidth={2} className="text-white" />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', lineHeight: 1.3 }}>New list</p>
+            <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>Start another list</p>
+          </div>
+        </motion.button>
+      </div>
+
+      {/* ── Active lists ── */}
+      <div className="px-5">
+
+        {incompleteLists.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Leaf size={28} strokeWidth={1.2} style={{ color: '#CFE1D1', marginBottom: 12 }} />
+            <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 500, marginBottom: 4 }}>A fresh start awaits.</p>
+            <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 24 }}>Tap &ldquo;New list&rdquo; to begin.</p>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setEditorMode('create'); setEditListId(null) }}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl text-white"
+              style={{ background: '#3F6B4F', fontSize: 13, fontWeight: 600 }}
+            >
+              <Plus size={14} strokeWidth={2} /> New list
+            </motion.button>
+          </div>
+        ) : (
+          <>
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-3">
+              <span style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                Active lists
+              </span>
+              <span style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>{listCount}</span>
+            </div>
+
+            {/* List rows */}
+            <div className="space-y-2">
+              {incompleteLists.map(list => {
+                const isExpanded   = expandedListId === list.id
+                const pending      = list.items.filter(i => !i.isChecked)
+                const done         = list.items.filter(i =>  i.isChecked)
+                const pendingCount = pending.length
+                const totalItems   = list.items.length
+                const pct          = totalItems > 0 ? ((totalItems - pendingCount) / totalItems) * 100 : 0
+                const { total: est, count: pricedCount } = listEstTotal(list)
+
+                return (
+                  <div key={list.id}>
+
+                    {/* ── List header row ── */}
+                    <motion.button
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => toggleExpand(list.id)}
+                      className="w-full flex items-center justify-between px-4 rounded-2xl text-left"
+                      style={{
+                        height: isExpanded ? 'auto' : 68,
+                        minHeight: 68,
+                        background: isExpanded ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.7)',
+                        boxShadow: isExpanded
+                          ? '0 2px 14px rgba(0,0,0,0.07)'
+                          : '0 1px 8px rgba(0,0,0,0.05)',
+                        borderRadius: isExpanded ? '16px 16px 0 0' : 16,
+                        paddingTop: 14,
+                        paddingBottom: 14,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: 15, fontWeight: 600, color: '#1f2937', lineHeight: 1.3, marginBottom: 2 }} className="truncate">
+                          {list.name}
+                        </p>
+                        <p style={{ fontSize: 11, color: '#9ca3af' }}>
+                          {list.storeName ? `${list.storeName} · ` : ''}
+                          {pendingCount === 0
+                            ? 'All done'
+                            : `${pendingCount} item${pendingCount !== 1 ? 's' : ''} remaining`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <button
+                          onClick={e => { e.stopPropagation(); setEditListId(list.id); setEditorMode('edit') }}
+                          className="p-1.5 active:opacity-60 transition-opacity"
+                        >
+                          <Pencil size={13} strokeWidth={1.5} style={{ color: '#d1d5db' }} />
+                        </button>
+                        {isExpanded
+                          ? <ChevronUp   size={16} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                          : <ChevronRight size={16} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                        }
+                      </div>
+                    </motion.button>
+
+                    {/* ── Expanded content ── */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <div
+                            style={{
+                              background: 'rgba(255,255,255,0.85)',
+                              borderRadius: '0 0 16px 16px',
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.07)',
+                              borderTop: '1px solid rgba(0,0,0,0.05)',
+                            }}
+                          >
+                            {/* Progress bar */}
+                            {totalItems > 0 && (
+                              <div className="mx-4 pt-2 pb-1">
+                                <div className="h-[2px] rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                  <motion.div
+                                    className="h-full rounded-full"
+                                    style={{ background: '#CFE1D1' }}
+                                    animate={{ width: `${pct}%` }}
+                                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Pending items */}
+                            <AnimatePresence initial={false}>
+                              {pending.map(item => {
+                                const isEditing =
+                                  editingItem?.listId === list.id && editingItem.itemId === item.id
+                                return (
+                                  <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.14 }}
+                                    className="border-b"
+                                    style={{ borderColor: 'rgba(0,0,0,0.05)' }}
+                                  >
+                                    {isEditing ? (
+                                      <div className="px-4 py-3 space-y-2">
+                                        <div className="flex gap-2">
+                                          <input
+                                            value={editName}
+                                            onChange={e => setEditName(e.target.value)}
+                                            autoFocus
+                                            onKeyDown={e => { if (e.key === 'Enter') saveEdit() }}
+                                            className="flex-1 text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none text-gray-800"
+                                            placeholder="Item name"
+                                          />
+                                          <input
+                                            type="number" min="1"
+                                            value={editQty}
+                                            onChange={e => setEditQty(e.target.value)}
+                                            className="w-12 text-sm text-center bg-gray-50 rounded-xl px-2 py-2.5 outline-none text-gray-700"
+                                          />
+                                          <input
+                                            type="number" min="0" step="0.01"
+                                            value={editPrice}
+                                            onChange={e => setEditPrice(e.target.value)}
+                                            placeholder="€"
+                                            className="w-16 text-sm text-right bg-gray-50 rounded-xl px-2 py-2.5 outline-none text-gray-700"
+                                          />
+                                        </div>
+                                        <input
+                                          value={editNotes}
+                                          onChange={e => setEditNotes(e.target.value)}
+                                          placeholder="Note (optional)"
+                                          className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl px-3 py-2 outline-none"
+                                        />
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={saveEdit}
+                                            disabled={!editName.trim()}
+                                            className="flex-1 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40"
+                                            style={{ background: '#3F6B4F' }}
+                                          >
+                                            Save
+                                          </button>
+                                          <button
+                                            onClick={() => setEditingItem(null)}
+                                            className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            onClick={() => { deleteItem(list.id, item.id); setEditingItem(null) }}
+                                            className="w-10 py-2 rounded-xl bg-red-50 text-red-400 flex items-center justify-center"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-3 px-4" style={{ height: 64 }}>
+                                        <motion.button
+                                          whileTap={{ scale: 0.82 }}
+                                          onClick={() => toggleItem(list.id, item.id)}
+                                          className="shrink-0 rounded-full border-[1.5px] flex items-center justify-center"
+                                          style={{ width: 20, height: 20, borderColor: '#CFE1D1' }}
+                                        />
+                                        <CategoryBadge name={item.name} />
+                                        <div className="flex-1 min-w-0">
+                                          <p className="truncate" style={{ fontSize: 14, fontWeight: 500, color: '#1f2937', lineHeight: 1.3 }}>
+                                            {item.name}
+                                          </p>
+                                          {item.notes && (
+                                            <p className="truncate mt-0.5" style={{ fontSize: 11, color: '#9ca3af' }}>
+                                              {item.notes}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <span className="shrink-0 tabular-nums" style={{ fontSize: 13, color: '#6b7280', minWidth: 20, textAlign: 'right' }}>
+                                          {item.quantity}
+                                        </span>
+                                        <button
+                                          onClick={() => startEdit(list.id, item)}
+                                          className="shrink-0 -mr-1 p-1 active:opacity-60"
+                                        >
+                                          <AlignJustify size={14} strokeWidth={1.5} style={{ color: '#d1d5db' }} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )
+                              })}
+                            </AnimatePresence>
+
+                            {/* Add item row */}
+                            {addFocused && addTargetListId === list.id ? (
+                              <div
+                                className="flex items-center gap-3 px-4 border-b"
+                                style={{ height: 60, borderColor: 'rgba(0,0,0,0.05)' }}
+                              >
+                                <div className="shrink-0 rounded-full border-[1.5px] border-dashed" style={{ width: 20, height: 20, borderColor: '#d1d5db' }} />
+                                <div className="w-7 h-7 shrink-0" />
+                                <input
+                                  ref={addInputRef}
+                                  value={addName}
+                                  onChange={e => setAddName(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') confirmAdd()
+                                    if (e.key === 'Escape') cancelAdd()
+                                  }}
+                                  onBlur={() => { if (!addName.trim()) cancelAdd() }}
+                                  placeholder="Item name…"
+                                  className="flex-1 outline-none bg-transparent"
+                                  style={{ fontSize: 14, color: '#374151' }}
+                                />
+                                <input
+                                  type="number" min="1"
+                                  value={addQty}
+                                  onChange={e => setAddQty(e.target.value)}
+                                  className="w-8 text-center bg-transparent outline-none tabular-nums"
+                                  style={{ fontSize: 13, color: '#6b7280' }}
+                                />
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={confirmAdd}
+                                  disabled={!addName.trim()}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center text-white disabled:opacity-30 shrink-0"
+                                  style={{ background: '#3F6B4F' }}
+                                >
+                                  <Plus size={12} strokeWidth={2.5} />
+                                </motion.button>
+                                <button onClick={cancelAdd} className="shrink-0 active:opacity-60">
+                                  <X size={14} strokeWidth={1.5} style={{ color: '#d1d5db' }} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => openAdd(list.id)}
+                                className="flex items-center gap-3 px-4 w-full border-b active:opacity-60 transition-opacity"
+                                style={{ height: 52, borderColor: 'rgba(0,0,0,0.05)' }}
+                              >
+                                <div className="w-5 h-5 shrink-0 flex items-center justify-center">
+                                  <Plus size={13} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                                </div>
+                                <div className="w-7 shrink-0" />
+                                <span style={{ fontSize: 13, color: '#9ca3af' }}>Add item</span>
+                              </button>
+                            )}
+
+                            {/* Estimated total for this list */}
+                            {pricedCount > 0 && (
+                              <div
+                                className="mx-4 my-3 rounded-xl px-4 py-3 flex items-center gap-3 relative overflow-hidden"
+                                style={{ background: 'linear-gradient(135deg, #E8F0E8 0%, #CFE1D1 100%)' }}
+                              >
+                                <BotanicalLeaf className="absolute right-0 bottom-0 w-16 h-16 opacity-[0.15]" />
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                  style={{ background: 'rgba(255,255,255,0.7)' }}
+                                >
+                                  <ShoppingBag size={14} strokeWidth={1.5} style={{ color: '#3F6B4F' }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p style={{ fontSize: 12, fontWeight: 600, color: '#1f2937' }}>Estimated total</p>
+                                  <p style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>Based on your list</p>
+                                </div>
+                                <p className="tabular-nums shrink-0" style={{ fontSize: 16, fontWeight: 700, color: '#1f2937' }}>
+                                  €{est.toFixed(2)}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Completed items sub-section */}
+                            {done.length > 0 && (
+                              <div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
+                                <button
+                                  onClick={() => setCompletedSubOpen(v => !v)}
+                                  className="flex items-center gap-3 px-4 w-full active:opacity-70"
+                                  style={{ height: 48 }}
+                                >
+                                  <CheckCircle2 size={14} strokeWidth={1.5} style={{ color: '#d1d5db' }} />
+                                  <span className="flex-1 text-left" style={{ fontSize: 13, color: '#6b7280' }}>Completed</span>
+                                  <span
+                                    className="tabular-nums px-1.5 py-0.5 rounded-full shrink-0"
+                                    style={{ fontSize: 10, fontWeight: 600, background: '#E6EFE6', color: '#3F6B4F' }}
+                                  >
+                                    {done.length}
+                                  </span>
+                                  {completedSubOpen
+                                    ? <ChevronDown  size={13} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                                    : <ChevronRight size={13} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                                  }
+                                </button>
+
+                                <AnimatePresence initial={false}>
+                                  {completedSubOpen && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                                      style={{ overflow: 'hidden' }}
+                                    >
+                                      {done.map(item => (
+                                        <div
+                                          key={item.id}
+                                          className="flex items-center gap-3 px-4 border-t"
+                                          style={{ height: 56, opacity: 0.5, borderColor: 'rgba(0,0,0,0.04)' }}
+                                        >
+                                          <motion.button
+                                            whileTap={{ scale: 0.85 }}
+                                            onClick={() => toggleItem(list.id, item.id)}
+                                            className="shrink-0 rounded-full flex items-center justify-center border-[1.5px] border-transparent"
+                                            style={{ width: 20, height: 20, background: '#CFE1D1' }}
+                                          >
+                                            <Check size={9} strokeWidth={2.5} style={{ color: '#3F6B4F' }} />
+                                          </motion.button>
+                                          <CategoryBadge name={item.name} dim />
+                                          <p className="flex-1 line-through truncate" style={{ fontSize: 13, color: '#6b7280' }}>
+                                            {item.name}
+                                          </p>
+                                          {item.quantity > 1 && (
+                                            <span className="shrink-0 tabular-nums" style={{ fontSize: 12, color: '#9ca3af' }}>
+                                              {item.quantity}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── Past lists ── */}
+        {completedLists.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setPastListsOpen(v => !v)}
+              className="flex items-center justify-between w-full mb-2 py-1"
+            >
+              <span style={{ fontSize: 10, fontWeight: 500, color: '#9ca3af', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                Past lists
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span style={{ fontSize: 12, color: '#9ca3af' }}>{completedLists.length}</span>
+                {pastListsOpen
+                  ? <ChevronDown  size={13} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                  : <ChevronRight size={13} strokeWidth={1.8} style={{ color: '#9ca3af' }} />
+                }
+              </div>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {pastListsOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div className="space-y-1">
+                    {completedLists.map(list => {
+                      const checked = list.items.filter(i => i.isChecked).length
+                      return (
+                        <div
+                          key={list.id}
+                          className="flex items-center gap-3 px-4 rounded-2xl"
+                          style={{ height: 56, background: 'rgba(255,255,255,0.5)', opacity: 0.6 }}
+                        >
+                          <div
+                            className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center"
+                            style={{ background: '#E6EFE6' }}
+                          >
+                            <Check size={9} strokeWidth={2.5} style={{ color: '#3F6B4F' }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="line-through truncate" style={{ fontSize: 13, color: '#6b7280' }}>{list.name}</p>
+                            <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>{checked}/{list.items.length} items</p>
+                          </div>
+                          <button onClick={() => setDeleteListId(list.id)} className="p-1 active:opacity-60">
+                            <Trash2 size={13} strokeWidth={1.5} style={{ color: '#d1d5db' }} />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ── Closing copy ── */}
+        {lists.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mt-10 mb-2 px-10">
+            <Leaf size={11} strokeWidth={1.5} style={{ color: '#8FA68D', flexShrink: 0 }} />
+            <p className="italic text-center leading-relaxed" style={{ fontSize: 11, color: '#9ca3af' }}>
+              Good food, good mood, better together. ♡
+            </p>
+          </div>
+        )}
+
+      </div>
+
+      {/* ── Sheets ── */}
       <AnimatePresence>
-        {showCreate && (
-          <ShoppingListEditorSheet
-            mode="create"
-            onSave={(id) => { setShowCreate(false); setOpenListId(id) }}
-            onClose={() => setShowCreate(false)}
+        {scannerOpen && !scanResult && (
+          <ReceiptScannerSheet
+            onClose={() => setScannerOpen(false)}
+            onResultReady={(result, photos) => {
+              setScanResult(result)
+              setScanPhotos(photos)
+              setScannerOpen(false)
+            }}
           />
         )}
       </AnimatePresence>
 
-      {/* Edit list sheet */}
       <AnimatePresence>
-        {editList && (
+        {scanResult && (
+          <ReceiptReviewSheet
+            result={scanResult}
+            photos={scanPhotos}
+            onClose={() => { setScanResult(null); setScanPhotos([]) }}
+            onSave={handleScanSave}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editorMode === 'create' && (
+          <ShoppingListEditorSheet
+            mode="create"
+            onSave={id => { setEditorMode(null); setExpandedListId(id) }}
+            onClose={() => setEditorMode(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editorMode === 'edit' && editList && (
           <ShoppingListEditorSheet
             mode="edit"
             list={editList}
-            onSave={() => setEditListId(null)}
-            onClose={() => setEditListId(null)}
+            onSave={() => setEditorMode(null)}
+            onClose={() => setEditorMode(null)}
           />
         )}
       </AnimatePresence>
-
-      <div className="px-5 pt-4 space-y-3">
-        {lists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-16 text-center">
-            <div className="text-5xl mb-4">🛒</div>
-            <p className="font-semibold text-gray-600 mb-1">No shopping lists yet</p>
-            <p className="text-sm text-gray-400">Create one to track what you need</p>
-          </div>
-        ) : (
-          lists.map(list => {
-            const checkedCount = list.items.filter(i => i.isChecked).length
-            const total        = list.items.length
-            const allDone      = total > 0 && checkedCount === total
-            const isOpen       = openListId === list.id
-            const cover        = effectivePhotos(list)[0]
-
-            return (
-              <motion.div
-                key={list.id}
-                layout
-                className="bg-white rounded-3xl shadow-card overflow-hidden"
-              >
-                {/* Cover photo */}
-                {cover && (
-                  <div
-                    className="w-full h-24 overflow-hidden cursor-pointer"
-                    onClick={() => openLightbox(effectivePhotos(list))}
-                  >
-                    <img src={cover} alt="" className="w-full h-full object-cover" />
-                  </div>
-                )}
-
-                {/* Header */}
-                <div
-                  className="px-4 py-3.5 flex items-center gap-3 cursor-pointer"
-                  onClick={() => setOpenListId(isOpen ? null : list.id)}
-                >
-                  <ShoppingBag size={18} className="text-gray-400 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm">{list.name}</p>
-                    <p className="text-xs text-gray-400">
-                      {checkedCount}/{total} items{allDone && total > 0 ? ' · all done!' : ''}
-                      {list.storeName ? ` · ${list.storeName}` : ''}
-                    </p>
-                  </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); setEditListId(list.id) }}
-                    className="text-gray-300 active:text-blue-400 p-1 shrink-0 text-xs font-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); setDeleteListId(list.id) }}
-                    className="text-gray-300 active:text-red-400 p-1 shrink-0"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                  <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown size={18} className="text-gray-400 shrink-0" />
-                  </motion.div>
-                </div>
-
-                {/* Items */}
-                <AnimatePresence>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.22 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-4 pb-4 space-y-2">
-                        {/* Items list */}
-                        {list.items.length === 0 ? (
-                          <p className="text-center text-xs text-gray-400 py-3">No items — tap Edit to add</p>
-                        ) : (
-                          list.items.map(item => (
-                            <motion.div
-                              key={item.id}
-                              layout
-                              className={cn(
-                                'flex items-center gap-3 p-3 rounded-2xl border transition-all',
-                                item.isChecked ? 'opacity-50 bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
-                              )}
-                            >
-                              <button
-                                onClick={() => toggleItem(list.id, item.id)}
-                                className={cn(
-                                  'w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all',
-                                  item.isChecked ? 'border-emerald-400 bg-emerald-400' : 'border-gray-300'
-                                )}
-                              >
-                                {item.isChecked && <Check size={12} color="white" strokeWidth={3} />}
-                              </button>
-                              {item.photo && (
-                                <button onClick={e => { e.stopPropagation(); openLightbox([item.photo!]) }} className="shrink-0">
-                                  <img
-                                    src={item.photo}
-                                    alt=""
-                                    className={cn('w-10 h-10 rounded-xl object-cover', item.isChecked && 'opacity-50')}
-                                  />
-                                </button>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className={cn('text-sm font-medium', item.isChecked ? 'line-through text-gray-400' : 'text-gray-800')}>
-                                  {item.name}
-                                </p>
-                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  {item.quantity > 1 && <span className="text-[10px] text-gray-400">×{item.quantity}</span>}
-                                  {item.price != null && item.price > 0 && (
-                                    <span className="text-[10px] text-gray-400">€{item.price.toFixed(2)}</span>
-                                  )}
-                                  {item.quantity > 1 && item.price != null && item.price > 0 && (
-                                    <span className="text-[10px] font-semibold text-gray-500">= €{(item.price * item.quantity).toFixed(2)}</span>
-                                  )}
-                                  {item.notes && <span className="text-[10px] text-gray-400 italic">{item.notes}</span>}
-                                </div>
-                                {item.isChecked && item.checkedBy && (
-                                  <p className="text-[10px] text-emerald-500 mt-0.5">
-                                    by {USERS[item.checkedBy].emoji} {USERS[item.checkedBy].displayName}
-                                  </p>
-                                )}
-                              </div>
-                            </motion.div>
-                          ))
-                        )}
-
-                        {allDone && total > 0 && (
-                          <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-center py-3 bg-emerald-50 rounded-2xl border border-emerald-100"
-                          >
-                            <p className="text-sm font-bold text-emerald-600">All done! Great job!</p>
-                          </motion.div>
-                        )}
-
-                        <button
-                          onClick={() => setEditListId(list.id)}
-                          className="w-full py-2 rounded-2xl text-xs font-semibold text-gray-400 bg-gray-50 active:bg-gray-100"
-                        >
-                          + Add or edit items
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )
-          })
-        )}
-      </div>
 
       <DeleteConfirmSheet
         open={!!deleteListId}
@@ -253,6 +804,7 @@ export default function ShoppingPage() {
         onCancel={() => setDeleteListId(null)}
         onConfirm={() => { deleteList(deleteListId!); setDeleteListId(null) }}
       />
+
     </div>
   )
 }

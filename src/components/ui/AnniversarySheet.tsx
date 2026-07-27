@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { differenceInCalendarDays, parseISO } from 'date-fns'
 import { Plus, X, Check, Camera, Trash2, Pencil } from 'lucide-react'
@@ -51,6 +51,14 @@ export function AnniversarySheet({
   const updateCountdown = useAppStore(s => s.updateCountdown)
   const uploadPhoto     = useAppStore(s => s.uploadPhoto)
   const openLightbox    = useLightboxStore(s => s.open)
+  const openOverlay     = useAppStore(s => s.openOverlay)
+  const closeOverlay    = useAppStore(s => s.closeOverlay)
+
+  useEffect(() => {
+    openOverlay()
+    return () => closeOverlay()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [title,    setTitle]    = useState(countdown.title)
   const [date,     setDate]     = useState(countdown.date)

@@ -214,6 +214,15 @@ function MemorySheet({
   onDelete?: () => void
 }) {
   const openLightbox = useLightboxStore(s => s.open)
+  const openOverlay  = useAppStore(s => s.openOverlay)
+  const closeOverlay = useAppStore(s => s.closeOverlay)
+
+  useEffect(() => {
+    openOverlay()
+    return () => closeOverlay()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [title,      setTitle]      = useState(memory?.title ?? '')
   const [date,       setDate]       = useState(memory?.date ?? getTodayString())
   const [notes,      setNotes]      = useState(memory?.notes ?? '')
@@ -500,6 +509,8 @@ export default function UsPage() {
   const setBoomBoom       = useAppStore(s => s.setBoomBoom)
   const goals             = useAppStore(s => s.goals)
   const loveNotes         = useAppStore(s => s.loveNotes)
+  const openOverlay       = useAppStore(s => s.openOverlay)
+  const closeOverlay      = useAppStore(s => s.closeOverlay)
 
   const partnerUser = OTHER_USER[currentUser]
   const isSeval     = currentUser === 'seval'
@@ -545,6 +556,14 @@ export default function UsPage() {
   const [boomBoomToast,  setBoomBoomToast]  = useState(false)
   const [boomBoomUndo,   setBoomBoomUndo]   = useState(0)   // previous value for undo
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Hide FAB while any inline sheet is open (MemorySheet and AnniversarySheet handle themselves)
+  const anyInlineSheetOpen = boomBoomSheet || moodPopup || addCdOpen
+  useEffect(() => {
+    if (!anyInlineSheetOpen) return
+    openOverlay()
+    return () => closeOverlay()
+  }, [anyInlineSheetOpen, openOverlay, closeOverlay])
 
   function handleBoomBoom(delta: 1 | -1) {
     const prev = boomBoomCount
