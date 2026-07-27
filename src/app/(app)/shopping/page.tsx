@@ -41,52 +41,111 @@ const C = {
 } as const
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Botanical corner cluster — leaves fan from the upper-right corner.
-   No single visible stem. Varied leaf sizes. Low contrast, organic.
+   Shopping botanical — large kitchen herb cluster entering from upper-right.
+   Extends partially off-screen. Varied leaf sizes, multiple growth directions.
+   Gradient mask fades left edge so title text stays fully readable.
 ───────────────────────────────────────────────────────────────────────────── */
-function BotanicalCornerCluster() {
+function ShoppingBotanical() {
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 220 220"
+      viewBox="0 0 380 370"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ position: 'absolute', top: -8, right: -8, width: 200, height: 200, pointerEvents: 'none', opacity: 0.72 }}
+      style={{
+        position: 'absolute', top: -28, right: -88,
+        width: 380, height: 370,
+        pointerEvents: 'none',
+      }}
     >
       <defs>
-        <filter id="bc-blur"><feGaussianBlur stdDeviation="0.7"/></filter>
+        <filter id="sb-soft">
+          <feGaussianBlur stdDeviation="1.1" />
+        </filter>
+        {/* Fade left edge so botanical doesn't compete with title */}
+        <linearGradient id="sb-fade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="white" stopOpacity="0" />
+          <stop offset="32%" stopColor="white" stopOpacity="0.5" />
+          <stop offset="52%" stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="1" />
+        </linearGradient>
+        <mask id="sb-mask">
+          <rect width="380" height="370" fill="url(#sb-fade)" />
+        </mask>
       </defs>
-      <g filter="url(#bc-blur)">
-        {/* Large leaf — sweeps down-left from corner */}
-        <path d="M210 10 C170 30 130 80 100 130" stroke="#8FA68D" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.35"/>
-        <g transform="translate(210,10) rotate(160)">
-          <path d="M0 0 C16 -10 16 -34 0 -52 C-16 -34 -16 -10 0 0Z" fill="#8FA68D" opacity="0.68"/>
-          <line x1="0" y1="-1" x2="0" y2="-50" stroke="#6B8A6B" strokeWidth="0.7" opacity="0.3"/>
+
+      <g mask="url(#sb-mask)" filter="url(#sb-soft)">
+        {/* Main branch stems */}
+        <path d="M380 10 Q318 68 272 148" stroke="#6E7E50" strokeWidth="1.8" strokeLinecap="round" fill="none" opacity="0.28" />
+        <path d="M372 55 Q310 115 264 210" stroke="#8FA68D" strokeWidth="1.3" strokeLinecap="round" fill="none" opacity="0.20" />
+        <path d="M350 110 Q295 168 258 258" stroke="#7A8C60" strokeWidth="1.0" strokeLinecap="round" fill="none" opacity="0.16" />
+
+        {/* LARGE leaves — top cluster */}
+        {/* Leaf 1 — sweeps strongly down-left from corner */}
+        <g transform="translate(355,42) rotate(156)">
+          <path d="M0 0 C16 -8 22 -42 0 -86 C-18 -46 -14 -10 0 0Z" fill="#6E7E50" opacity="0.78" />
+          <path d="M0 -2 L2 -84" stroke="#506040" strokeWidth="0.7" opacity="0.25" />
         </g>
-        {/* Medium leaf — angled toward left */}
-        <g transform="translate(185,22) rotate(142)">
-          <path d="M0 0 C13 -8 13 -26 0 -40 C-13 -26 -13 -8 0 0Z" fill="#7A9870" opacity="0.60"/>
-          <line x1="0" y1="-1" x2="0" y2="-39" stroke="#60806A" strokeWidth="0.7" opacity="0.28"/>
+        {/* Leaf 2 — angled more horizontally left */}
+        <g transform="translate(320,18) rotate(132)">
+          <path d="M0 0 C14 -6 20 -36 0 -74 C-17 -40 -12 -8 0 0Z" fill="#8FA68D" opacity="0.70" />
+          <path d="M0 -2 L1 -72" stroke="#6A8A6A" strokeWidth="0.7" opacity="0.22" />
         </g>
-        {/* Medium leaf — downward */}
-        <g transform="translate(198,52) rotate(168)">
-          <path d="M0 0 C11 -8 11 -24 0 -36 C-11 -24 -11 -8 0 0Z" fill="#93AE90" opacity="0.55"/>
-          <line x1="0" y1="-1" x2="0" y2="-35" stroke="#6B8A6B" strokeWidth="0.6" opacity="0.26"/>
+        {/* Leaf 3 — going more downward from right edge */}
+        <g transform="translate(372,104) rotate(168)">
+          <path d="M0 0 C14 -7 18 -34 0 -68 C-15 -36 -12 -8 0 0Z" fill="#5A6E48" opacity="0.74" />
         </g>
-        {/* Small leaf — sprouting right */}
-        <g transform="translate(170,40) rotate(125)">
-          <path d="M0 0 C9 -6 9 -18 0 -28 C-9 -18 -9 -6 0 0Z" fill="#7C9C74" opacity="0.52"/>
+
+        {/* MEDIUM leaves — mid cluster */}
+        {/* Leaf 4 */}
+        <g transform="translate(292,52) rotate(138)">
+          <path d="M0 0 C12 -7 16 -28 0 -58 C-14 -32 -10 -8 0 0Z" fill="#7A9870" opacity="0.65" />
+          <path d="M0 -1 L1 -56" stroke="#608060" strokeWidth="0.6" opacity="0.20" />
         </g>
-        {/* Small leaf — low and left */}
-        <g transform="translate(148,78) rotate(148)">
-          <path d="M0 0 C8 -5 8 -16 0 -24 C-8 -16 -8 -5 0 0Z" fill="#8FA68D" opacity="0.45"/>
+        {/* Leaf 5 — going down from branch midpoint */}
+        <g transform="translate(338,148) rotate(172)">
+          <path d="M0 0 C11 -6 15 -26 0 -52 C-13 -28 -10 -7 0 0Z" fill="#7A8C60" opacity="0.62" />
         </g>
-        {/* Tiny accent — very corner */}
-        <g transform="translate(215,35) rotate(155)">
-          <path d="M0 0 C6 -4 6 -12 0 -18 C-6 -12 -6 -4 0 0Z" fill="#7A9870" opacity="0.40"/>
+        {/* Leaf 6 — reaching left */}
+        <g transform="translate(260,90) rotate(143)">
+          <path d="M0 0 C11 -7 15 -28 0 -50 C-13 -30 -10 -8 0 0Z" fill="#93AE90" opacity="0.58" />
         </g>
-        {/* Stem trace — secondary branch */}
-        <path d="M195 18 C175 52 155 90 128 118" stroke="#8FA68D" strokeWidth="0.9" strokeLinecap="round" fill="none" opacity="0.22"/>
+        {/* Leaf 7 — lower branch */}
+        <g transform="translate(318,196) rotate(174)">
+          <path d="M0 0 C10 -6 13 -24 0 -46 C-12 -26 -9 -7 0 0Z" fill="#6B7C52" opacity="0.55" />
+        </g>
+
+        {/* SMALL leaves */}
+        {/* Leaf 8 */}
+        <g transform="translate(240,138) rotate(146)">
+          <path d="M0 0 C8 -5 11 -20 0 -38 C-10 -22 -7 -6 0 0Z" fill="#8FA68D" opacity="0.50" />
+        </g>
+        {/* Leaf 9 — right edge lower */}
+        <g transform="translate(368,178) rotate(162)">
+          <path d="M0 0 C7 -5 10 -18 0 -34 C-9 -19 -7 -5 0 0Z" fill="#5E7048" opacity="0.52" />
+        </g>
+        {/* Leaf 10 */}
+        <g transform="translate(295,232) rotate(176)">
+          <path d="M0 0 C7 -4 9 -16 0 -30 C-8 -18 -6 -5 0 0Z" fill="#7A9870" opacity="0.46" />
+        </g>
+        {/* Leaf 11 */}
+        <g transform="translate(228,182) rotate(150)">
+          <path d="M0 0 C6 -4 9 -16 0 -28 C-8 -17 -6 -5 0 0Z" fill="#8FA68D" opacity="0.42" />
+        </g>
+
+        {/* TINY accents */}
+        <g transform="translate(345,220) rotate(168)">
+          <path d="M0 0 C5 -3 7 -13 0 -22 C-6 -14 -4 -4 0 0Z" fill="#7A8C60" opacity="0.38" />
+        </g>
+        <g transform="translate(262,272) rotate(178)">
+          <path d="M0 0 C4 -3 6 -11 0 -19 C-5 -12 -4 -3 0 0Z" fill="#93AE90" opacity="0.34" />
+        </g>
+        <g transform="translate(374,248) rotate(160)">
+          <path d="M0 0 C4 -3 6 -10 0 -18 C-5 -11 -4 -3 0 0Z" fill="#8FA68D" opacity="0.32" />
+        </g>
+        <g transform="translate(214,226) rotate(148)">
+          <path d="M0 0 C4 -3 5 -9 0 -16 C-5 -10 -3 -3 0 0Z" fill="#7A9870" opacity="0.30" />
+        </g>
       </g>
     </svg>
   )
@@ -354,12 +413,21 @@ export default function ShoppingPage() {
       <C2PageBackground />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          HEADER — editorial eyebrow · large title · botanical corner cluster
+          HEADER — editorial eyebrow · large title · botanical composition
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="relative overflow-hidden" style={{ paddingTop: 88, paddingBottom: 32, paddingLeft: 22, paddingRight: 22 }}>
+      <div className="relative overflow-hidden" style={{ paddingTop: 92, paddingBottom: 36, paddingLeft: 22, paddingRight: 22 }}>
 
-        {/* Botanical corner cluster — upper-right, partially off-screen */}
-        <BotanicalCornerCluster />
+        {/* Botanical shadow layer — very soft, behind botanical artwork */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: -10, right: -80, width: 340, height: 280,
+          background: 'radial-gradient(ellipse at 70% 20%, rgba(90,110,72,0.055) 0%, transparent 65%)',
+          filter: 'blur(28px)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }} />
+
+        {/* Botanical composition — large kitchen herb cluster */}
+        <ShoppingBotanical />
 
         {/* Text block — left column, clears the botanical */}
         <div style={{ maxWidth: '62%', position: 'relative', zIndex: 1 }}>

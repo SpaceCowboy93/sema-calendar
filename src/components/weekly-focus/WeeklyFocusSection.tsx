@@ -89,9 +89,9 @@ function SwipeableRow({
         dragDirectionLock
         dragConstraints={{ left: -110, right: 0 }}
         dragElastic={{ left: 0.05, right: 0 }}
-        style={{ x }}
+        style={{ x, background: 'transparent' }}
         onDragEnd={handleDragEnd}
-        className="relative bg-white flex items-center gap-3 py-2.5"
+        className="relative flex items-center gap-3 py-2.5"
       >
         {/* Checkbox */}
         <motion.button
@@ -209,18 +209,22 @@ function DayCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22 }}
       className={cn(
-        'mb-2 overflow-hidden',
+        'mb-1.5 overflow-hidden',
         isToday
-          ? 'rounded-2xl bg-white shadow-[0_2px_12px_rgba(45,41,38,0.07)]'
-          : 'rounded-xl bg-white/50',
+          ? 'rounded-2xl shadow-[0_1px_8px_rgba(45,41,38,0.06)]'
+          : 'rounded-xl',
       )}
+      style={isToday
+        ? { background: 'rgba(253,250,245,0.95)', border: '1px solid rgba(45,41,38,0.06)' }
+        : { background: 'transparent' }
+      }
     >
       {/* Card header */}
       <div
         className={cn(
           'flex items-center justify-between',
-          isToday ? 'px-4 pt-4 pb-3' : 'px-4 pt-3 pb-2.5',
-          !isToday && 'cursor-pointer active:opacity-70 transition-opacity',
+          isToday ? 'px-4 pt-4 pb-3' : 'px-2 pt-2.5 pb-2',
+          !isToday && 'cursor-pointer active:opacity-60 transition-opacity',
         )}
         onClick={isToday ? undefined : onToggleExpand}
       >
@@ -516,7 +520,7 @@ export function WeeklyFocusSection() {
     <div className="px-4 pb-6">
 
       {/* ── Profile filter ── */}
-      <div className="flex mb-4 bg-gray-100 rounded-xl p-1">
+      <div className="flex mb-4 rounded-xl p-1" style={{ background: 'rgba(45,41,38,0.05)' }}>
         {(['both', 'mateo', 'seval'] as const).map(f => (
           <button
             key={f}
@@ -545,7 +549,8 @@ export function WeeklyFocusSection() {
       <div className="flex items-center justify-between mb-5">
         <button
           onClick={() => navigateWeek(-1)}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
+          style={{ background: 'rgba(45,41,38,0.05)' }}
         >
           <ChevronLeft size={16} className="text-gray-500" />
         </button>
@@ -568,13 +573,15 @@ export function WeeklyFocusSection() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigateWeek(1)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
+            style={{ background: 'rgba(45,41,38,0.05)' }}
           >
             <ChevronRight size={16} className="text-gray-500" />
           </button>
           <button
             onClick={() => setWeekBrowserOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full active:opacity-60 transition-opacity"
+            style={{ background: 'rgba(45,41,38,0.05)' }}
           >
             <History size={14} className="text-gray-500" />
           </button>

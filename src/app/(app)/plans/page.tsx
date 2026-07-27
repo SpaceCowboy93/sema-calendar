@@ -94,6 +94,84 @@ async function scheduleMonthEndPush(monthKey: string) {
   } catch { /* non-fatal */ }
 }
 
+/* ── Olive botanical — structured, calm, trustworthy ────────────────────────── */
+function FinanceBotanical() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 300 280"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        position: 'absolute', top: -16, right: -64,
+        width: 300, height: 280,
+        pointerEvents: 'none',
+      }}
+    >
+      <defs>
+        <filter id="fb-soft"><feGaussianBlur stdDeviation="0.9" /></filter>
+        <linearGradient id="fb-fade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="white" stopOpacity="0" />
+          <stop offset="30%" stopColor="white" stopOpacity="0.5" />
+          <stop offset="50%" stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="1" />
+        </linearGradient>
+        <mask id="fb-mask">
+          <rect width="300" height="280" fill="url(#fb-fade)" />
+        </mask>
+      </defs>
+      <g mask="url(#fb-mask)" filter="url(#fb-soft)">
+        {/* Olive branch stems — structured, formal */}
+        <path d="M295 20 Q262 55 245 100 Q228 148 220 210" stroke="#6B7C50" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity="0.30" />
+        <path d="M278 10 Q250 48 235 90 Q218 140 210 200" stroke="#7A8C60" strokeWidth="1.0" strokeLinecap="round" fill="none" opacity="0.20" />
+
+        {/* Olive leaves — oval, paired, more structured than eucalyptus */}
+        {/* Pair 1 top */}
+        <g transform="translate(285,35) rotate(35)">
+          <path d="M0 0 C8 -4 10 -18 0 -32 C-8 -18 -6 -4 0 0Z" fill="#6B7C50" opacity="0.76" />
+          <path d="M0 -1 L0 -31" stroke="#556040" strokeWidth="0.6" opacity="0.22" />
+        </g>
+        <g transform="translate(268,48) rotate(-30)">
+          <path d="M0 0 C7 -4 9 -16 0 -28 C-7 -16 -5 -4 0 0Z" fill="#7A8C60" opacity="0.68" />
+        </g>
+        {/* Pair 2 */}
+        <g transform="translate(265,72) rotate(28)">
+          <path d="M0 0 C7 -4 9 -17 0 -30 C-8 -17 -6 -4 0 0Z" fill="#5E6E48" opacity="0.70" />
+        </g>
+        <g transform="translate(252,84) rotate(-26)">
+          <path d="M0 0 C7 -3 8 -15 0 -26 C-7 -15 -5 -4 0 0Z" fill="#7A8C60" opacity="0.62" />
+        </g>
+        {/* Pair 3 */}
+        <g transform="translate(250,108) rotate(24)">
+          <path d="M0 0 C6 -3 8 -15 0 -26 C-7 -15 -5 -3 0 0Z" fill="#8A9C70" opacity="0.60" />
+        </g>
+        <g transform="translate(236,118) rotate(-22)">
+          <path d="M0 0 C6 -3 8 -14 0 -24 C-6 -14 -5 -3 0 0Z" fill="#6B7C50" opacity="0.54" />
+        </g>
+        {/* Pair 4 */}
+        <g transform="translate(235,142) rotate(22)">
+          <path d="M0 0 C5 -3 7 -13 0 -22 C-6 -13 -4 -3 0 0Z" fill="#7A8C60" opacity="0.50" />
+        </g>
+        <g transform="translate(222,150) rotate(-20)">
+          <path d="M0 0 C5 -3 6 -12 0 -20 C-5 -12 -4 -3 0 0Z" fill="#8A9C70" opacity="0.44" />
+        </g>
+        {/* Pair 5 fading */}
+        <g transform="translate(224,172) rotate(18)">
+          <path d="M0 0 C5 -2 6 -11 0 -19 C-5 -11 -4 -3 0 0Z" fill="#6B7C50" opacity="0.38" />
+        </g>
+        <g transform="translate(212,180) rotate(-17)">
+          <path d="M0 0 C4 -2 5 -10 0 -17 C-4 -10 -3 -2 0 0Z" fill="#7A8C60" opacity="0.32" />
+        </g>
+        {/* Small side branch upper */}
+        <path d="M272 60 Q285 46 296 30" stroke="#7A8C60" strokeWidth="0.8" strokeLinecap="round" fill="none" opacity="0.16" />
+        <g transform="translate(296,30) rotate(55)">
+          <path d="M0 0 C5 -3 6 -11 0 -18 C-5 -11 -4 -3 0 0Z" fill="#8A9C70" opacity="0.40" />
+        </g>
+      </g>
+    </svg>
+  )
+}
+
 /* ── main page ───────────────────────────────────────────────────────────────── */
 export default function FinancePage() {
   const currentUser        = useAppStore(s => s.currentUser)!
@@ -195,10 +273,20 @@ export default function FinancePage() {
 
       <div className="relative z-10">
 
-        <PageHeader
-          title="Our Finances"
-          subtitle="Planning our future together."
-        />
+        <div className="relative overflow-hidden">
+          <div aria-hidden="true" style={{
+            position: 'absolute', top: 0, right: -50, width: 260, height: 200,
+            background: 'radial-gradient(ellipse at 70% 10%, rgba(80,100,60,0.048) 0%, transparent 62%)',
+            filter: 'blur(22px)',
+            pointerEvents: 'none',
+          }} />
+          <FinanceBotanical />
+          <PageHeader
+            eyebrow="Our money"
+            title="Our Finances"
+            subtitle="Planning our future together."
+          />
+        </div>
 
         {/* ── Month Selector ── */}
         <div className="mx-4 mb-4 rounded-2xl px-4 py-3 flex items-center justify-between"

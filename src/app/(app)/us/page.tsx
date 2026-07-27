@@ -60,6 +60,90 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
+/* ── Blossom botanical — soft, intimate, warm foliage ──────────────────────── */
+function UsBotanical() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 310 280"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        position: 'absolute', top: -16, right: -65,
+        width: 310, height: 280,
+        pointerEvents: 'none',
+      }}
+    >
+      <defs>
+        <filter id="ub-soft"><feGaussianBlur stdDeviation="1.2" /></filter>
+        <linearGradient id="ub-fade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="white" stopOpacity="0" />
+          <stop offset="26%" stopColor="white" stopOpacity="0.4" />
+          <stop offset="48%" stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="1" />
+        </linearGradient>
+        <mask id="ub-mask">
+          <rect width="310" height="280" fill="url(#ub-fade)" />
+        </mask>
+      </defs>
+      <g mask="url(#ub-mask)" filter="url(#ub-soft)">
+        {/* Soft curving stem */}
+        <path d="M305 22 Q270 55 252 108 Q235 162 226 225" stroke="#9A8880" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.25" />
+        <path d="M288 12 Q252 50 236 100" stroke="#B09888" strokeWidth="0.9" strokeLinecap="round" fill="none" opacity="0.18" />
+
+        {/* Rounded blossom-style leaves — softer, more organic shapes */}
+        {/* Large top leaves */}
+        <g transform="translate(295,36) rotate(148)">
+          <path d="M0 0 C18 -6 22 -34 0 -66 C-18 -36 -14 -8 0 0Z" fill="#9A8880" opacity="0.60" />
+          <path d="M0 -1 L1 -64" stroke="#7A6870" strokeWidth="0.6" opacity="0.18" />
+        </g>
+        <g transform="translate(268,20) rotate(126)">
+          <path d="M0 0 C15 -6 19 -30 0 -58 C-16 -32 -12 -7 0 0Z" fill="#B09888" opacity="0.56" />
+        </g>
+        <g transform="translate(300,90) rotate(162)">
+          <path d="M0 0 C14 -6 17 -28 0 -54 C-14 -30 -11 -7 0 0Z" fill="#8A8070" opacity="0.62" />
+        </g>
+
+        {/* Medium leaves — warmer tones */}
+        <g transform="translate(252,55) rotate(134)">
+          <path d="M0 0 C11 -5 14 -24 0 -46 C-12 -26 -9 -6 0 0Z" fill="#A09080" opacity="0.54" />
+        </g>
+        <g transform="translate(282,138) rotate(168)">
+          <path d="M0 0 C11 -5 13 -22 0 -42 C-11 -24 -8 -6 0 0Z" fill="#9A8880" opacity="0.50" />
+        </g>
+        <g transform="translate(236,92) rotate(138)">
+          <path d="M0 0 C10 -5 12 -20 0 -38 C-10 -22 -8 -5 0 0Z" fill="#B09888" opacity="0.46" />
+        </g>
+        <g transform="translate(264,178) rotate(172)">
+          <path d="M0 0 C9 -4 11 -19 0 -36 C-10 -20 -7 -5 0 0Z" fill="#8A8070" opacity="0.44" />
+        </g>
+
+        {/* Small petal-like leaves — the blossom character */}
+        <g transform="translate(218,132) rotate(142)">
+          <path d="M0 0 C8 -4 10 -16 0 -28 C-8 -17 -6 -4 0 0Z" fill="#A09080" opacity="0.40" />
+        </g>
+        <g transform="translate(298,162) rotate(160)">
+          <path d="M0 0 C7 -3 9 -14 0 -24 C-7 -14 -5 -4 0 0Z" fill="#9A8880" opacity="0.42" />
+        </g>
+        <g transform="translate(244,212) rotate(174)">
+          <path d="M0 0 C6 -3 8 -13 0 -22 C-7 -13 -5 -3 0 0Z" fill="#B09888" opacity="0.36" />
+        </g>
+
+        {/* Tiny blush accents */}
+        <g transform="translate(210,172) rotate(145)">
+          <path d="M0 0 C5 -2 6 -10 0 -18 C-5 -10 -4 -2 0 0Z" fill="#C4A898" opacity="0.34" />
+        </g>
+        <g transform="translate(278,202) rotate(166)">
+          <path d="M0 0 C4 -2 5 -9 0 -15 C-4 -9 -3 -2 0 0Z" fill="#A09080" opacity="0.28" />
+        </g>
+        <g transform="translate(228,248) rotate(176)">
+          <path d="M0 0 C4 -2 5 -8 0 -14 C-4 -8 -3 -2 0 0Z" fill="#9A8880" opacity="0.24" />
+        </g>
+      </g>
+    </svg>
+  )
+}
+
 /* ── FloatingHeart ─────────────────────────────────────────────────────────── */
 function FloatingHeart({ x, delay, primary }: { x: number; delay: number; primary: string }) {
   return (
@@ -608,18 +692,28 @@ export default function UsPage() {
 
       <C2PageBackground />
 
-      <PageHeader
-        title="Us"
-        subtitle="Our story, our space"
-        action={
-          <button
-            onClick={() => { setCurrentUser(null); router.replace('/') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
-          >
-            <LogOut size={14} /> Sign out
-          </button>
-        }
-      />
+      <div className="relative overflow-hidden">
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: 0, right: -50, width: 270, height: 210,
+          background: 'radial-gradient(ellipse at 72% 10%, rgba(160,128,112,0.045) 0%, transparent 60%)',
+          filter: 'blur(24px)',
+          pointerEvents: 'none',
+        }} />
+        <UsBotanical />
+        <PageHeader
+          eyebrow="Our space"
+          title="Us"
+          subtitle="Our story, our space"
+          action={
+            <button
+              onClick={() => { setCurrentUser(null); router.replace('/') }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          }
+        />
+      </div>
 
       <div className="px-5 pt-4 space-y-8">
 

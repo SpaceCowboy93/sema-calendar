@@ -77,15 +77,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onClick={() => { if (overlayCount === 0) setQuickAddOpen(true) }}
         aria-hidden={overlayCount > 0}
         tabIndex={overlayCount > 0 ? -1 : undefined}
-        className="fixed bottom-20 right-5 z-30 w-[52px] h-[52px] rounded-full
+        className="fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
                    flex items-center justify-center text-white backdrop-blur-sm"
         style={{
           background:    primary,
-          boxShadow:     `0 4px 16px ${primary}38`,
+          boxShadow:     `0 2px 10px ${primary}28`,
           pointerEvents: overlayCount > 0 ? 'none' : 'auto',
         }}
       >
-        <Plus size={24} strokeWidth={2.5} />
+        <Plus size={20} strokeWidth={2} />
       </motion.button>
 
       <PartnerNoteNotification />
