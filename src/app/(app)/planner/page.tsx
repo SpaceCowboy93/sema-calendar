@@ -119,6 +119,7 @@ export default function PlannerPage() {
         title="Planner"
         subtitle={plannerSubtitle}
         imageSrc={C2_ROOM_HEADERS.planner.src}
+        imageObjectFit={C2_ROOM_HEADERS.planner.imageObjectFit}
         imageObjectPosition={C2_ROOM_HEADERS.planner.imageObjectPosition}
       />
 

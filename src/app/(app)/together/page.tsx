@@ -279,6 +279,7 @@ export default function TogetherPage() {
         subtitle={living.homeSubtitle || undefined}
         dateLabel={dateLabel}
         imageSrc={C2_ROOM_HEADERS.home.src}
+        imageObjectFit={C2_ROOM_HEADERS.home.imageObjectFit}
         imageObjectPosition={C2_ROOM_HEADERS.home.imageObjectPosition}
       />
 

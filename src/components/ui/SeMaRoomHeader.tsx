@@ -28,17 +28,24 @@ export type SeMaRoomHeaderProps = {
   /** Date string rendered below subtitle. */
   dateLabel?: string
 
-  /** Path to the full-width botanical header image (served from /public). */
+  /** Path to the botanical header image (served from /public). */
   imageSrc?: string
 
   /** Alt text — pass "" for purely decorative images. */
   imageAlt?: string
 
   /**
-   * CSS object-position for the background botanical artwork.
-   * Defaults to 'center center'. Use to tune which part of the
-   * composition is visible on mobile crops.
-   * Examples: 'right top', 'left bottom', 'center top'
+   * 'cover'   — landscape images: fills the full header, minimal crop.
+   * 'contain' — portrait images: shows full artwork anchored to the right,
+   *             cream background shows through on the left for text.
+   * Defaults to 'cover'.
+   */
+  imageObjectFit?: 'cover' | 'contain'
+
+  /**
+   * CSS object-position.
+   * cover:   tune which area stays visible when cropping (e.g. 'center top')
+   * contain: controls anchor side/edge (e.g. 'right bottom')
    */
   imageObjectPosition?: string
 
@@ -67,19 +74,23 @@ export function SeMaRoomHeader({
   dateLabel,
   imageSrc,
   imageAlt = '',
-  imageObjectPosition = 'center center',
+  imageObjectFit = 'cover',
+  imageObjectPosition,
   action,
   className,
 }: SeMaRoomHeaderProps) {
+  const defaultPosition = imageObjectFit === 'contain' ? 'right center' : 'center center'
+  const resolvedPosition = imageObjectPosition ?? defaultPosition
+
   return (
     <header
       className={['relative overflow-hidden', className].filter(Boolean).join(' ')}
       style={{
-        minHeight: 'clamp(180px, 42vw, 240px)',
+        minHeight: 'clamp(200px, 50vw, 260px)',
         background: 'var(--bj-cream)',
       }}
     >
-      {/* Full-width botanical artwork — fills entire header */}
+      {/* Botanical artwork */}
       {imageSrc && (
         <div
           aria-hidden="true"
@@ -91,24 +102,29 @@ export function SeMaRoomHeader({
             fill
             sizes="100vw"
             style={{
-              objectFit: 'cover',
-              objectPosition: imageObjectPosition,
+              objectFit: imageObjectFit,
+              objectPosition: resolvedPosition,
             }}
             priority
           />
+
           {/*
-           * Soft left-to-right gradient — protects text legibility
-           * without blocking the botanical artwork on the right.
-           * Tuned to match the natural negative space in the compositions.
+           * Gradient overlay — only for cover (landscape) images where artwork
+           * fills the full header and may overlap the text column.
+           *
+           * For contain (portrait) images, the cream background shows through
+           * on the left naturally, so no gradient is needed.
            */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to right, rgba(253,250,245,0.82) 0%, rgba(253,250,245,0.50) 40%, rgba(253,250,245,0.10) 65%, transparent 85%)',
-            }}
-          />
+          {imageObjectFit === 'cover' && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(to right, rgba(253,250,245,0.88) 0%, rgba(253,250,245,0.60) 35%, rgba(253,250,245,0.20) 60%, transparent 80%)',
+              }}
+            />
+          )}
         </div>
       )}
 

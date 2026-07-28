@@ -212,6 +212,7 @@ export default function FinancePage() {
           title="Our Finances"
           subtitle={living.financeSubtitle || 'Planning our future together.'}
           imageSrc={C2_ROOM_HEADERS.finances.src}
+          imageObjectFit={C2_ROOM_HEADERS.finances.imageObjectFit}
           imageObjectPosition={C2_ROOM_HEADERS.finances.imageObjectPosition}
         />
 
