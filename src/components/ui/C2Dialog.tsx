@@ -79,7 +79,7 @@ export function C2Dialog({
       if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
       if (e.key !== 'Tab') return
 
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(selectors))
+      const focusable = Array.from(panel!.querySelectorAll<HTMLElement>(selectors))
       if (!focusable.length) return
 
       const first = focusable[0]

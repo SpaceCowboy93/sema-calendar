@@ -15,8 +15,8 @@ export {
 export type { ButtonVariant, PrimaryButtonProps, SecondaryButtonProps, GhostButtonProps, DangerButtonProps, IconButtonProps, IconButtonVariant } from './Button'
 
 // ── Inputs ────────────────────────────────────────────────────────────────────
-export { TextInput, DateInput, TimeInput, CurrencyInput, SearchInput } from './Input'
-export type { TextInputProps, CurrencyInputProps, SearchInputProps } from './Input'
+export { TextInput, DateInput, TimeInput, CurrencyInput, SearchInput, SelectInput } from './Input'
+export type { TextInputProps, CurrencyInputProps, SearchInputProps, SelectInputProps } from './Input'
 
 // ── Textarea ──────────────────────────────────────────────────────────────────
 export { Textarea } from './Textarea'
@@ -67,6 +67,10 @@ export type { C2SurfaceProps, C2SurfaceVariant } from './C2Surface'
 
 export { C2SectionLabel }  from './C2SectionLabel'
 export type { C2SectionLabelProps } from './C2SectionLabel'
+
+// ── Metric Card / Action Row ──────────────────────────────────────────────────
+export { C2MetricCard, C2ActionRow } from './C2MetricCard'
+export type { C2MetricCardProps, C2ActionRowProps, MetricTrendVariant } from './C2MetricCard'
 
 // ── Sheet system ──────────────────────────────────────────────────────────────
 export {

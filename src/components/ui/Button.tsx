@@ -137,10 +137,11 @@ const ICON_BTN_CLASSES: Record<IconButtonVariant, string> = {
 }
 
 export function IconButton({
-  icon: Icon, iconSize = 16, variant = 'close', color, className, style, ...rest
+  icon: Icon, iconSize = 16, variant = 'close', color, className, style, 'aria-label': ariaLabel, ...rest
 }: IconButtonProps) {
   return (
     <button
+      aria-label={ariaLabel}
       className={cn(
         'w-8 h-8 flex items-center justify-center rounded-full shrink-0',
         'transition-opacity active:opacity-70',
@@ -150,7 +151,7 @@ export function IconButton({
       style={variant === 'primary' && color ? { background: color, ...style } : style}
       {...rest}
     >
-      <Icon size={iconSize} strokeWidth={1.75} />
+      <Icon size={iconSize} strokeWidth={1.75} aria-hidden="true" />
     </button>
   )
 }

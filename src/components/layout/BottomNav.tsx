@@ -22,7 +22,7 @@ export function BottomNav() {
   const activeColor = isSeval ? '#8b5cf6' : '#14b8a6'
 
   return (
-    <nav className="glass-nav fixed bottom-0 left-0 right-0 z-40 pb-safe">
+    <nav aria-label="Main navigation" className="glass-nav fixed bottom-0 left-0 right-0 z-40 pb-safe">
       <div className="flex items-center justify-around px-2 h-16 max-w-lg mx-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/')
@@ -30,6 +30,8 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
               className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full
                          relative active:opacity-70 transition-opacity"
             >
@@ -45,6 +47,7 @@ export function BottomNav() {
                 size={22}
                 strokeWidth={isActive ? 2.2 : 1.7}
                 color={isActive ? activeColor : '#9ca3af'}
+                aria-hidden="true"
               />
               <span
                 className={cn('text-[10px] font-medium transition-colors', {

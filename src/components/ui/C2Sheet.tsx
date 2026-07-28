@@ -286,7 +286,7 @@ export function C2Sheet({
       }
       if (e.key !== 'Tab') return
 
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(focusableSelectors))
+      const focusable = Array.from(panel!.querySelectorAll<HTMLElement>(focusableSelectors))
       if (focusable.length === 0) return
 
       const first = focusable[0]
