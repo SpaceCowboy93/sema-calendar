@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Check, X } from 'lucide-react'
+import { Plus, Trash2, Check, X } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type WishlistItem, type WishlistCategory } from '@/types'
 import { WISHLIST_CATEGORY_CONFIG, cn } from '@/lib/utils'

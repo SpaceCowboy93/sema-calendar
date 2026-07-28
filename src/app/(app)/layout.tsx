@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { Plus } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'

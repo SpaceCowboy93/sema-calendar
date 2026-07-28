@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus } from 'lucide-react'
+import { X, Plus } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'

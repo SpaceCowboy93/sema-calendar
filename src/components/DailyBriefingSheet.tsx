@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import { getTodayString } from '@/lib/utils'

@@ -1,6 +1,6 @@
 'use client'
 
-import { Camera, X } from 'lucide-react'
+import { Camera, X } from '@/design/iconSystem'
 import { useLightboxStore } from '@/store/useLightboxStore'
 
 interface Props {

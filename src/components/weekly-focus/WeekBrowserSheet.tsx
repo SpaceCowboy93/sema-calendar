@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { getWeekKey, getWeekLabel } from '@/lib/utils'
 

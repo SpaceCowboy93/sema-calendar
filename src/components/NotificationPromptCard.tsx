@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellOff, ChevronDown, RefreshCw, Loader2 } from 'lucide-react'
+import { Bell, BellOff, ChevronDown, RefreshCw, Loader2 } from '@/design/iconSystem'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'

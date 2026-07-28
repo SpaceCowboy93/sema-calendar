@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
+import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import type { ShoppingList, ShoppingItem } from '@/types'

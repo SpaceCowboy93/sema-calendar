@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, Image as ImageIcon, Trash2, ScanLine, Plus, Loader2 } from 'lucide-react'
+import { X, Camera, ImageIcon, Trash2, ScanLine, Plus, Loader2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type ReceiptResult } from '@/types'
 import { cn } from '@/lib/utils'

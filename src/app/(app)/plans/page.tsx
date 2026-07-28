@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, Wallet, Trash2, Sparkles, Pencil, Leaf,
-} from 'lucide-react'
+} from '@/design/iconSystem'
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'

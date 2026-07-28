@@ -10,7 +10,7 @@ import {
   Wine, Beer, Fish, Citrus, Droplets, Carrot, Cherry,
   Grape, Salad,
   type LucideIcon,
-} from 'lucide-react'
+} from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { getLivingMoment } from '@/lib/livingMoment'
 import { getTodayString, cn } from '@/lib/utils'

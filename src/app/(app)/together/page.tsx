@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO, differenceInCalendarDays } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Search, X, Send, Sun } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Search, X, Send, Sun } from '@/design/iconSystem'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import {

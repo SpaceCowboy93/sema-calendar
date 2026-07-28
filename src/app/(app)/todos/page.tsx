@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText } from 'lucide-react'
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText } from '@/design/iconSystem'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type SharedTodo } from '@/types'

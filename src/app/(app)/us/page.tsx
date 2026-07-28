@@ -7,7 +7,7 @@ import {
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
-import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from 'lucide-react'
+import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from '@/design/iconSystem'
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'

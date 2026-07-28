@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority, type UserName } from '@/types'
 import { cn, generateId } from '@/lib/utils'

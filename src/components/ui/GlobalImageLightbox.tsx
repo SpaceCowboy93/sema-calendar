@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from '@/design/iconSystem'
 import { useLightboxStore } from '@/store/useLightboxStore'
 
 export function GlobalImageLightbox() {

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, useMotionValue, animate as animateX } from 'framer-motion'
-import { ChevronLeft, ChevronRight, ChevronDown, History, Check, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, History, Check, Plus, Pencil, Trash2 } from '@/design/iconSystem'
 import { format, addWeeks, subWeeks } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type UserName, type FocusActivity } from '@/types'

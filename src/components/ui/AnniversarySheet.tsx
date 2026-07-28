@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { Plus, X, Check, Camera, Trash2, Pencil } from 'lucide-react'
+import { Plus, X, Check, Camera, Trash2, Pencil } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type Countdown, type ChecklistEntry } from '@/types'

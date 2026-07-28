@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Trash2, AlertTriangle } from 'lucide-react'
+import { X, Trash2, AlertTriangle } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type ReceiptResult, type ReceiptItem } from '@/types'
 import { cn, generateId } from '@/lib/utils'

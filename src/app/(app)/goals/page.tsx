@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays } from '@/design/iconSystem'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { type Goal, type GoalCategory } from '@/types'

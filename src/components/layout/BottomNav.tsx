@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, LayoutGrid, Wallet, User } from 'lucide-react'
+import { IconNavHome, IconNavPlanner, IconNavFinances, IconNavUs } from '@/design/iconSystem'
 import { motion } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/together', label: 'Home',     icon: Home       },
-  { href: '/planner',  label: 'Planner',  icon: LayoutGrid },
-  { href: '/plans',    label: 'Finances', icon: Wallet     },
-  { href: '/us',       label: 'Us',       icon: User       },
+  { href: '/together', label: 'Home',     icon: IconNavHome     },
+  { href: '/planner',  label: 'Planner',  icon: IconNavPlanner  },
+  { href: '/plans',    label: 'Finances', icon: IconNavFinances  },
+  { href: '/us',       label: 'Us',       icon: IconNavUs        },
 ]
 
 export function BottomNav() {

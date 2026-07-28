@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
-import { CalendarClock, Leaf, AlertCircle } from 'lucide-react'
+import { CalendarClock, Leaf, AlertCircle } from '@/design/iconSystem'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { type Countdown, type CalendarEvent, USERS } from '@/types'

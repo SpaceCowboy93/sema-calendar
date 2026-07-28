@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Pin, Trash2, Send, Heart } from 'lucide-react'
+import { Pin, Trash2, Send, Heart } from '@/design/iconSystem'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'

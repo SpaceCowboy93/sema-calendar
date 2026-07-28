@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from '@/design/iconSystem'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'

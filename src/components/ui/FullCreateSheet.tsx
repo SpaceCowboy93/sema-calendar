@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Camera } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
