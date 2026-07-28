@@ -2,19 +2,19 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus } from '@/design/iconSystem'
+import { X, Plus, Mail, type LucideIcon, CalendarCheck2, Sparkles, Gift, Heart, FileText } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
-const TYPES: { id: QuickType; emoji: string; label: string }[] = [
-  { id: 'plan',   emoji: '💚', label: 'Plan'   },
-  { id: 'dream',  emoji: '💙', label: 'Dream'  },
-  { id: 'wish',   emoji: '💜', label: 'Wish'   },
-  { id: 'moment', emoji: '💛', label: 'Moment' },
-  { id: 'note',   emoji: '💌', label: 'Note'   },
+const TYPES: { id: QuickType; icon: LucideIcon; label: string }[] = [
+  { id: 'plan',   icon: CalendarCheck2, label: 'Plan'   },
+  { id: 'dream',  icon: Sparkles,       label: 'Dream'  },
+  { id: 'wish',   icon: Gift,           label: 'Wish'   },
+  { id: 'moment', icon: Heart,          label: 'Moment' },
+  { id: 'note',   icon: Mail,           label: 'Note'   },
 ]
 
 
@@ -122,7 +122,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                       : { background: '#EDE9E3', color: '#8B7D70' }
                     }
                   >
-                    {t.emoji} {t.label}
+                    <t.icon size={13} strokeWidth={1.75} /> {t.label}
                   </motion.button>
                 ))}
               </div>
@@ -138,8 +138,11 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                     <motion.div
                       animate={{ scale: [1, 1.3, 1] }}
                       transition={{ repeat: 2, duration: 0.4 }}
-                      className="text-5xl mb-3"
-                    >💌</motion.div>
+                      className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
+                      style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}
+                    >
+                      <Mail size={32} strokeWidth={1.5} />
+                    </motion.div>
                     <p className="font-bold text-gray-800">Sent with love 💕</p>
                   </motion.div>
                 ) : (

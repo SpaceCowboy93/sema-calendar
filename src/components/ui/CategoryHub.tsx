@@ -4,6 +4,8 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, Camera, Check, Trash2, Pencil, ScanLine, ChevronDown, ChevronRight,
+  type LucideIcon, Globe, Coins, Dumbbell, Leaf, BookOpen, Palette, Trophy,
+  CalendarCheck2, Sparkles, Gift, ShoppingBag, Heart, PartyPopper,
 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
@@ -22,26 +24,26 @@ import {
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 
-export const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
-  ['travel',     { emoji: '✈️', label: 'Travel'     }],
-  ['money',      { emoji: '💰', label: 'Money'      }],
-  ['fitness',    { emoji: '💪', label: 'Fitness'    }],
-  ['life',       { emoji: '🌱', label: 'Life'       }],
-  ['learning',   { emoji: '📚', label: 'Learning'   }],
-  ['hobbies',    { emoji: '🎨', label: 'Hobbies'    }],
-  ['challenges', { emoji: '🏆', label: 'Challenges' }],
+export const GOAL_CATEGORIES: [GoalCategory, { icon: LucideIcon; label: string }][] = [
+  ['travel',     { icon: Globe,        label: 'Travel'     }],
+  ['money',      { icon: Coins,        label: 'Money'      }],
+  ['fitness',    { icon: Dumbbell,     label: 'Fitness'    }],
+  ['life',       { icon: Leaf,         label: 'Life'       }],
+  ['learning',   { icon: BookOpen,     label: 'Learning'   }],
+  ['hobbies',    { icon: Palette,      label: 'Hobbies'    }],
+  ['challenges', { icon: Trophy,       label: 'Challenges' }],
 ]
 
 export type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments' | 'plans'
 
 export const CATEGORY_DEFS: {
-  id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor
+  id: CategoryType; icon: LucideIcon; label: string; hex: string; color?: EventColor
 }[] = [
-  { id: 'plans',    emoji: '💚', label: 'Plans',    hex: '#34d399', color: 'green'  },
-  { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
-  { id: 'wishes',   emoji: '💜', label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
-  { id: 'shopping', emoji: '🛍️', label: 'Shopping', hex: '#ef4444'                  },
-  { id: 'moments',  emoji: '💛', label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
+  { id: 'plans',    icon: CalendarCheck2, label: 'Plans',    hex: '#34d399', color: 'green'  },
+  { id: 'dreams',   icon: Sparkles,       label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
+  { id: 'wishes',   icon: Gift,           label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
+  { id: 'shopping', icon: ShoppingBag,    label: 'Shopping', hex: '#ef4444'                  },
+  { id: 'moments',  icon: Heart,          label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
 ]
 
 /* ── Helpers ────────────────────────────────────────────────────────────────── */
@@ -238,7 +240,10 @@ export function CategoryHubSheet({
           <div className="drag-handle mb-3" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl" aria-hidden="true">{def.emoji}</span>
+              <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: `${catHex}18`, color: catHex }}>
+                <def.icon size={18} strokeWidth={1.75} aria-hidden="true" />
+              </div>
               <div>
                 <h2 className="text-base font-bold text-gray-800">{def.label}</h2>
                 <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
@@ -271,7 +276,10 @@ export function CategoryHubSheet({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-2">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-5xl mb-3 opacity-30" aria-hidden="true">{def.emoji}</span>
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center mb-3 opacity-30"
+                style={{ background: `${catHex}18`, color: catHex }}>
+                <def.icon size={28} strokeWidth={1.5} aria-hidden="true" />
+              </div>
               <p className="text-sm text-gray-400">Nothing here yet</p>
             </div>
           ) : (
@@ -1500,10 +1508,11 @@ export function ShoppingDetailSheet({
                       <motion.div
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ repeat: 2, duration: 0.45 }}
-                        className="text-4xl mb-3"
+                        className="w-14 h-14 rounded-full flex items-center justify-center mb-3 mx-auto"
+                        style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}
                         aria-hidden="true"
                       >
-                        🎉
+                        <PartyPopper size={28} strokeWidth={1.5} />
                       </motion.div>
                       <h3 className="text-base font-bold text-gray-800 mb-1">Shopping complete!</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">

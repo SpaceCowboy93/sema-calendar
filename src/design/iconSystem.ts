@@ -70,6 +70,13 @@ export { Flag     as IconMilestone} from 'lucide-react'
 export { TrendingUp   as IconTrendingUp   } from 'lucide-react'
 export { TrendingDown as IconTrendingDown } from 'lucide-react'
 export { Wallet       as IconWallet       } from 'lucide-react'
+// Finance category icons
+export { Car          as IconCar          } from 'lucide-react' // Transport
+export { Zap          as IconZap          } from 'lucide-react' // Utilities / lightning
+export { Play         as IconPlay         } from 'lucide-react' // Subscriptions
+export { Gift         as IconGift         } from 'lucide-react' // Gifts
+export { Plane        as IconPlane        } from 'lucide-react' // Travel
+export { ShoppingCart as IconGroceries    } from 'lucide-react' // Groceries
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 7 — STATE & FEEDBACK
@@ -123,6 +130,50 @@ export {
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SECTION 14 — MOOD ICONS
+// ─────────────────────────────────────────────────────────────────────────────
+export { Smile      as IconMoodHappy   } from 'lucide-react'
+export { Leaf       as IconMoodRelaxed } from 'lucide-react' // calm / botanical
+export { Moon       as IconMoodTired   } from 'lucide-react'
+export { CloudRain  as IconMoodSad     } from 'lucide-react'
+export { Flame      as IconMoodStressed} from 'lucide-react'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 15 — MILESTONE ICONS
+// ─────────────────────────────────────────────────────────────────────────────
+export { Gem         as IconGem         } from 'lucide-react' // engagement / ring
+export { CakeSlice   as IconCake        } from 'lucide-react' // birthday
+export { PartyPopper as IconParty       } from 'lucide-react' // celebration
+export { Waves       as IconWaves       } from 'lucide-react' // beach / waves
+export { TreePine    as IconTree        } from 'lucide-react' // christmas / nature
+export { Drama       as IconDrama       } from 'lucide-react' // theatre
+export { Flower2     as IconFlower      } from 'lucide-react' // flower / romance
+export { Star        as IconStar        } from 'lucide-react' // generic milestone
+export { CalendarCheck2 as IconCalendarCheck } from 'lucide-react' // plan confirmed
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 16 — GOAL CATEGORY ICONS
+// ─────────────────────────────────────────────────────────────────────────────
+export { Coins    as IconCoins    } from 'lucide-react' // money / savings
+export { Dumbbell as IconDumbbell } from 'lucide-react' // fitness
+export { Globe    as IconGlobe    } from 'lucide-react' // travel / world
+export { BookOpen as IconBookOpen } from 'lucide-react' // learning
+export { Palette  as IconPalette  } from 'lucide-react' // hobbies / art
+export { Trophy   as IconTrophy   } from 'lucide-react' // challenges / achievements
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 17 — UTILITY ICONS
+// ─────────────────────────────────────────────────────────────────────────────
+export { UserRound    as IconUserRound   } from 'lucide-react' // profile / person
+export { Smartphone   as IconSmartphone  } from 'lucide-react' // mobile / push notif
+export { BarChart2    as IconBarChart    } from 'lucide-react' // stats / analytics
+export { MapPin       as IconMapPin      } from 'lucide-react' // location
+export { Banknote     as IconBanknote    } from 'lucide-react' // income / money
+export { BookHeart    as IconBookHeart   } from 'lucide-react' // memory / journal
+export { Utensils     as IconUtensils    } from 'lucide-react' // dinner / restaurant
+export { Mail         as IconMail        } from 'lucide-react' // letter / message
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RAW RE-EXPORTS  (backward-compat — existing files change only the import path)
 // ─────────────────────────────────────────────────────────────────────────────
 export {
@@ -138,6 +189,7 @@ export {
   Heart, Sparkles, Flag,
   // Finance
   TrendingUp, TrendingDown,
+  Car, Zap, Play, Gift, Plane, ShoppingCart,
   // State
   Loader2, AlertTriangle, AlertCircle, CheckCircle2,
   // Notifications
@@ -150,6 +202,14 @@ export {
   Leaf,
   // Misc
   Sun, AlignJustify, ShoppingBag,
+  // Mood
+  Smile, Moon, CloudRain, Flame,
+  // Milestones
+  Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Flower2, Star, CalendarCheck2,
+  // Goals
+  Coins, Dumbbell, Globe, BookOpen, Palette, Trophy,
+  // Utility
+  UserRound, Smartphone, BarChart2, MapPin, Banknote, BookHeart, Utensils, Mail,
 } from 'lucide-react'
 
 // Image re-exported as ImageIcon to avoid conflict with Next.js <Image> component

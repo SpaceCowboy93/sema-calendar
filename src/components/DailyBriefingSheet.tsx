@@ -2,7 +2,53 @@
 
 import { useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from 'framer-motion'
-import { X } from '@/design/iconSystem'
+import {
+  X, type LucideIcon,
+  Flower2, AlertTriangle, CalendarDays, CheckSquare, Mail, ShoppingCart,
+  Smile, Moon, CloudRain, Flame, Leaf,
+  Heart, Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Star, Sun, Plane,
+} from '@/design/iconSystem'
+
+const BRIEFING_ICON_MAP: Record<string, LucideIcon> = {
+  // System keys
+  warning:   AlertTriangle,
+  calendar:  CalendarDays,
+  checklist: CheckSquare,
+  note:      Mail,
+  shopping:  ShoppingCart,
+  // Mood keys
+  happy:     Smile,
+  relaxed:   Leaf,
+  tired:     Moon,
+  sad:       CloudRain,
+  stressed:  Flame,
+  // Milestone keys
+  heart:     Heart,
+  gem:       Gem,
+  cake:      CakeSlice,
+  star:      Star,
+  party:     PartyPopper,
+  plane:     Plane,
+  flower:    Flower2,
+  waves:     Waves,
+  sun:       Sun,
+  tree:      TreePine,
+  drama:     Drama,
+}
+
+function BriefingItemIcon({ emoji }: { emoji: string }) {
+  const Icon = BRIEFING_ICON_MAP[emoji]
+  if (Icon) {
+    return (
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: 'rgba(158,201,179,0.12)', color: '#7BBBA5' }}>
+        <Icon size={16} strokeWidth={1.75} />
+      </div>
+    )
+  }
+  // Fallback: render as emoji text (user-set event emoji)
+  return <span className="text-xl shrink-0 leading-none">{emoji}</span>
+}
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
 import { getTodayString } from '@/lib/utils'
@@ -134,7 +180,10 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-3">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center px-4">
-                  <span className="text-5xl mb-4">🌸</span>
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                  style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
+                  <Flower2 size={32} strokeWidth={1.5} />
+                </div>
                   <p
                     className="text-gray-800 text-lg mb-1.5"
                     style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
@@ -155,7 +204,7 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
                       onClick={() => handleItemPress(item)}
                       className="w-full c2-sheet-section px-4 py-3.5 flex items-center gap-3 text-left active:opacity-90 transition-colors rounded-2xl"
                     >
-                      <span className="text-xl shrink-0 leading-none">{item.emoji}</span>
+                      <BriefingItemIcon emoji={item.emoji} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">{item.label}</p>
                         {item.sub && (

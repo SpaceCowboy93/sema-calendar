@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Camera } from '@/design/iconSystem'
+import { X, Clock, FileText, Plus, Check, Camera, Mail, type LucideIcon, CalendarCheck2, Sparkles, Gift, Heart, ShoppingCart } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
@@ -20,7 +20,7 @@ const COLOR_OPTIONS = [
 ] as const
 
 type TypeConfig = {
-  emoji: string
+  icon: LucideIcon
   label: string
   placeholder: string
   defaultColor: EventColor
@@ -36,37 +36,37 @@ type TypeConfig = {
 
 const TYPE_CONFIG: Record<CreateType, TypeConfig> = {
   moment: {
-    emoji: '💛', label: 'Moment',
+    icon: Heart, label: 'Moment',
     placeholder: 'Name this moment...',
     defaultColor: 'yellow', saveLabel: 'Save Moment',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   plan: {
-    emoji: '💚', label: 'Plan',
+    icon: CalendarCheck2, label: 'Plan',
     placeholder: 'What do you want to plan?',
     defaultColor: 'green', saveLabel: 'Save Plan',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   dream: {
-    emoji: '💙', label: 'Dream',
+    icon: Sparkles, label: 'Dream',
     placeholder: 'What do you dream of?',
     defaultColor: 'blue', saveLabel: 'Save Dream',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   wish: {
-    emoji: '💜', label: 'Wish',
+    icon: Gift, label: 'Wish',
     placeholder: 'What do you wish for?',
     defaultColor: 'seval', saveLabel: 'Save Wish',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   note: {
-    emoji: '💌', label: 'Note',
+    icon: Mail, label: 'Note',
     placeholder: 'Write something from the heart...',
     defaultColor: 'seval', saveLabel: 'Send with love',
     showColor: false, showDate: false, showChecklist: false, showPhotos: false, noteMode: true, shopMode: false, chipHex: undefined,
   },
   shopping: {
-    emoji: '🛒', label: 'Shopping',
+    icon: ShoppingCart, label: 'Shopping',
     placeholder: '',
     defaultColor: 'green', saveLabel: '',
     showColor: false, showDate: false, showChecklist: false, showPhotos: false,
@@ -355,7 +355,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                         : { background: '#EDE9E3', color: '#8B7D70' }
                       }
                     >
-                      {tc.emoji} {tc.label}
+                      <tc.icon size={13} strokeWidth={1.75} /> {tc.label}
                     </motion.button>
                   )
                 })}
@@ -376,8 +376,11 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                     <motion.div
                       animate={{ scale: [1, 1.3, 1] }}
                       transition={{ repeat: 2, duration: 0.4 }}
-                      className="text-5xl mb-3"
-                    >💌</motion.div>
+                      className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
+                      style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}
+                    >
+                      <Mail size={32} strokeWidth={1.5} />
+                    </motion.div>
                     <p className="font-bold text-gray-800">Sent with love</p>
                   </motion.div>
                 ) : (

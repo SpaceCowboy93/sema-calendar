@@ -7,7 +7,12 @@ import {
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
   addYears, addMonths,
 } from 'date-fns'
-import { Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart } from '@/design/iconSystem'
+import {
+  Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart,
+  type LucideIcon,
+  UserRound, Smile, Moon, CloudRain, Flame, Leaf,
+  Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Flower2, Star, Sun, Plane,
+} from '@/design/iconSystem'
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'
@@ -26,7 +31,36 @@ import { MOOD_CONFIG, getTodayString, cn } from '@/lib/utils'
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 const RELATIONSHIP_START = new Date('2025-03-05T21:00:00')
-const EMOJI_OPTIONS = ['💕', '💍', '🎂', '🌟', '🎉', '✈️', '🌸', '🌊', '🏖️', '🎊', '🎄', '🎭']
+
+const MILESTONE_OPTIONS: { key: string; icon: LucideIcon; label: string }[] = [
+  { key: 'heart',  icon: Heart,        label: 'Heart'     },
+  { key: 'gem',    icon: Gem,          label: 'Ring'      },
+  { key: 'cake',   icon: CakeSlice,    label: 'Birthday'  },
+  { key: 'star',   icon: Star,         label: 'Star'      },
+  { key: 'party',  icon: PartyPopper,  label: 'Party'     },
+  { key: 'plane',  icon: Plane,        label: 'Travel'    },
+  { key: 'flower', icon: Flower2,      label: 'Flower'    },
+  { key: 'waves',  icon: Waves,        label: 'Beach'     },
+  { key: 'sun',    icon: Sun,          label: 'Sun'       },
+  { key: 'tree',   icon: TreePine,     label: 'Christmas' },
+  { key: 'drama',  icon: Drama,        label: 'Theatre'   },
+]
+
+// Maps legacy emoji strings stored in Countdown.emoji → semantic key
+const EMOJI_TO_KEY: Record<string, string> = {
+  '💕': 'heart', '💍': 'gem', '🎂': 'cake', '🌟': 'star', '🎉': 'party',
+  '✈️': 'plane', '🌸': 'flower', '🌊': 'waves', '🏖️': 'waves',
+  '🎊': 'party', '🎄': 'tree', '🎭': 'drama',
+}
+
+function getMilestoneIcon(iconKey: string): LucideIcon {
+  const resolved = EMOJI_TO_KEY[iconKey] ?? iconKey
+  return MILESTONE_OPTIONS.find(o => o.key === resolved)?.icon ?? Heart
+}
+
+const MOOD_ICONS: Record<string, LucideIcon> = {
+  happy: Smile, relaxed: Leaf, tired: Moon, sad: CloudRain, stressed: Flame,
+}
 /* ── Helpers ───────────────────────────────────────────────────────────────── */
 function calcDuration() {
   const now    = new Date()
@@ -557,7 +591,7 @@ export default function UsPage() {
   const [addCdOpen,  setAddCdOpen]  = useState(false)
   const [newCdTitle, setNewCdTitle] = useState('')
   const [newCdDate,  setNewCdDate]  = useState('')
-  const [newCdEmoji, setNewCdEmoji] = useState('💕')
+  const [newCdIconKey, setNewCdIconKey] = useState('heart')
 
   // Boom Boom sheet + toast
   const [boomBoomSheet,  setBoomBoomSheet]  = useState(false)
@@ -611,8 +645,8 @@ export default function UsPage() {
 
   function handleAddCountdown() {
     if (!newCdTitle.trim() || !newCdDate) return
-    addCountdown(newCdTitle.trim(), newCdDate, newCdEmoji)
-    setNewCdTitle(''); setNewCdDate(''); setNewCdEmoji('💕'); setAddCdOpen(false)
+    addCountdown(newCdTitle.trim(), newCdDate, newCdIconKey)
+    setNewCdTitle(''); setNewCdDate(''); setNewCdIconKey('heart'); setAddCdOpen(false)
   }
 
   return (
@@ -659,11 +693,14 @@ export default function UsPage() {
                 const isMe = uid === currentUser
                 return (
                   <div key={uid} className="rounded-xl p-4 text-center" style={{ background: 'rgba(45,41,38,0.03)' }}>
-                    <div className="text-2xl mb-1">{u.emoji}</div>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-1"
+                      style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
+                      <UserRound size={16} strokeWidth={1.75} />
+                    </div>
                     <p className="text-xs font-semibold text-gray-600 mb-2">{isMe ? 'You' : u.displayName}</p>
                     {mood ? (
                       <div>
-                        <span className="text-2xl">{MOOD_CONFIG[mood.mood].emoji}</span>
+                        {(() => { const MIcon = MOOD_ICONS[mood.mood] ?? Smile; return <MIcon size={22} className="mx-auto" style={{ color: '#9B9590' }} /> })()}
                         <p className="text-xs text-gray-500 mt-1">{MOOD_CONFIG[mood.mood].label}</p>
                         {mood.note && (
                           <p className="text-[10px] text-gray-400 italic mt-1 leading-snug line-clamp-2">
@@ -702,7 +739,7 @@ export default function UsPage() {
                     )}
                     style={myMood?.mood === type ? { background: primary } : {}}
                   >
-                    <span className="text-base">{cfg.emoji}</span>
+                    {(() => { const MIcon = MOOD_ICONS[type] ?? Smile; return <MIcon size={15} strokeWidth={1.75} /> })()}
                     {cfg.label}
                   </motion.button>
                 ))}
@@ -758,10 +795,10 @@ export default function UsPage() {
                       style={{ background: `radial-gradient(circle at right, ${primary}, transparent)` }}
                     />
                     <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                       style={{ background: `${primary}18` }}
                     >
-                      {c.emoji}
+                      {(() => { const MIcon = getMilestoneIcon(c.emoji); return <MIcon size={18} strokeWidth={1.75} style={{ color: primary }} /> })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
@@ -976,7 +1013,10 @@ export default function UsPage() {
               <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle mb-5" />
                 <div className="text-center mb-6">
-                  <span className="text-4xl">🛏️</span>
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-1"
+                    style={{ background: `${primary}18`, color: primary }}>
+                    <Heart size={28} strokeWidth={1.5} />
+                  </div>
                   <h3 className="text-base font-bold text-gray-800 mt-2">Boom Boom</h3>
                   <p className="text-sm text-gray-400 mt-1">Current count: <span className="font-bold text-gray-700">{boomBoomCount}</span></p>
                 </div>
@@ -1068,7 +1108,7 @@ export default function UsPage() {
                       )}
                       style={pendingMood === type ? { background: `${primary}18` } : {}}
                     >
-                      <span className="text-3xl">{cfg.emoji}</span>
+                      {(() => { const MIcon = MOOD_ICONS[type] ?? Smile; return <MIcon size={26} strokeWidth={1.5} style={{ color: pendingMood === type ? primary : '#9ca3af' }} /> })()}
                       <span
                         className="text-[10px] font-semibold"
                         style={{ color: pendingMood === type ? primary : '#9ca3af' }}
@@ -1097,7 +1137,7 @@ export default function UsPage() {
                   className="w-full py-4 rounded-2xl text-white text-sm font-semibold"
                   style={{ background: primary }}
                 >
-                  {MOOD_CONFIG[pendingMood].emoji} Share this feeling
+                  Share this feeling
                 </motion.button>
               </div>
             </motion.div>
@@ -1169,16 +1209,19 @@ export default function UsPage() {
                   </button>
                 </div>
                 <div className="flex gap-2 flex-wrap mb-4">
-                  {EMOJI_OPTIONS.map(e => (
+                  {MILESTONE_OPTIONS.map(({ key, icon: MIcon }) => (
                     <button
-                      key={e}
-                      onClick={() => setNewCdEmoji(e)}
+                      key={key}
+                      onClick={() => setNewCdIconKey(key)}
                       className={cn(
-                        'text-2xl w-11 h-11 rounded-2xl flex items-center justify-center transition-all',
-                        newCdEmoji === e ? 'bg-gray-200 scale-110' : 'bg-gray-50'
+                        'w-11 h-11 rounded-2xl flex items-center justify-center transition-all',
+                        newCdIconKey === key ? 'scale-110' : 'bg-gray-50'
                       )}
+                      style={newCdIconKey === key
+                        ? { background: `${primary}18`, color: primary }
+                        : { color: '#9ca3af' }}
                     >
-                      {e}
+                      <MIcon size={18} strokeWidth={1.75} />
                     </button>
                   ))}
                 </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays } from '@/design/iconSystem'
+import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays, type LucideIcon, Globe, Coins, Dumbbell, Leaf, BookOpen, Palette, Trophy, PartyPopper } from '@/design/iconSystem'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { type Goal, type GoalCategory } from '@/types'
@@ -11,19 +11,19 @@ import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 /* ─── Category config ─────────────────────────────────────────────────────────── */
 const GOAL_CATEGORIES: Record<GoalCategory, {
-  emoji: string
+  icon: LucideIcon
   label: string
   gradient: string
   lightBg: string
   accent: string
 }> = {
-  travel:     { emoji: '✈️',  label: 'Travel',            gradient: 'from-sky-400 to-blue-500',       lightBg: 'bg-sky-50',    accent: '#0ea5e9' },
-  money:      { emoji: '💰',  label: 'Money',             gradient: 'from-emerald-400 to-green-500',  lightBg: 'bg-emerald-50',accent: '#10b981' },
-  fitness:    { emoji: '🏃',  label: 'Fitness',           gradient: 'from-orange-400 to-red-500',     lightBg: 'bg-orange-50', accent: '#f97316' },
-  life:       { emoji: '🌍',  label: 'Life',              gradient: 'from-violet-400 to-purple-500',  lightBg: 'bg-violet-50', accent: '#8b5cf6' },
-  learning:   { emoji: '📚',  label: 'Learning & Growth', gradient: 'from-yellow-400 to-amber-500',   lightBg: 'bg-yellow-50', accent: '#f59e0b' },
-  hobbies:    { emoji: '🎨',  label: 'Hobbies',           gradient: 'from-pink-400 to-rose-500',      lightBg: 'bg-pink-50',   accent: '#ec4899' },
-  challenges: { emoji: '🎯',  label: 'Fun Challenges',    gradient: 'from-teal-400 to-cyan-500',      lightBg: 'bg-teal-50',   accent: '#14b8a6' },
+  travel:     { icon: Globe,    label: 'Travel',            gradient: 'from-sky-400 to-blue-500',       lightBg: 'bg-sky-50',    accent: '#0ea5e9' },
+  money:      { icon: Coins,    label: 'Money',             gradient: 'from-emerald-400 to-green-500',  lightBg: 'bg-emerald-50',accent: '#10b981' },
+  fitness:    { icon: Dumbbell, label: 'Fitness',           gradient: 'from-orange-400 to-red-500',     lightBg: 'bg-orange-50', accent: '#f97316' },
+  life:       { icon: Leaf,     label: 'Life',              gradient: 'from-violet-400 to-purple-500',  lightBg: 'bg-violet-50', accent: '#8b5cf6' },
+  learning:   { icon: BookOpen, label: 'Learning & Growth', gradient: 'from-yellow-400 to-amber-500',   lightBg: 'bg-yellow-50', accent: '#f59e0b' },
+  hobbies:    { icon: Palette,  label: 'Hobbies',           gradient: 'from-pink-400 to-rose-500',      lightBg: 'bg-pink-50',   accent: '#ec4899' },
+  challenges: { icon: Trophy,   label: 'Fun Challenges',    gradient: 'from-teal-400 to-cyan-500',      lightBg: 'bg-teal-50',   accent: '#14b8a6' },
 }
 
 const CATEGORY_ORDER: GoalCategory[] = [
@@ -92,13 +92,14 @@ function CelebrationOverlay({ active, onDone }: { active: boolean; onDone: () =>
                        flex items-center gap-3 mx-6"
             style={{ top: '38%' }}
           >
-            <motion.span
+            <motion.div
               animate={{ rotate: [0, -15, 15, -10, 10, 0] }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="text-3xl"
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(158,201,179,0.2)', color: '#7BBBA5' }}
             >
-              🎉
-            </motion.span>
+              <PartyPopper size={22} strokeWidth={1.5} />
+            </motion.div>
             <div>
               <p className="font-bold text-gray-800 text-sm">Goal Completed!</p>
               <p className="text-xs text-gray-400 mt-0.5">Amazing work together</p>
@@ -168,7 +169,9 @@ export default function GoalsPage() {
               <div className="absolute inset-0 bg-white/10 rounded-3xl" />
 
               <div className="relative z-10">
-                <span className="text-3xl">{cfg.emoji}</span>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-1">
+                  <cfg.icon size={20} strokeWidth={1.75} className="text-white" />
+                </div>
                 <p className="text-white font-bold text-sm mt-2 leading-tight">{cfg.label}</p>
                 {catGoals.length > 0 ? (
                   <p className="text-white/70 text-xs mt-1">{done}/{catGoals.length} done</p>
@@ -262,7 +265,9 @@ function CategoryModal({
           <div className="drag-handle mb-3 bg-white/40" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-4xl">{cfg.emoji}</span>
+              <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center">
+                <cfg.icon size={22} strokeWidth={1.75} className="text-white" />
+              </div>
               <div>
                 <h2 className="text-lg font-bold text-white">{cfg.label}</h2>
                 <p className="text-white/70 text-xs">

@@ -3,23 +3,35 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { Plus, X, Check, Camera, Trash2, Pencil } from '@/design/iconSystem'
+import { Plus, X, Check, Camera, Trash2, Pencil, Mail, type LucideIcon, Utensils, Flower2, Gift, BookOpen, Flame, Wine, Heart, Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Star, Sun, Plane } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type Countdown, type ChecklistEntry } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
-export const ANNIVERSARY_SUGGESTIONS = [
-  { emoji: '🌹', text: 'Plan a dinner reservation' },
-  { emoji: '💐', text: 'Buy flowers' },
-  { emoji: '🎁', text: 'Prepare a small gift' },
-  { emoji: '💌', text: 'Write a love letter' },
-  { emoji: '📸', text: 'Choose a favourite photo together' },
-  { emoji: '🕯️', text: 'Set the mood with candles' },
-  { emoji: '🍾', text: 'Open something special to drink' },
-  { emoji: '📖', text: 'Write a memory from this day' },
+export const ANNIVERSARY_SUGGESTIONS: { icon: LucideIcon; text: string }[] = [
+  { icon: Utensils, text: 'Plan a dinner reservation'     },
+  { icon: Flower2,  text: 'Buy flowers'                   },
+  { icon: Gift,     text: 'Prepare a small gift'          },
+  { icon: Mail,     text: 'Write a love letter'           },
+  { icon: Camera,   text: 'Choose a favourite photo together' },
+  { icon: Flame,    text: 'Set the mood with candles'     },
+  { icon: Wine,     text: 'Open something special to drink' },
+  { icon: BookOpen, text: 'Write a memory from this day'  },
 ]
+
+// Maps milestone emoji strings (legacy) or key strings → LucideIcon
+const MILESTONE_ICON_MAP: Record<string, LucideIcon> = {
+  heart: Heart, gem: Gem, cake: CakeSlice, star: Star, party: PartyPopper,
+  plane: Plane, flower: Flower2, waves: Waves, sun: Sun, tree: TreePine, drama: Drama,
+  '💕': Heart, '💍': Gem, '🎂': CakeSlice, '🌟': Star, '🎉': PartyPopper,
+  '✈️': Plane, '🌸': Flower2, '🌊': Waves, '🏖️': Waves, '🎊': PartyPopper,
+  '🎄': TreePine, '🎭': Drama,
+}
+function getMilestoneIcon(key: string): LucideIcon {
+  return MILESTONE_ICON_MAP[key] ?? Heart
+}
 
 async function resizeImage(file: File): Promise<string> {
   return new Promise(resolve => {
@@ -170,10 +182,10 @@ export function AnniversarySheet({
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ background: `${primary}15` }}
               >
-                {countdown.emoji}
+                {(() => { const MIcon = getMilestoneIcon(countdown.emoji); return <MIcon size={22} strokeWidth={1.75} style={{ color: primary }} /> })()}
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ageLabel}</p>
@@ -202,7 +214,7 @@ export function AnniversarySheet({
           </div>
 
           <div className="rounded-2xl px-4 py-3 mb-3" style={{ background: `${primary}06` }}>
-            <p className="text-[10px] font-bold mb-1" style={{ color: primary }}>💌 A message to remember</p>
+            <p className="text-[10px] font-bold mb-1 flex items-center gap-1" style={{ color: primary }}><Mail size={11} strokeWidth={2} /> A message to remember</p>
             <textarea
               value={romantic}
               onChange={e => { setRomantic(e.target.value); mark() }}
@@ -347,7 +359,7 @@ export function AnniversarySheet({
                     className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium', already ? 'opacity-40' : 'active:opacity-80')}
                     style={{ background: `${primary}10`, color: already ? primary : '#6b7280', border: `1px solid ${primary}20` }}
                   >
-                    {s.emoji} {s.text} {already && <Check size={10} />}
+                    <s.icon size={13} strokeWidth={1.75} /> {s.text} {already && <Check size={10} />}
                   </button>
                 )
               })}

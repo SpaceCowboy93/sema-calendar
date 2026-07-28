@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, Wallet, Trash2, Sparkles, Pencil, Leaf,
+  Home, Car, Zap, Play, Gift, Plane, ShoppingCart, ShoppingBag, Heart,
+  MapPin, BarChart2,
+  type LucideIcon,
 } from '@/design/iconSystem'
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
@@ -62,9 +65,9 @@ function canFinalize(key: string) {
   return now.getDate() >= lastDayOf(key).getDate() - 2
 }
 function pctColor(pct: number) {
-  if (pct > 100) return '#ef4444'
-  if (pct > 80)  return '#f59e0b'
-  return '#10b981'
+  if (pct > 100) return '#D88A8A'
+  if (pct > 80)  return '#E7B77C'
+  return '#9EC9B3'
 }
 function buildReport(month: FinanceMonth, totalSaved: number): FinanceMonthReport {
   const totalExpenses = month.budgetItems.reduce((a, b) => a + b.actual, 0)
@@ -233,7 +236,7 @@ export default function FinancePage() {
                   currentMonth.isFinalized
                     ? 'bg-purple-100 text-purple-600'
                     : monthKey === currentMonthKey()
-                      ? 'bg-green-100 text-green-600'
+                      ? 'bg-[rgba(158,201,179,0.18)] text-[#5B9A85]'
                       : 'bg-gray-100 text-gray-500'
                 )}
               >
@@ -252,8 +255,8 @@ export default function FinancePage() {
         {/* ── Total Savings Banner ── */}
         <div className="c2-card mx-4 mb-4 px-4 py-3.5 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(63,107,79,0.09)' }}>
-            <TrendingUp size={16} style={{ color: '#4a7c5e' }} />
+            style={{ background: 'rgba(158,201,179,0.12)' }}>
+            <TrendingUp size={16} style={{ color: '#9EC9B3' }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="c2-label">Total Savings</p>
@@ -262,7 +265,7 @@ export default function FinancePage() {
           {thisMonthSavings !== 0 && (
             <div className="shrink-0 text-right">
               <p className="text-[10px]" style={{ color: '#a8b0a0' }}>This month</p>
-              <p className="text-sm font-bold" style={{ color: thisMonthSavings > 0 ? '#4a7c5e' : '#ef4444' }}>
+              <p className="text-sm font-bold" style={{ color: thisMonthSavings > 0 ? '#9EC9B3' : '#D88A8A' }}>
                 {fmtSigned(thisMonthSavings)}
               </p>
             </div>
@@ -291,7 +294,7 @@ export default function FinancePage() {
               <div
                 className="rounded-2xl px-5 py-5 mb-3"
                 style={{
-                  background: remaining >= 0 ? 'rgba(74,124,94,0.07)' : 'rgba(239,68,68,0.06)',
+                  background: remaining >= 0 ? 'rgba(158,201,179,0.08)' : 'rgba(216,138,138,0.07)',
                   boxShadow: '0 2px 16px rgba(45,41,38,0.06)',
                 }}
               >
@@ -300,7 +303,7 @@ export default function FinancePage() {
                 </p>
                 <p
                   className="text-4xl font-bold leading-none"
-                  style={{ fontFamily: 'var(--font-playfair)', color: remaining >= 0 ? '#1a1f18' : '#ef4444' }}
+                  style={{ fontFamily: 'var(--font-playfair)', color: remaining >= 0 ? '#1a1f18' : '#D88A8A' }}
                 >
                   {remaining < 0 ? '-' : ''}{fmt(remaining)}
                 </p>
@@ -317,7 +320,7 @@ export default function FinancePage() {
                   onClick={() => { setIncomeInput(String(currentMonth.income)); setIncomeEditing(true) }}
                   className="w-full px-4 py-3.5 flex items-center gap-3 text-left"
                 >
-                  <TrendingUp size={15} style={{ color: '#4a7c5e', flexShrink: 0 }} />
+                  <TrendingUp size={15} style={{ color: '#9EC9B3', flexShrink: 0 }} />
                   <span className="flex-1 text-sm text-gray-600">Income</span>
                   <span className="text-sm font-semibold text-gray-800">{fmt(currentMonth.income)}</span>
                 </motion.button>
@@ -325,10 +328,10 @@ export default function FinancePage() {
                 <div style={{ height: 1, background: 'rgba(45,41,38,0.05)', margin: '0 16px' }} />
 
                 <div className="px-4 py-3.5 flex items-center gap-3">
-                  <TrendingDown size={15} style={{ color: '#ef4444', flexShrink: 0 }} />
+                  <TrendingDown size={15} style={{ color: '#D88A8A', flexShrink: 0 }} />
                   <span className="flex-1 text-sm text-gray-600">Expenses</span>
                   <div className="text-right">
-                    <span className="text-sm font-semibold" style={{ color: '#ef4444' }}>{fmt(totalExpenses)}</span>
+                    <span className="text-sm font-semibold" style={{ color: '#D88A8A' }}>{fmt(totalExpenses)}</span>
                     <span className="text-[10px] text-gray-400 ml-1.5">of {fmt(currentMonth.budgetItems.reduce((a, b) => a + b.planned, 0))}</span>
                   </div>
                 </div>
@@ -342,7 +345,7 @@ export default function FinancePage() {
                 >
                   <Sparkles size={15} style={{ color: '#C9A96E', flexShrink: 0 }} />
                   <span className="flex-1 text-sm text-gray-600">Saved this month</span>
-                  <span className="text-sm font-semibold" style={{ color: thisMonthSavings >= 0 ? '#4a7c5e' : '#ef4444' }}>
+                  <span className="text-sm font-semibold" style={{ color: thisMonthSavings >= 0 ? '#9EC9B3' : '#D88A8A' }}>
                     {thisMonthSavings >= 0 ? '' : '-'}{fmt(thisMonthSavings)}
                   </span>
                 </motion.button>
@@ -356,7 +359,7 @@ export default function FinancePage() {
                 <button
                   onClick={() => setAddBudgetOpen(true)}
                   className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                  style={{ background: 'rgba(74,124,94,0.09)', color: '#4a7c5e' }}
+                  style={{ background: 'rgba(158,201,179,0.12)', color: '#9EC9B3' }}
                 >
                   <Plus size={11} /> Category
                 </button>
@@ -378,7 +381,7 @@ export default function FinancePage() {
                       className="c2-card w-full p-3.5 text-left"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-xl shrink-0">{item.emoji}</span>
+                        <FinanceCategoryIcon category={item.category} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1.5">
                             <p className="text-sm font-medium text-gray-700 truncate">{item.category}</p>
@@ -386,7 +389,7 @@ export default function FinancePage() {
                               <span className="text-[11px] font-semibold" style={{ color }}>{fmt(item.actual)}</span>
                               <span className="text-[10px] text-gray-300">/</span>
                               <span className="text-[10px] text-gray-400">{fmt(item.planned)}</span>
-                              {over && <span className="text-[9px] font-bold text-red-400 bg-red-50 px-1 rounded">OVER</span>}
+                              {over && <span className="text-[9px] font-bold px-1 rounded" style={{ color: '#D88A8A', background: 'rgba(216,138,138,0.12)' }}>OVER</span>}
                             </div>
                           </div>
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -422,8 +425,11 @@ export default function FinancePage() {
                     >
                       <div className={cn(
                         'w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0',
-                      )} style={{ background: t.amount > 0 ? 'rgba(74,124,94,0.10)' : 'rgba(239,68,68,0.10)' }}>
-                        {t.amount > 0 ? '💸' : '📤'}
+                      )} style={{ background: t.amount > 0 ? 'rgba(158,201,179,0.12)' : 'rgba(216,138,138,0.12)' }}>
+                        {t.amount > 0
+                          ? <TrendingUp size={15} strokeWidth={1.75} style={{ color: '#9EC9B3' }} />
+                          : <TrendingDown size={15} strokeWidth={1.75} style={{ color: '#D88A8A' }} />
+                        }
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-700 truncate">
@@ -434,7 +440,7 @@ export default function FinancePage() {
                           {' · '}{t.createdBy}
                         </p>
                       </div>
-                      <p className="text-sm font-bold shrink-0 mr-1" style={{ color: t.amount > 0 ? '#4a7c5e' : '#ef4444' }}>
+                      <p className="text-sm font-bold shrink-0 mr-1" style={{ color: t.amount > 0 ? '#9EC9B3' : '#D88A8A' }}>
                         {t.amount > 0 ? '+' : ''}{fmt(t.amount)}
                       </p>
                       <button
@@ -477,14 +483,14 @@ export default function FinancePage() {
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ background: 'rgba(63,107,79,0.08)' }}>
-                            <Sparkles size={16} style={{ color: '#4a7c5e' }} />
+                            style={{ background: 'rgba(158,201,179,0.10)' }}>
+                            <Sparkles size={16} style={{ color: '#9EC9B3' }} />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-700 truncate">{list.name}</p>
                           <p className="text-[10px] text-gray-400">
-                            {list.storeName ? `📍 ${list.storeName} · ` : ''}
+                            {list.storeName ? <><MapPin size={10} className="inline-block mr-0.5" />{list.storeName} · </> : ''}
                             {list.items.length} item{list.items.length !== 1 ? 's' : ''}
                             {list.completedAt ? ` · ${new Date(list.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
                           </p>
@@ -503,7 +509,7 @@ export default function FinancePage() {
                 <button
                   onClick={() => setConfirmFinalize(true)}
                   className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2"
-                  style={{ background: '#4a7c5e' }}
+                  style={{ background: '#9EC9B3' }}
                 >
                   <Sparkles size={16} />
                   Generate Month-End Report
@@ -558,7 +564,7 @@ export default function FinancePage() {
               className="fixed inset-0 z-50 flex items-center justify-center p-6"
             >
               <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
-                <h3 className="font-bold text-gray-800 mb-1">Monthly Income 💶</h3>
+                <h3 className="font-bold text-gray-800 mb-1">Monthly Income</h3>
                 <p className="text-xs text-gray-400 mb-4">Combined household income for {shortMonthLabel(monthKey)}</p>
                 <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-3 mb-4">
                   <span className="text-gray-400 font-semibold">{CURRENCY}</span>
@@ -574,7 +580,7 @@ export default function FinancePage() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => setIncomeEditing(false)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
-                  <button onClick={saveIncome} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#4a7c5e' }}>Save</button>
+                  <button onClick={saveIncome} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#9EC9B3' }}>Save</button>
                 </div>
               </div>
             </motion.div>
@@ -649,7 +655,10 @@ export default function FinancePage() {
             >
               <div className="c2-sheet-bg rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <div className="text-center mb-4">
-                  <div className="text-4xl mb-2">📊</div>
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-2 mx-auto"
+                    style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
+                    <BarChart2 size={28} strokeWidth={1.5} />
+                  </div>
                   <h3 className="font-bold" style={{ color: '#2D2926' }}>Generate Report?</h3>
                   <p className="text-xs mt-1" style={{ color: '#9B9590' }}>
                     This will finalize {shortMonthLabel(monthKey)} and generate your month-end report. You can still edit entries after.
@@ -657,7 +666,7 @@ export default function FinancePage() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => setConfirmFinalize(false)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
-                  <button onClick={handleFinalize} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#4a7c5e' }}>
+                  <button onClick={handleFinalize} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#9EC9B3' }}>
                     Generate
                   </button>
                 </div>
@@ -719,8 +728,8 @@ function EmptyMonthState({
     <div className="px-4">
       <div className="c2-card-lg p-6 text-center">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-          style={{ background: 'rgba(63,107,79,0.08)' }}>
-          <Wallet size={20} style={{ color: '#4a7c5e' }} />
+          style={{ background: 'rgba(158,201,179,0.10)' }}>
+          <Wallet size={20} style={{ color: '#9EC9B3' }} />
         </div>
         <h3 className="font-bold text-base mb-1" style={{ color: '#1a1f18' }}>No budget for {monthLabel(monthKey)}</h3>
         <p className="text-xs mb-5" style={{ color: '#a8b0a0' }}>Start tracking your finances for this month.</p>
@@ -728,7 +737,7 @@ function EmptyMonthState({
           <button
             onClick={onStartBlank}
             className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold"
-            style={{ background: '#4a7c5e' }}
+            style={{ background: '#9EC9B3' }}
           >
             Start blank
           </button>
@@ -753,8 +762,8 @@ function ReportCard({ report }: { report: FinanceMonthReport }) {
   return (
     <div className="c2-card mx-4 mb-4 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(63,107,79,0.09)' }}>
-          <Sparkles size={14} style={{ color: '#4a7c5e' }} />
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(158,201,179,0.12)' }}>
+          <Sparkles size={14} style={{ color: '#9EC9B3' }} />
         </div>
         <h3 className="font-bold text-sm" style={{ color: '#1a1f18' }}>Month-End Report</h3>
         <span className="ml-auto text-[10px] text-gray-400">
@@ -763,10 +772,10 @@ function ReportCard({ report }: { report: FinanceMonthReport }) {
       </div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         {[
-          { label: 'Income',    value: fmt2(report.totalIncome),    color: '#10b981' },
-          { label: 'Expenses',  value: fmt2(report.totalExpenses),  color: '#ef4444' },
-          { label: 'Saved',     value: fmt2(report.totalSaved),     color: '#f59e0b' },
-          { label: 'Remaining', value: `${report.remaining < 0 ? '-' : ''}${fmt2(report.remaining)}`, color: report.remaining >= 0 ? '#60a5fa' : '#ef4444' },
+          { label: 'Income',    value: fmt2(report.totalIncome),    color: '#9EC9B3' },
+          { label: 'Expenses',  value: fmt2(report.totalExpenses),  color: '#D88A8A' },
+          { label: 'Saved',     value: fmt2(report.totalSaved),     color: '#E7B77C' },
+          { label: 'Remaining', value: `${report.remaining < 0 ? '-' : ''}${fmt2(report.remaining)}`, color: report.remaining >= 0 ? '#9EC9B3' : '#D88A8A' },
         ].map(row => (
           <div key={row.label} className="bg-white/70 rounded-xl px-3 py-2">
             <p className="text-[10px] text-gray-400 mb-0.5">{row.label}</p>
@@ -776,13 +785,13 @@ function ReportCard({ report }: { report: FinanceMonthReport }) {
       </div>
       <div className="bg-white/70 rounded-xl px-3 py-2 mb-2">
         <p className="text-[10px] text-gray-400 mb-0.5">Savings Rate</p>
-        <p className="text-sm font-bold text-purple-600">{report.savingsRate.toFixed(1)}%</p>
+        <p className="text-sm font-bold" style={{ color: '#9EC9B3' }}>{report.savingsRate.toFixed(1)}%</p>
       </div>
       {report.topCategory && (
         <p className="text-xs text-gray-500">Top category: <span className="font-semibold">{report.topCategory}</span></p>
       )}
       {report.overBudgetCategories.length > 0 && (
-        <p className="text-xs text-red-400 mt-1">Over budget: {report.overBudgetCategories.join(', ')}</p>
+        <p className="text-xs mt-1" style={{ color: '#D88A8A' }}>Over budget: {report.overBudgetCategories.join(', ')}</p>
       )}
     </div>
   )
@@ -874,7 +883,7 @@ function FinanceCategoryEditorSheet({
             <div className="drag-handle mb-4" />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{item.emoji}</span>
+                <FinanceCategoryIcon category={item.category} size={18} />
                 <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
               </div>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
@@ -954,7 +963,7 @@ function FinanceCategoryEditorSheet({
                 <button
                   onClick={addCatItem} disabled={!newName.trim()}
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-40 shrink-0"
-                  style={{ background: '#4a7c5e' }}
+                  style={{ background: '#9EC9B3' }}
                 >
                   <Plus size={14} />
                 </button>
@@ -990,7 +999,7 @@ function FinanceCategoryEditorSheet({
             <button
               onClick={save}
               className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold mb-3"
-              style={{ background: '#4a7c5e' }}
+              style={{ background: '#9EC9B3' }}
             >
               Save Changes
             </button>
@@ -1025,7 +1034,7 @@ function ItemRow({ item, onEdit, onDelete }: { item: FinanceCategoryItem; onEdit
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
           {item.isPaid && (
-            <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 rounded-full">PAID</span>
+            <span className="text-[9px] font-bold px-1.5 rounded-full" style={{ color: '#5B9A85', background: 'rgba(158,201,179,0.2)' }}>PAID</span>
           )}
           <p className="text-sm font-medium text-gray-700 truncate">{item.name}</p>
         </div>
@@ -1085,7 +1094,7 @@ function ItemForm({
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl p-3 space-y-2"
-      style={{ background: 'rgba(74,124,94,0.06)' }}
+      style={{ background: 'rgba(158,201,179,0.08)' }}
     >
       <input
         type="text"
@@ -1119,7 +1128,7 @@ function ItemForm({
         </div>
         {lineTotal > 0 && (
           <div className="bg-white/80 rounded-xl px-3 py-2 flex items-center shrink-0">
-            <span className="text-sm font-bold" style={{ color: '#4a7c5e' }}>{fmt(lineTotal)}</span>
+            <span className="text-sm font-bold" style={{ color: '#9EC9B3' }}>{fmt(lineTotal)}</span>
           </div>
         )}
       </div>
@@ -1135,10 +1144,10 @@ function ItemForm({
           onClick={() => setIsPaid(p => !p)}
           className={cn(
             'text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all',
-            isPaid ? 'bg-green-100 text-green-700' : 'bg-white/80 text-gray-500',
+            isPaid ? 'bg-white/80' : 'bg-white/80 text-gray-500',
           )}
         >
-          {isPaid ? '✓ Paid' : 'Mark as paid'}
+          <span style={isPaid ? { color: '#5B9A85' } : undefined}>{isPaid ? '✓ Paid' : 'Mark as paid'}</span>
         </button>
         <div className="flex gap-1.5">
           <button onClick={onCancel}
@@ -1155,7 +1164,7 @@ function ItemForm({
             onClick={save}
             disabled={!canSave}
             className="px-3 py-1.5 rounded-xl text-white text-[11px] font-semibold disabled:opacity-40"
-            style={{ background: '#4a7c5e' }}
+            style={{ background: '#9EC9B3' }}
           >
             {item ? 'Update' : 'Add'}
           </button>
@@ -1223,7 +1232,7 @@ function AddBudgetSheet({
           </div>
           <button onClick={save} disabled={!category.trim()}
             className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-            style={{ background: '#4a7c5e' }}
+            style={{ background: '#9EC9B3' }}
           >
             Add Category
           </button>
@@ -1277,13 +1286,15 @@ function SavingsSheet({
           <div className="flex gap-2 mb-4 bg-gray-100 rounded-2xl p-1">
             <button
               onClick={() => setType('add')}
-              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'add' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500')}
+              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'add' ? 'bg-white shadow-sm' : 'text-gray-500')}
+              style={type === 'add' ? { color: '#5B9A85' } : undefined}
             >
               + Contribute
             </button>
             <button
               onClick={() => setType('withdraw')}
-              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'withdraw' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-500')}
+              className={cn('flex-1 py-2 rounded-xl text-sm font-semibold transition-all', type === 'withdraw' ? 'bg-white shadow-sm' : 'text-gray-500')}
+              style={type === 'withdraw' ? { color: '#D88A8A' } : undefined}
             >
               - Withdraw
             </button>
@@ -1317,12 +1328,40 @@ function SavingsSheet({
             onClick={save}
             disabled={!amount || parseFloat(amount) <= 0}
             className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold disabled:opacity-40"
-            style={{ background: type === 'add' ? '#4a7c5e' : '#ef4444' }}
+            style={{ background: type === 'add' ? '#9EC9B3' : '#D88A8A' }}
           >
             {type === 'add' ? 'Add Contribution' : 'Record Withdrawal'}
           </button>
         </div>
       </motion.div>
     </>
+  )
+}
+
+/* ── Finance Category Icon ───────────────────────────────────────────────────── */
+function getCategoryIcon(category: string): LucideIcon {
+  const c = category.toLowerCase()
+  if (c.includes('hous') || c.includes('rent') || c.includes('apartment')) return Home
+  if (c.includes('car') || c.includes('transport') || c.includes('fuel') || c.includes('auto') || c.includes('bus') || c.includes('metro')) return Car
+  if (c.includes('util') || c.includes('electric') || c.includes('gas') || c.includes('water') || c.includes('power') || c.includes('energy')) return Zap
+  if (c.includes('subscri') || c.includes('netflix') || c.includes('spotify') || c.includes('stream') || c.includes('media')) return Play
+  if (c.includes('gift') || c.includes('present')) return Gift
+  if (c.includes('date') || c.includes('dining') || c.includes('dinner') || c.includes('restaurant') || c.includes('night')) return Heart
+  if (c.includes('travel') || c.includes('flight') || c.includes('hotel') || c.includes('holiday') || c.includes('vacation') || c.includes('trip') || c.includes('plane')) return Plane
+  if (c.includes('shop') || c.includes('cloth') || c.includes('fashion') || c.includes('wear')) return ShoppingBag
+  if (c.includes('grocer') || c.includes('food') || c.includes('supermark') || c.includes('market') || c.includes('cart')) return ShoppingCart
+  if (c.includes('weed') || c.includes('herb') || c.includes('plant')) return Leaf
+  return Heart // default / other
+}
+
+function FinanceCategoryIcon({ category, size = 17 }: { category: string; size?: number }) {
+  const Icon = getCategoryIcon(category)
+  return (
+    <div
+      className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+      style={{ background: 'rgba(158,201,179,0.13)', color: '#7BBBA5' }}
+    >
+      <Icon size={size} strokeWidth={1.75} />
+    </div>
   )
 }

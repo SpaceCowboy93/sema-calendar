@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Check, X } from '@/design/iconSystem'
+import { Plus, Trash2, Check, X, Sparkles } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type WishlistItem, type WishlistCategory } from '@/types'
 import { WISHLIST_CATEGORY_CONFIG, cn } from '@/lib/utils'
@@ -164,7 +164,10 @@ export default function WishlistPage() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center pt-16 text-center"
         >
-          <div className="text-5xl mb-4">✨</div>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto"
+            style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
+            <Sparkles size={32} strokeWidth={1.5} />
+          </div>
           <p className="font-semibold text-gray-600 mb-1">Your wishlist awaits ✨</p>
           <p className="text-sm text-gray-400">Add wishes, date ideas, dreams...</p>
         </motion.div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Pin, Trash2, Send, Heart } from '@/design/iconSystem'
+import { Pin, Trash2, Send, Heart, Mail } from '@/design/iconSystem'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
@@ -109,7 +109,10 @@ export default function NotesPage() {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center pt-20 text-center"
         >
-          <div className="text-5xl mb-4">💌</div>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto"
+            style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
+            <Mail size={32} strokeWidth={1.5} />
+          </div>
           <p className="font-semibold text-gray-600 mb-1">No notes yet</p>
           <p className="text-sm text-gray-400">
             Tap the heart button to write your first love note
