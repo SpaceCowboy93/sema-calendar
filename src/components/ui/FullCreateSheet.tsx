@@ -8,6 +8,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
+import { Chip, ChipGroup } from '@/components/ui'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
@@ -339,27 +340,23 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
               </div>
 
               {/* Type selector chips */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+              <ChipGroup className="mb-4">
                 {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
                   const tc = TYPE_CONFIG[t]
                   const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
                   const chipHex = tc.chipHex ?? col?.hex ?? primary
                   return (
-                    <motion.button
+                    <Chip
                       key={t}
-                      whileTap={{ scale: 0.93 }}
+                      icon={tc.icon}
+                      label={tc.label}
+                      selected={type === t}
+                      activeColor={chipHex}
                       onClick={() => switchType(t)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
-                      style={type === t
-                        ? { background: chipHex, color: 'white' }
-                        : { background: '#EDE9E3', color: '#8B7D70' }
-                      }
-                    >
-                      <tc.icon size={13} strokeWidth={1.75} /> {tc.label}
-                    </motion.button>
+                    />
                   )
                 })}
-              </div>
+              </ChipGroup>
             </div>
 
             {/* Scrollable body */}

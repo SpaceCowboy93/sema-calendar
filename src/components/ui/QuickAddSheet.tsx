@@ -6,6 +6,7 @@ import { X, Plus, Mail, type LucideIcon, CalendarCheck2, Sparkles, Gift, Heart, 
 import { useAppStore } from '@/store/useAppStore'
 import type { WishlistCategory, GoalCategory, EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'
+import { Chip, ChipGroup } from '@/components/ui'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
@@ -110,22 +111,18 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
               </div>
 
               {/* Type chips — always visible */}
-              <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+              <ChipGroup className="mb-5">
                 {TYPES.map(t => (
-                  <motion.button
+                  <Chip
                     key={t.id}
-                    whileTap={{ scale: 0.93 }}
+                    icon={t.icon}
+                    label={t.label}
+                    selected={type === t.id}
+                    activeColor={COLOR_HEX[TYPE_COLOR[t.id]]}
                     onClick={() => { setType(t.id); setColor(TYPE_COLOR[t.id]); setTitle(''); setNotes('') }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
-                    style={type === t.id
-                      ? { background: COLOR_HEX[TYPE_COLOR[t.id]], color: 'white' }
-                      : { background: '#EDE9E3', color: '#8B7D70' }
-                    }
-                  >
-                    <t.icon size={13} strokeWidth={1.75} /> {t.label}
-                  </motion.button>
+                  />
                 ))}
-              </div>
+              </ChipGroup>
 
               <AnimatePresence mode="wait">
                 {sent ? (

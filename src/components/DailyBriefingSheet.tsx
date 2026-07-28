@@ -8,6 +8,7 @@ import {
   Smile, Moon, CloudRain, Flame, Leaf,
   Heart, Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Star, Sun, Plane,
 } from '@/design/iconSystem'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const BRIEFING_ICON_MAP: Record<string, LucideIcon> = {
   // System keys
@@ -179,19 +180,12 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
             {/* Scrollable body */}
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-3">
               {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-14 text-center px-4">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                  style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
-                  <Flower2 size={32} strokeWidth={1.5} />
-                </div>
-                  <p
-                    className="text-gray-800 text-lg mb-1.5"
-                    style={{ fontFamily: 'var(--font-playfair)', fontWeight: 600 }}
-                  >
-                    Nothing urgent today.
-                  </p>
-                  <p className="text-gray-400 text-sm">Enjoy a calm day together.</p>
-                </div>
+                <EmptyState
+                  icon={Flower2}
+                  title="Nothing urgent today."
+                  description="Enjoy a calm day together."
+                  animate={false}
+                />
               ) : (
                 <div className="space-y-2 pb-3">
                   {items.map((item, i) => (

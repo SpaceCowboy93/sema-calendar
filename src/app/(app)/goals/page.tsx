@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { type Goal, type GoalCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { EmptyState, Progress } from '@/components/ui'
 
 /* ─── Category config ─────────────────────────────────────────────────────────── */
 const GOAL_CATEGORIES: Record<GoalCategory, {
@@ -135,15 +136,7 @@ export default function GoalsPage() {
             : `${completedGoals}/${totalGoals} dreams achieved`}
         </p>
         {totalGoals > 0 && (
-          <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${(completedGoals / totalGoals) * 100}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="h-full rounded-full"
-              style={{ background: primaryColor }}
-            />
-          </div>
+          <Progress value={(completedGoals / totalGoals) * 100} color={primaryColor} className="mt-3" />
         )}
       </div>
 
@@ -314,11 +307,12 @@ function CategoryModal({
           </AnimatePresence>
 
           {pending.length === 0 && done.length === 0 && !showForm && (
-            <div className="flex flex-col items-center py-10 text-center">
-              <Target size={40} className="text-gray-200 mb-3" />
-              <p className="font-semibold text-gray-500 mb-1">No dreams here yet 🌟</p>
-              <p className="text-sm text-gray-400">Tap + to add your first dream</p>
-            </div>
+            <EmptyState
+              icon={Target}
+              title="No dreams here yet"
+              description="Tap + to add your first dream"
+              className="py-10"
+            />
           )}
 
           <AnimatePresence mode="popLayout">
@@ -518,15 +512,7 @@ function GoalCard({
                     {goal.progressCurrent}/{goal.progressTarget}
                   </span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
-                    className="h-full rounded-full"
-                    style={{ background: accent }}
-                  />
-                </div>
+                <Progress value={pct} color={accent} />
               </div>
               {!isMaxed && (
                 <button
@@ -819,15 +805,12 @@ function GoalEditModal({
                     />
                   </div>
                 </div>
-                <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      background: accent,
-                      width: `${Math.min((parseInt(progressCurrent) / (parseInt(progressTarget) || 1)) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
+                <Progress
+                  value={Math.min((parseInt(progressCurrent) / (parseInt(progressTarget) || 1)) * 100, 100)}
+                  color={accent}
+                  trackColor="rgba(255,255,255,0.6)"
+                  animated={false}
+                />
               </div>
             </>
           )}

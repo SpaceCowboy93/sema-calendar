@@ -9,6 +9,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import { type Countdown, type ChecklistEntry } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { Progress } from '@/components/ui/Progress'
 
 export const ANNIVERSARY_SUGGESTIONS: { icon: LucideIcon; text: string }[] = [
   { icon: Utensils, text: 'Plan a dinner reservation'     },
@@ -249,14 +250,7 @@ export function AnniversarySheet({
             </div>
 
             {totalCount > 0 && (
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: primary }}
-                  animate={{ width: `${(doneCount / totalCount) * 100}%` }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                />
-              </div>
+              <Progress value={(doneCount / totalCount) * 100} color={primary} className="mb-3" />
             )}
 
             <div className="space-y-1.5">

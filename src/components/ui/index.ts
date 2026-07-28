@@ -1,0 +1,69 @@
+/**
+ * Together Component Library — barrel export
+ *
+ * Import any component from '@/components/ui' instead of the individual file.
+ *
+ * @example
+ * import { EmptyState, Progress, Badge, Chip } from '@/components/ui'
+ */
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+export {
+  PrimaryButton, SecondaryButton, GhostButton, DangerButton,
+  IconButton, MotionPrimaryButton,
+} from './Button'
+export type { ButtonVariant, PrimaryButtonProps, SecondaryButtonProps, GhostButtonProps, DangerButtonProps, IconButtonProps, IconButtonVariant } from './Button'
+
+// ── Inputs ────────────────────────────────────────────────────────────────────
+export { TextInput, DateInput, TimeInput, CurrencyInput, SearchInput } from './Input'
+export type { TextInputProps, CurrencyInputProps, SearchInputProps } from './Input'
+
+// ── Textarea ──────────────────────────────────────────────────────────────────
+export { Textarea } from './Textarea'
+export type { TextareaProps } from './Textarea'
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+export { Card, CardSection } from './Card'
+export type { CardProps, CardVariant, CardRadius } from './Card'
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+export { Badge } from './Badge'
+export type { BadgeProps, BadgeVariant, BadgeSize } from './Badge'
+
+// ── Chip ──────────────────────────────────────────────────────────────────────
+export { Chip, ChipGroup } from './Chip'
+export type { ChipProps } from './Chip'
+
+// ── EmptyState ────────────────────────────────────────────────────────────────
+export { EmptyState, DashedEmptyState } from './EmptyState'
+export type { EmptyStateProps, DashedEmptyStateProps } from './EmptyState'
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+export { Progress, ProgressWithLabel } from './Progress'
+export type { ProgressProps, ProgressVariant } from './Progress'
+
+// ── SectionTitle ──────────────────────────────────────────────────────────────
+export { SectionTitle } from './SectionTitle'
+export type { SectionTitleProps, SectionTitleAction } from './SectionTitle'
+
+// ── Divider ───────────────────────────────────────────────────────────────────
+export { Divider } from './Divider'
+export type { DividerProps, DividerVariant } from './Divider'
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+export { Avatar } from './Avatar'
+export type { AvatarProps, AvatarSize } from './Avatar'
+
+// ── ListItem ──────────────────────────────────────────────────────────────────
+export { ListItem } from './ListItem'
+export type { ListItemProps } from './ListItem'
+
+// ── Pre-existing shared components ────────────────────────────────────────────
+export { C2Button }        from './C2Button'
+export type { C2ButtonProps, C2ButtonVariant } from './C2Button'
+
+export { C2Surface }       from './C2Surface'
+export type { C2SurfaceProps, C2SurfaceVariant } from './C2Surface'
+
+export { C2SectionLabel }  from './C2SectionLabel'
+export type { C2SectionLabelProps } from './C2SectionLabel'

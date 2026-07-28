@@ -20,6 +20,7 @@ import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
+import { Badge } from '@/components/ui'
 
 const CURRENCY = '€'
 
@@ -389,7 +390,7 @@ export default function FinancePage() {
                               <span className="text-[11px] font-semibold" style={{ color }}>{fmt(item.actual)}</span>
                               <span className="text-[10px] text-gray-300">/</span>
                               <span className="text-[10px] text-gray-400">{fmt(item.planned)}</span>
-                              {over && <span className="text-[9px] font-bold px-1 rounded" style={{ color: '#D88A8A', background: 'rgba(216,138,138,0.12)' }}>OVER</span>}
+                              {over && <Badge variant="danger">OVER</Badge>}
                             </div>
                           </div>
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">

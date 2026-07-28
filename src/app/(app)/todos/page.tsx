@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText, Sparkles } from '@/design/iconSystem'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type SharedTodo } from '@/types'
@@ -218,18 +219,12 @@ export default function TodosPage() {
 
       {/* List */}
       {todos.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center pt-16 text-center"
-        >
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto"
-            style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}>
-            <Sparkles size={32} strokeWidth={1.5} />
-          </div>
-          <p className="font-semibold text-gray-600 mb-1">All clear!</p>
-          <p className="text-sm text-gray-400">Tap + to plan something together 🫶</p>
-        </motion.div>
+        <EmptyState
+          icon={Sparkles}
+          title="All clear!"
+          description="Tap + to plan something together 🫶"
+          className="pt-16"
+        />
       ) : (
         <>
           <AnimatePresence mode="popLayout">
