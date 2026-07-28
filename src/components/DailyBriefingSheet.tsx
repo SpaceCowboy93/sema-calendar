@@ -102,7 +102,7 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
               className="shrink-0 pt-3 pb-1 flex justify-center touch-none cursor-grab active:cursor-grabbing"
               onPointerDown={e => dragControls.start(e)}
             >
-              <div className="w-10 h-1 rounded-full bg-gray-200" />
+              <div className="w-10 h-1 rounded-full bg-[rgba(180,165,140,0.4)]" />
             </div>
 
             {/* Header */}
@@ -121,7 +121,7 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 shrink-0 mt-1 active:bg-gray-200 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0 mt-1 transition-colors"
               >
                 <X size={16} />
               </button>
@@ -153,7 +153,7 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
                       transition={{ delay: shouldReduce ? 0 : i * 0.06, duration: 0.22, ease: 'easeOut' }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleItemPress(item)}
-                      className="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left active:bg-gray-100 transition-colors"
+                      className="w-full c2-sheet-section px-4 py-3.5 flex items-center gap-3 text-left active:opacity-90 transition-colors rounded-2xl"
                     >
                       <span className="text-xl shrink-0 leading-none">{item.emoji}</span>
                       <div className="flex-1 min-w-0">

@@ -496,8 +496,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           <p className="font-bold text-gray-800 mb-1">Remove item?</p>
           <p className="text-sm text-gray-400 mb-4">This can&apos;t be undone.</p>
           <div className="flex gap-2">
-            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
-            <button onClick={() => confirmDeleteItem(deleteConfirmId)} className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm">Remove</button>
+            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
+            <button onClick={() => confirmDeleteItem(deleteConfirmId)} className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm">Remove</button>
           </div>
         </motion.div>
       </motion.div>
@@ -525,7 +525,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+        className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
@@ -535,7 +535,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
             <h3 className="text-base font-bold text-gray-800">
               {mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'} ❤️
             </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
@@ -545,7 +545,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           {formContent}
         </div>
 
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
           {saveButton}
         </div>
       </motion.div>

@@ -534,7 +534,7 @@ function EditTodoModal({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         {/* Non-scrolling header */}
@@ -546,7 +546,7 @@ function EditTodoModal({
             <h3 className="text-base font-bold text-gray-800">Edit Plan</h3>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />
             </button>
@@ -670,21 +670,23 @@ function EditTodoModal({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+              className="relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
             >
-              <div className="text-4xl mb-3">🗑️</div>
-              <h3 className="font-bold text-gray-800 mb-1">Remove this plan?</h3>
-              <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
+              <div className="w-12 h-12 rounded-2xl c2-sheet-danger-soft flex items-center justify-center mx-auto mb-3">
+                <Trash2 size={20} />
+              </div>
+              <h3 className="font-bold mb-1" style={{ color: '#2D2926' }}>Remove this plan?</h3>
+              <p className="text-sm mb-5" style={{ color: '#9B9590' }}>This can&apos;t be undone.</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDelete(false)}
-                  className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                  className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={onDelete}
-                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                  className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm"
                 >
                   Remove
                 </button>

@@ -229,13 +229,13 @@ export function FocusActivitySheet({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto flex flex-col"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto flex flex-col"
               style={{ maxHeight: 'calc(100dvh - 48px)' }}
             >
               {/* Non-scrolling header */}
               <div className="px-5 pt-4 shrink-0">
                 {/* Drag handle */}
-                <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
+                <div className="w-10 h-1 rounded-full bg-[rgba(180,165,140,0.4)] mx-auto mb-5" />
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
@@ -249,14 +249,14 @@ export function FocusActivitySheet({
                     {isEdit && (
                       <button
                         onClick={() => setConfirmDelete(true)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-400 active:bg-red-100"
+                        className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-danger-soft"
                       >
                         <Trash2 size={15} />
                       </button>
                     )}
                     <button
                       onClick={onClose}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                      className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                     >
                       <X size={16} />
                     </button>
@@ -454,7 +454,7 @@ export function FocusActivitySheet({
               </div>
 
               {/* Pinned save footer */}
-              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+              <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSave}

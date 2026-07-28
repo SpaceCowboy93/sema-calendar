@@ -88,7 +88,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-[80] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-[80] c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
       >
         <div className="px-5 pt-4 pb-12">
           <div className="drag-handle mb-5" />
@@ -102,7 +102,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
                 {isManual ? 'Fill in the details manually' : 'Check and correct the scanned details'}
               </p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 shrink-0">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0">
               <X size={16} />
             </button>
           </div>
@@ -133,7 +133,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
 
           {/* Store + Date + Currency */}
           <div className="space-y-2 mb-4">
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
+            <div className="c2-sheet-section px-4 py-3">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Store / Merchant</p>
               <input
                 value={store} onChange={e => setStore(e.target.value)}
@@ -221,7 +221,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
           </div>
 
           {/* Totals */}
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-6 space-y-2">
+          <div className="c2-sheet-section px-4 py-3 mb-6 space-y-2">
             <div className="flex items-center justify-between text-sm text-gray-500">
               <span>Subtotal</span>
               <span>{currency} {subtotal.toFixed(2)}</span>

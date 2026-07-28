@@ -50,11 +50,11 @@ export function WeekBrowserSheet({ open, onClose, onSelectWeek, currentWeekKey }
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto"
           >
             <div className="px-5 pt-4 pb-10 max-h-[70dvh] flex flex-col">
               {/* Handle */}
-              <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5 shrink-0" />
+              <div className="w-10 h-1 rounded-full bg-[rgba(180,165,140,0.4)] mx-auto mb-5 shrink-0" />
 
               {/* Header */}
               <div className="flex items-center justify-between mb-4 shrink-0">
@@ -64,7 +64,7 @@ export function WeekBrowserSheet({ open, onClose, onSelectWeek, currentWeekKey }
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                 >
                   <X size={16} />
                 </button>
@@ -82,7 +82,7 @@ export function WeekBrowserSheet({ open, onClose, onSelectWeek, currentWeekKey }
                       key={key}
                       onClick={() => onSelectWeek(key)}
                       className="w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-colors active:bg-gray-50"
-                      style={isActive ? { background: '#f9f9f9' } : undefined}
+                      style={isActive ? { background: 'rgba(255,255,255,0.55)' } : undefined}
                     >
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-800">

@@ -228,7 +228,7 @@ export function CategoryHubSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
         role="dialog" aria-modal="true" aria-label={def.label}
@@ -247,7 +247,7 @@ export function CategoryHubSheet({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />
             </button>
@@ -348,7 +348,7 @@ export function CategoryHubSheet({
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+              className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal
                          max-w-lg mx-auto flex flex-col"
               style={{ maxHeight: 'calc(100dvh - 48px)' }}
               role="dialog" aria-modal="true" aria-label={`Edit ${addLabel}`}
@@ -358,7 +358,7 @@ export function CategoryHubSheet({
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-gray-800">Edit {addLabel}</h3>
                   <button onClick={() => setEditingId(null)} aria-label="Close"
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                     <X size={16} />
                   </button>
                 </div>
@@ -1513,7 +1513,7 @@ export function ShoppingDetailSheet({
                     <div className="flex gap-2">
                       <button
                         onClick={() => setCompletionDialog(false)}
-                        className="flex-1 py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold active:opacity-80"
+                        className="flex-1 py-3.5 rounded-2xl c2-sheet-cancel text-sm font-semibold active:opacity-80"
                       >
                         Not now
                       </button>

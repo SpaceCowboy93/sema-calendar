@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Camera } from '@/design/iconSystem'
+import { X, Clock, FileText, Plus, Check, Camera, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
@@ -187,7 +187,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
             style={{ maxHeight: 'calc(100dvh - 48px)' }}
           >
             {/* Non-scrolling header */}
@@ -201,7 +201,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 </h2>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                 >
                   <X size={16} />
                 </button>
@@ -225,7 +225,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </div>
 
               {/* Date & Time */}
-              <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+              <div className="c2-sheet-section p-4 mb-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
                     <Clock size={14} className="text-gray-400" />
@@ -251,7 +251,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </div>
 
               {/* Notes */}
-              <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex gap-3">
+              <div className="c2-sheet-section p-4 mb-4 flex gap-3">
                 <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                   <FileText size={14} className="text-gray-400" />
                 </div>
@@ -392,7 +392,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             </div>
 
             {/* Pinned action footer */}
-            <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+            <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
               <button
                 onClick={handleSave}
                 disabled={!title.trim() || saving}
@@ -428,21 +428,23 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
-                  className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+                  className="relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
                 >
-                  <div className="text-4xl mb-3">🗑️</div>
-                  <h3 className="font-bold text-gray-800 mb-1">Delete Event?</h3>
-                  <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
+                  <div className="w-12 h-12 rounded-2xl c2-sheet-danger-soft flex items-center justify-center mx-auto mb-3">
+                    <Trash2 size={20} />
+                  </div>
+                  <h3 className="font-bold mb-1" style={{ color: '#2D2926' }}>Delete Event?</h3>
+                  <p className="text-sm mb-5" style={{ color: '#9B9590' }}>This can&apos;t be undone.</p>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowDelete(false)}
-                      className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                      className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleDelete}
-                      className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                      className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm"
                     >
                       Delete
                     </button>

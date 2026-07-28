@@ -94,7 +94,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
                        max-w-lg mx-auto"
           >
             <div className="px-5 pt-4 pb-10">
@@ -104,7 +104,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-base font-bold text-gray-800">Add something 💕</h3>
                 <button onClick={close}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                   <X size={16} />
                 </button>
               </div>
@@ -119,7 +119,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
                     style={type === t.id
                       ? { background: COLOR_HEX[TYPE_COLOR[t.id]], color: 'white' }
-                      : { background: '#f3f4f6', color: '#6b7280' }
+                      : { background: '#EDE9E3', color: '#8B7D70' }
                     }
                   >
                     {t.emoji} {t.label}
@@ -152,7 +152,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                     className="space-y-3"
                   >
                     {/* Main title / message input */}
-                    <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="c2-sheet-section p-4">
                       {type === 'note' ? (
                         <textarea
                           value={title}
@@ -183,7 +183,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
 
                     {/* Notes field (all types except note) */}
                     {type !== 'note' && (
-                      <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                      <div className="c2-sheet-section px-4 py-3">
                         <textarea
                           value={notes}
                           onChange={e => setNotes(e.target.value)}
@@ -208,7 +208,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
                           type="time"
                           value={time}
                           onChange={e => setTime(e.target.value)}
-                          className="w-28 text-sm text-gray-600 bg-gray-50 rounded-2xl px-3 py-3 outline-none"
+                          className="w-28 text-sm text-gray-600 c2-sheet-section px-3 py-3 outline-none"
                         />
                       </div>
                     )}

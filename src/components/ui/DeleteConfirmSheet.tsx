@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { Trash2 } from '@/design/iconSystem'
 
 interface Props {
   open: boolean
@@ -33,21 +34,23 @@ export default function DeleteConfirmSheet({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
+            className="relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
           >
-            <div className="text-4xl mb-3">🗑️</div>
-            <h3 className="font-bold text-gray-800 mb-1">{title}</h3>
-            <p className="text-sm text-gray-400 mb-5">{message}</p>
+            <div className="w-12 h-12 rounded-2xl c2-sheet-danger-soft flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={20} />
+            </div>
+            <h3 className="font-bold mb-1" style={{ color: '#2D2926' }}>{title}</h3>
+            <p className="text-sm mb-5" style={{ color: '#9B9590' }}>{message}</p>
             <div className="flex gap-3">
               <button
                 onClick={onCancel}
-                className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
+                className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
+                className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm"
               >
                 {confirmLabel}
               </button>

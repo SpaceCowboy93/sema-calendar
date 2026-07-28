@@ -319,7 +319,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
                        max-w-lg mx-auto flex flex-col"
             style={{ maxHeight: 'calc(100dvh - 48px)' }}
           >
@@ -332,7 +332,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                 <h3 className="text-base font-bold text-gray-800">Add something</h3>
                 <button
                   onClick={close}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                 >
                   <X size={16} />
                 </button>
@@ -352,7 +352,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
                       style={type === t
                         ? { background: chipHex, color: 'white' }
-                        : { background: '#f3f4f6', color: '#6b7280' }
+                        : { background: '#EDE9E3', color: '#8B7D70' }
                       }
                     >
                       {tc.emoji} {tc.label}
@@ -430,7 +430,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                       <>
                         {/* Date & Time */}
                         {cfg.showDate && (
-                          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                          <div className="c2-sheet-section p-4 space-y-3">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                                 <Clock size={14} className="text-gray-400" />
@@ -457,7 +457,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                         )}
 
                         {/* Notes */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex gap-3">
+                        <div className="c2-sheet-section p-4 flex gap-3">
                           <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                             <FileText size={14} className="text-gray-400" />
                           </div>
@@ -601,7 +601,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
 
             {/* Pinned footer — only when there's a save action */}
             {!sent && !cfg.shopMode && (
-              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+              <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSave}

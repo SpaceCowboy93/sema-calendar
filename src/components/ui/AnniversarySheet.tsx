@@ -160,7 +160,7 @@ export function AnniversarySheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         {/* Non-scrolling header */}
@@ -184,7 +184,7 @@ export function AnniversarySheet({
                 />
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 shrink-0">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0">
               <X size={16} />
             </button>
           </div>
@@ -192,7 +192,7 @@ export function AnniversarySheet({
 
         {/* Scrollable form content */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+          <div className="c2-sheet-section px-4 py-3 mb-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
             <input
               type="date" value={date}
@@ -212,7 +212,7 @@ export function AnniversarySheet({
             />
           </div>
 
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+          <div className="c2-sheet-section px-4 py-3 mb-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
             <textarea
               value={notes}
@@ -379,7 +379,7 @@ export function AnniversarySheet({
         </div>
 
         {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
           <div className="flex gap-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}

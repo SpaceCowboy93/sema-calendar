@@ -274,7 +274,7 @@ function MemorySheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         {/* Non-scrolling header */}
@@ -285,7 +285,7 @@ function MemorySheet({
             <h3 className="text-base font-bold text-gray-800">
               {isEdit ? 'Edit Memory' : 'New Memory'}
             </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
@@ -971,7 +971,7 @@ export default function UsPage() {
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle mb-5" />
@@ -1043,7 +1043,7 @@ export default function UsPage() {
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle" />
@@ -1051,7 +1051,7 @@ export default function UsPage() {
                   <h3 className="text-base font-bold text-gray-800">How are you feeling?</h3>
                   <button
                     onClick={() => setMoodPopup(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                    className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                   >
                     <X size={16} />
                   </button>
@@ -1155,7 +1155,7 @@ export default function UsPage() {
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-sheet-footer">
                 <div className="drag-handle mb-4" />
@@ -1163,7 +1163,7 @@ export default function UsPage() {
                   <h3 className="text-base font-bold text-gray-800">New Milestone</h3>
                   <button
                     onClick={() => setAddCdOpen(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                    className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                   >
                     <X size={16} />
                   </button>

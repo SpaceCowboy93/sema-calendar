@@ -182,9 +182,53 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .c2-handle {
     width: 36px;
     height: 4px;
-    background: #e5e7eb;
+    background: rgba(180, 165, 140, 0.40);
     border-radius: 9999px;
     margin: 0 auto 20px;
+  }
+
+  /* ── Sheet system ───────────────────────────────────────── */
+
+  /* Sheet container — warm cream paper with barely-visible botanical corners */
+  .c2-sheet-bg {
+    background: #FBF7F1;
+    background-image:
+      radial-gradient(ellipse at 5% 95%, rgba(107, 140, 107, 0.055) 0%, transparent 42%),
+      radial-gradient(ellipse at 95% 5%, rgba(107, 140, 107, 0.04) 0%, transparent 38%);
+  }
+
+  /* Inner section / input group block */
+  .c2-sheet-section {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(180, 165, 140, 0.13);
+    border-radius: 1rem;
+  }
+
+  /* Cancel / secondary action */
+  .c2-sheet-cancel {
+    background: #EDE9E3;
+    color: #5C5048;
+  }
+
+  /* Destructive action — muted warm terracotta */
+  .c2-sheet-danger {
+    background: #C27A63;
+    color: white;
+  }
+
+  /* Soft delete icon button */
+  .c2-sheet-danger-soft {
+    background: rgba(194, 122, 99, 0.12);
+    color: #B05A44;
+  }
+
+  /* Close (X) button */
+  .c2-sheet-x {
+    background: rgba(180, 165, 140, 0.14);
+    color: #6B6458;
+  }
+  .c2-sheet-x:active {
+    background: rgba(180, 165, 140, 0.26);
   }
 
   /* Legacy aliases kept for compatibility */
@@ -226,7 +270,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .drag-handle {
   width: 36px;
   height: 4px;
-  background: #e5e7eb;
+  background: rgba(180, 165, 140, 0.40);
   border-radius: 9999px;
   margin: 0 auto 20px;
 }

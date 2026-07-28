@@ -645,7 +645,7 @@ export default function TogetherPage() {
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-10">
                 <div className="drag-handle" />
@@ -666,7 +666,7 @@ export default function TogetherPage() {
                           <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
                         </div>
                         <button onClick={() => { setNoteOpen(false); setNoteText('') }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                          className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                           <X size={16} />
                         </button>
                       </div>

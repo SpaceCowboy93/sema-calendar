@@ -573,7 +573,7 @@ export default function FinancePage() {
                   />
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setIncomeEditing(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button onClick={() => setIncomeEditing(false)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
                   <button onClick={saveIncome} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#4a7c5e' }}>Save</button>
                 </div>
               </div>
@@ -647,16 +647,16 @@ export default function FinancePage() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-6"
             >
-              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
+              <div className="c2-sheet-bg rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <div className="text-center mb-4">
                   <div className="text-4xl mb-2">📊</div>
-                  <h3 className="font-bold text-gray-800">Generate Report?</h3>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <h3 className="font-bold" style={{ color: '#2D2926' }}>Generate Report?</h3>
+                  <p className="text-xs mt-1" style={{ color: '#9B9590' }}>
                     This will finalize {shortMonthLabel(monthKey)} and generate your month-end report. You can still edit entries after.
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setConfirmFinalize(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button onClick={() => setConfirmFinalize(false)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
                   <button onClick={handleFinalize} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#4a7c5e' }}>
                     Generate
                   </button>
@@ -689,12 +689,12 @@ export default function FinancePage() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-6"
             >
-              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
-                <h3 className="font-bold text-gray-800 mb-3 text-center">Remove transaction?</h3>
+              <div className="c2-sheet-bg rounded-3xl p-6 w-full max-w-sm shadow-modal">
+                <h3 className="font-bold mb-3 text-center" style={{ color: '#2D2926' }}>Remove transaction?</h3>
                 <div className="flex gap-3">
-                  <button onClick={() => setDeleteTxId(null)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
+                  <button onClick={() => setDeleteTxId(null)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
                   <button onClick={() => { deleteSavingsTransaction(deleteTxId!); setDeleteTxId(null) }}
-                    className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm">Delete</button>
+                    className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm">Delete</button>
                 </div>
               </div>
             </motion.div>
@@ -864,7 +864,7 @@ function FinanceCategoryEditorSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
@@ -877,7 +877,7 @@ function FinanceCategoryEditorSheet({
                 <span className="text-2xl">{item.emoji}</span>
                 <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
               </div>
-              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                 <X size={16} />
               </button>
             </div>
@@ -1188,13 +1188,13 @@ function AddBudgetSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
       >
         <div className="px-5 pt-4 pb-sheet-footer">
           <div className="drag-handle mb-5" />
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-bold text-gray-800">New Budget Category</h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
@@ -1259,7 +1259,7 @@ function SavingsSheet({
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
       >
         <div className="px-5 pt-4 pb-sheet-footer">
           <div className="drag-handle mb-5" />
@@ -1268,7 +1268,7 @@ function SavingsSheet({
               <h3 className="text-base font-bold text-gray-800">Savings Entry</h3>
               <p className="text-xs text-gray-400">{label}</p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
