@@ -627,12 +627,14 @@ export default function UsPage() {
         imageSrc={C2_ROOM_HEADERS.us.src}
         imageObjectPosition={C2_ROOM_HEADERS.us.imageObjectPosition}
         action={
-          <button
-            onClick={() => { setCurrentUser(null); router.replace('/') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
-          >
-            <LogOut size={14} /> Sign out
-          </button>
+          <div style={{ marginTop: 7, marginRight: 6 }}>
+            <button
+              onClick={() => { setCurrentUser(null); router.replace('/') }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
         }
       />
 

@@ -213,6 +213,7 @@ export default function FinancePage() {
           subtitle={living.financeSubtitle || 'Planning our future together.'}
           imageSrc={C2_ROOM_HEADERS.finances.src}
           imageObjectPosition={C2_ROOM_HEADERS.finances.imageObjectPosition}
+          imageGradientBoost={C2_ROOM_HEADERS.finances.gradientBoost}
         />
 
         {/* ── Month Selector ── */}

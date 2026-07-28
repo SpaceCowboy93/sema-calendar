@@ -310,6 +310,7 @@ export default function ShoppingPage() {
         subtitle={subtitle}
         imageSrc={C2_ROOM_HEADERS.shopping.src}
         imageObjectPosition={C2_ROOM_HEADERS.shopping.imageObjectPosition}
+        imageGradientBoost={C2_ROOM_HEADERS.shopping.gradientBoost}
       />
 
       {/* ══════════════════════════════════════════════════════════════════════

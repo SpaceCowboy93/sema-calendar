@@ -24,6 +24,13 @@ export type SeMaRoomHeaderProps = {
    * Tune per room to place text in the natural empty paper area.
    */
   imageObjectPosition?: string
+  /**
+   * Fine-tune the left readability gradient strength.
+   * Positive → stronger (more cream), negative → lighter (more artwork visible).
+   * Applied to the middle gradient stops only; fade endpoints stay fixed.
+   * Typical range: -0.08 to +0.08.
+   */
+  imageGradientBoost?: number
   /** Right-aligned slot — e.g. Sign Out button. */
   action?: React.ReactNode
   className?: string
@@ -49,9 +56,13 @@ export function SeMaRoomHeader({
   imageSrc,
   imageAlt = '',
   imageObjectPosition = 'center center',
+  imageGradientBoost = 0,
   action,
   className,
 }: SeMaRoomHeaderProps) {
+  // Clamp a gradient alpha value with the per-room boost applied
+  const ga = (v: number) => Math.min(1, Math.max(0, v + imageGradientBoost)).toFixed(2)
+
   return (
     <header
       className={['relative overflow-hidden', className].filter(Boolean).join(' ')}
@@ -82,21 +93,15 @@ export function SeMaRoomHeader({
       {/* ── Layer 2: Left readability gradient ──
           Cream at the left where text lives, fades to transparent
           toward the botanical artwork on the right.
-          No white rectangle. No dark overlay. No harsh edge. */}
+          No white rectangle. No dark overlay. No harsh edge.
+          Middle stops are tuned per room via imageGradientBoost. */}
       {imageSrc && (
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
           style={{
             zIndex: 1,
-            background: [
-              'linear-gradient(90deg,',
-              'rgba(253,250,245,0.98) 0%,',
-              'rgba(253,250,245,0.92) 35%,',
-              'rgba(253,250,245,0.55) 58%,',
-              'rgba(253,250,245,0.08) 78%,',
-              'rgba(253,250,245,0) 100%)',
-            ].join(' '),
+            background: `linear-gradient(90deg, rgba(253,250,245,0.98) 0%, rgba(253,250,245,${ga(0.92)}) 35%, rgba(253,250,245,${ga(0.55)}) 58%, rgba(253,250,245,${ga(0.08)}) 78%, rgba(253,250,245,0) 100%)`,
           }}
         />
       )}
@@ -132,7 +137,7 @@ export function SeMaRoomHeader({
           paddingBottom: 28,
         }}
       >
-        <div style={{ maxWidth: '64%', minWidth: 0 }}>
+        <div style={{ maxWidth: mode === 'greeting' ? '68%' : '64%', minWidth: 0 }}>
 
           {/* Static mode */}
           {mode === 'static' && (
@@ -176,8 +181,8 @@ export function SeMaRoomHeader({
               style={{
                 fontFamily: 'var(--font-playfair)',
                 fontWeight: 600,
-                fontSize: 'clamp(2rem, 7.5vw, 2.65rem)',
-                lineHeight: 1.07,
+                fontSize: 'clamp(1.85rem, 6.8vw, 2.4rem)',
+                lineHeight: 1.05,
                 color: 'var(--bj-charcoal)',
                 letterSpacing: '-0.015em',
                 marginBottom: subtitle || dateLabel ? 10 : 0,

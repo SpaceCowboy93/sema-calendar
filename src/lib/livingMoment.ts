@@ -299,7 +299,7 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   if (incompleteLists.length > 0) {
     return {
       homeSubtitle:    '🛒 Kitchen restock day.',
-      plannerSubtitle: 'There are a few errands to fit into the week.',
+      plannerSubtitle: 'A few errands to fit into your week.',
       financeSubtitle: 'Another step toward your plans.',
       usSubtitle:      'Another day in your story.',
       ...defaultShopping,

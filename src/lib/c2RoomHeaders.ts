@@ -29,6 +29,13 @@ export type C2RoomHeaderConfig = {
    * Text lives at top-left — position should keep cream paper there.
    */
   imageObjectPosition: string
+  /**
+   * Fine-tune readability gradient per room.
+   * Positive → stronger cream (better text contrast).
+   * Negative → lighter (more botanical artwork visible).
+   * Omit for the default gradient (0).
+   */
+  gradientBoost?: number
 }
 
 export const C2_ROOM_HEADERS: Record<C2RoomId, C2RoomHeaderConfig> = {
@@ -51,6 +58,9 @@ export const C2_ROOM_HEADERS: Record<C2RoomId, C2RoomHeaderConfig> = {
     // Portrait — covers by width, ~top 47% shows.
     // Olive clusters prominent at top corners; cream center is wide.
     imageObjectPosition: 'center top',
+    // Strongest botanical composition — slightly more cream on left
+    // so the title stays fully readable over the olive foliage.
+    gradientBoost: 0.05,
   },
   finances: {
     src: '/assets/c2/botanical/finances-header.webp',
@@ -58,6 +68,9 @@ export const C2_ROOM_HEADERS: Record<C2RoomId, C2RoomHeaderConfig> = {
     // Horizontal olive branch composition; center keeps branches visible
     // at edges while cream paper shows at top-left for the title.
     imageObjectPosition: 'center center',
+    // Calm composition with naturally clear cream area — lighten
+    // gradient slightly to let more of the artwork breathe.
+    gradientBoost: -0.06,
   },
   us: {
     src: '/assets/c2/botanical/us-header.webp',
