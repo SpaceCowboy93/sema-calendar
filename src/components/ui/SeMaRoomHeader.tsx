@@ -3,67 +3,41 @@
 import Image from 'next/image'
 
 export type SeMaRoomHeaderProps = {
-  /**
-   * 'static'   — shows eyebrow + title + optional subtitle + optional date.
-   * 'greeting' — shows greeting line + optional subtitle + optional date.
-   * Defaults to 'static'.
-   */
+  /** 'static' — eyebrow + title. 'greeting' — greeting line. */
   mode?: 'static' | 'greeting'
-
-  /** Small-caps muted line above the title (static mode). */
+  /** Small-caps eyebrow above title (static mode). */
   eyebrow?: string
-
-  /**
-   * Page title in static mode. Accepts ReactNode so callers can embed
-   * line breaks via <br /> without special-casing.
-   */
+  /** Page title (static mode). Accepts ReactNode for line breaks. */
   title?: React.ReactNode
-
-  /** Personalized greeting line (greeting mode). */
+  /** Greeting line (greeting mode). */
   greeting?: string
-
   /** Muted line below title / greeting. */
   subtitle?: string
-
-  /** Date string rendered below subtitle. */
+  /** Date string below subtitle. */
   dateLabel?: string
-
-  /** Path to the botanical header image (served from /public). */
+  /** Botanical artwork path served from /public. */
   imageSrc?: string
-
   /** Alt text — pass "" for purely decorative images. */
   imageAlt?: string
-
   /**
-   * 'cover'   — landscape images: fills the full header, minimal crop.
-   * 'contain' — portrait images: shows full artwork anchored to the right,
-   *             cream background shows through on the left for text.
-   * Defaults to 'cover'.
-   */
-  imageObjectFit?: 'cover' | 'contain'
-
-  /**
-   * CSS object-position.
-   * cover:   tune which area stays visible when cropping (e.g. 'center top')
-   * contain: controls anchor side/edge (e.g. 'right bottom')
+   * CSS object-position for the cover-mode artwork.
+   * Tune per room to place text in the natural empty paper area.
    */
   imageObjectPosition?: string
-
   /** Right-aligned slot — e.g. Sign Out button. */
   action?: React.ReactNode
-
   className?: string
 }
 
 /**
- * SeMaRoomHeader — shared presentational header for all C2 rooms.
+ * SeMaRoomHeader — full-canvas botanical journal header.
  *
- * Full-width botanical artwork fills the header as a background.
- * A soft left-side gradient ensures typography remains legible over
- * the watercolor paper composition.
+ * The botanical artwork fills the entire header (object-fit: cover).
+ * Text floats above it in the natural cream paper area of each composition.
+ * A soft cream gradient from the left protects typography without covering
+ * the artwork. A bottom fade blends into the page body below.
  *
- * Pure display component: no store reads, no Living Moment logic,
- * no generated SVG, no Framer Motion.
+ * Pure display component — no store, no SVG, no generated decorations.
  */
 export function SeMaRoomHeader({
   mode = 'static',
@@ -74,79 +48,102 @@ export function SeMaRoomHeader({
   dateLabel,
   imageSrc,
   imageAlt = '',
-  imageObjectFit = 'cover',
-  imageObjectPosition,
+  imageObjectPosition = 'center center',
   action,
   className,
 }: SeMaRoomHeaderProps) {
-  const defaultPosition = imageObjectFit === 'contain' ? 'right center' : 'center center'
-  const resolvedPosition = imageObjectPosition ?? defaultPosition
-
   return (
     <header
       className={['relative overflow-hidden', className].filter(Boolean).join(' ')}
       style={{
-        minHeight: 'clamp(200px, 50vw, 260px)',
+        minHeight: 'clamp(210px, 27vh, 250px)',
         background: 'var(--bj-cream)',
       }}
     >
-      {/* Botanical artwork */}
+
+      {/* ── Layer 1: Full-canvas botanical artwork ── */}
       {imageSrc && (
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none select-none"
+          style={{ zIndex: 0 }}
         >
           <Image
             src={imageSrc}
             alt={imageAlt}
             fill
             sizes="100vw"
-            style={{
-              objectFit: imageObjectFit,
-              objectPosition: resolvedPosition,
-            }}
+            style={{ objectFit: 'cover', objectPosition: imageObjectPosition }}
             priority
           />
-
-          {/*
-           * Gradient overlay — only for cover (landscape) images where artwork
-           * fills the full header and may overlap the text column.
-           *
-           * For contain (portrait) images, the cream background shows through
-           * on the left naturally, so no gradient is needed.
-           */}
-          {imageObjectFit === 'cover' && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(to right, rgba(253,250,245,0.88) 0%, rgba(253,250,245,0.60) 35%, rgba(253,250,245,0.20) 60%, transparent 80%)',
-              }}
-            />
-          )}
         </div>
       )}
 
-      {/* Text column — sits above artwork via z-index */}
+      {/* ── Layer 2: Left readability gradient ──
+          Cream at the left where text lives, fades to transparent
+          toward the botanical artwork on the right.
+          No white rectangle. No dark overlay. No harsh edge. */}
+      {imageSrc && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            zIndex: 1,
+            background: [
+              'linear-gradient(90deg,',
+              'rgba(253,250,245,0.98) 0%,',
+              'rgba(253,250,245,0.92) 35%,',
+              'rgba(253,250,245,0.55) 58%,',
+              'rgba(253,250,245,0.08) 78%,',
+              'rgba(253,250,245,0) 100%)',
+            ].join(' '),
+          }}
+        />
+      )}
+
+      {/* ── Layer 3: Bottom fade into page body ──
+          Ensures the header blends seamlessly into the cream journal page. */}
+      {imageSrc && (
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 right-0 pointer-events-none"
+          style={{
+            zIndex: 1,
+            height: '55%',
+            background: [
+              'linear-gradient(to bottom,',
+              'rgba(253,250,245,0) 0%,',
+              'rgba(253,250,245,0) 70%,',
+              'rgba(253,250,245,0.65) 88%,',
+              'var(--bj-cream) 100%)',
+            ].join(' '),
+          }}
+        />
+      )}
+
+      {/* ── Layer 4: Content — text floats inside the artwork ── */}
       <div
-        className="relative z-10 flex items-start justify-between"
+        className="relative flex items-start justify-between"
         style={{
-          paddingInline: 20,
-          paddingTop: 'clamp(44px, 7vh, 60px)',
-          paddingBottom: 'clamp(22px, 4vh, 32px)',
+          zIndex: 2,
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingTop: 48,
+          paddingBottom: 28,
         }}
       >
-        <div style={{ maxWidth: '62%', minWidth: 0 }}>
+        <div style={{ maxWidth: '64%', minWidth: 0 }}>
 
-          {/* ── Static mode ── */}
+          {/* Static mode */}
           {mode === 'static' && (
             <>
               {eyebrow && (
                 <p
-                  className="font-medium tracking-widest uppercase"
                   style={{
                     fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.10em',
+                    textTransform: 'uppercase',
                     color: '#9B9590',
                     marginBottom: 10,
                     lineHeight: 1.4,
@@ -155,17 +152,16 @@ export function SeMaRoomHeader({
                   {eyebrow}
                 </p>
               )}
-
               {title && (
                 <h1
                   style={{
                     fontFamily: 'var(--font-playfair)',
                     fontWeight: 600,
-                    fontSize: 'clamp(2rem, 8vw, 2.75rem)',
-                    lineHeight: 1.1,
+                    fontSize: 'clamp(2rem, 7.5vw, 2.65rem)',
+                    lineHeight: 1.07,
                     color: 'var(--bj-charcoal)',
                     letterSpacing: '-0.015em',
-                    marginBottom: subtitle || dateLabel ? 14 : 0,
+                    marginBottom: subtitle || dateLabel ? 12 : 0,
                   }}
                 >
                   {title}
@@ -174,43 +170,39 @@ export function SeMaRoomHeader({
             </>
           )}
 
-          {/* ── Greeting mode ── */}
+          {/* Greeting mode */}
           {mode === 'greeting' && greeting && (
             <h1
-              className="leading-snug"
               style={{
                 fontFamily: 'var(--font-playfair)',
                 fontWeight: 600,
-                fontSize: 'clamp(1.75rem, 7vw, 2.5rem)',
+                fontSize: 'clamp(2rem, 7.5vw, 2.65rem)',
+                lineHeight: 1.07,
                 color: 'var(--bj-charcoal)',
-                marginBottom: subtitle || dateLabel ? 8 : 0,
+                letterSpacing: '-0.015em',
+                marginBottom: subtitle || dateLabel ? 10 : 0,
               }}
             >
               {greeting}
             </h1>
           )}
 
-          {/* Subtitle — shared between modes */}
           {subtitle && (
-            <p
-              className="text-sm"
-              style={{ color: '#6B6458', marginBottom: dateLabel ? 4 : 0 }}
-            >
+            <p style={{ fontSize: 14, lineHeight: 1.45, color: '#6B6458', marginBottom: dateLabel ? 4 : 0 }}>
               {subtitle}
             </p>
           )}
 
-          {/* Date label — shared between modes */}
           {dateLabel && (
-            <p className="text-xs" style={{ color: '#9B9590' }}>
+            <p style={{ fontSize: 12, color: '#9B9590' }}>
               {dateLabel}
             </p>
           )}
         </div>
 
-        {/* Right-side action slot */}
+        {/* Action slot (sign-out, etc.) — z-index 3 to stay above all layers */}
         {action && (
-          <div className="ml-3 mt-1 shrink-0">
+          <div style={{ marginLeft: 12, flexShrink: 0, position: 'relative', zIndex: 3 }}>
             {action}
           </div>
         )}

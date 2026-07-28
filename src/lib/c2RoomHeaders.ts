@@ -1,22 +1,16 @@
 /**
  * C2 Room Header Configuration
  *
- * Single source of truth for botanical artwork paths, fit mode, and
- * positioning for each room header.
+ * All headers use object-fit: cover — the botanical artwork fills the
+ * entire header canvas. object-position places the natural cream paper
+ * area of each composition behind the text column (left side).
  *
- * Asset dimensions:
- *   finances  659×356  landscape 1.85:1  → cover
- *   us        671×356  landscape 1.88:1  → cover
- *   home      435×535  portrait  0.81:1  → contain (right-anchored panel)
- *   planner   444×535  portrait  0.83:1  → contain (right-anchored panel)
- *   shopping  440×535  portrait  0.82:1  → contain (right-anchored panel)
- *
- * Portrait images use `contain` so the full artwork is visible as a
- * vertical panel on the right; the cream header background shows through
- * on the left, providing a natural text area without any gradient.
- *
- * Landscape images use `cover`; a soft left-to-right gradient overlay
- * is applied automatically to protect text legibility.
+ * Asset dimensions for reference:
+ *   finances  659×356  landscape 1.85:1
+ *   us        671×356  landscape 1.88:1
+ *   home      435×535  portrait  0.81:1  (covers by width; ~top half shows)
+ *   planner   444×535  portrait  0.83:1  (covers by width; ~top half shows)
+ *   shopping  440×535  portrait  0.82:1  (covers by width; ~top half shows)
  */
 
 export type C2RoomId =
@@ -29,52 +23,47 @@ export type C2RoomId =
 export type C2RoomHeaderConfig = {
   /** Botanical artwork path (served from /public). */
   src: string
-  /** 'cover' for landscape images, 'contain' for portrait images. */
-  imageObjectFit: 'cover' | 'contain'
   /**
-   * CSS object-position.
-   * cover:   which part stays visible when cropping.
-   * contain: which edge/corner the artwork anchors to.
+   * CSS object-position for cover cropping.
+   * Controls which part of the composition is visible in the header crop.
+   * Text lives at top-left — position should keep cream paper there.
    */
   imageObjectPosition: string
 }
 
 export const C2_ROOM_HEADERS: Record<C2RoomId, C2RoomHeaderConfig> = {
   home: {
-    src:                 '/assets/c2/botanical/home-header.webp',
-    imageObjectFit:      'contain',
-    // Portrait panel anchored bottom-right; flowers (bottom of image)
-    // and olive frame (all edges) fully visible. Cream shows left for text.
-    imageObjectPosition: 'right bottom',
+    src: '/assets/c2/botanical/home-header.webp',
+    // Portrait — covers by width, ~top 47% of image shows.
+    // Top of image: olive branches across upper edges, cream center-left.
+    // Slight downward offset surfaces more of the botanical frame.
+    imageObjectPosition: 'center 15%',
   },
   planner: {
-    src:                 '/assets/c2/botanical/planner-header.webp',
-    imageObjectFit:      'contain',
-    // Portrait panel anchored right-center; eucalyptus fills the image
-    // evenly so centering vertically shows the full composition.
-    imageObjectPosition: 'right center',
+    src: '/assets/c2/botanical/planner-header.webp',
+    // Portrait — covers by width, ~top 48% shows.
+    // Eucalyptus arches from upper-left and lower-right; top section
+    // has the main arch with cream upper-right for the title.
+    imageObjectPosition: 'center top',
   },
   shopping: {
-    src:                 '/assets/c2/botanical/shopping-header.webp',
-    imageObjectFit:      'contain',
-    // Portrait panel anchored top-right; olive clusters at the top
-    // corners remain prominent and un-cropped.
-    imageObjectPosition: 'right top',
+    src: '/assets/c2/botanical/shopping-header.webp',
+    // Portrait — covers by width, ~top 47% shows.
+    // Olive clusters prominent at top corners; cream center is wide.
+    imageObjectPosition: 'center top',
   },
   finances: {
-    src:                 '/assets/c2/botanical/finances-header.webp',
-    imageObjectFit:      'cover',
-    // Landscape 1.85:1 in ~1.77:1 container — minimal crop.
-    // Olive branches are at the bottom; center keeps the cream top-left
-    // clear for the title while showing branches at the bottom edge.
+    src: '/assets/c2/botanical/finances-header.webp',
+    // Landscape 1.85:1 — near-perfect fit, minimal crop.
+    // Horizontal olive branch composition; center keeps branches visible
+    // at edges while cream paper shows at top-left for the title.
     imageObjectPosition: 'center center',
   },
   us: {
-    src:                 '/assets/c2/botanical/us-header.webp',
-    imageObjectFit:      'cover',
-    // Landscape 1.88:1 in ~1.77:1 container — minimal crop.
-    // Pink poppies anchor the bottom; anchoring top keeps the cream/blush
-    // area visible at top-left where the title sits.
+    src: '/assets/c2/botanical/us-header.webp',
+    // Landscape 1.88:1 — near-perfect fit, minimal crop.
+    // Pink poppies at bottom; top anchor keeps cream/blush upper area
+    // clear for the title and sign-out action.
     imageObjectPosition: 'center top',
   },
 }

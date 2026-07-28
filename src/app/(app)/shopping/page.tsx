@@ -309,7 +309,6 @@ export default function ShoppingPage() {
         title={<>This week&apos;s<br />kitchen</>}
         subtitle={subtitle}
         imageSrc={C2_ROOM_HEADERS.shopping.src}
-        imageObjectFit={C2_ROOM_HEADERS.shopping.imageObjectFit}
         imageObjectPosition={C2_ROOM_HEADERS.shopping.imageObjectPosition}
       />
 

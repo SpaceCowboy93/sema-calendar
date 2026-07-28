@@ -625,7 +625,6 @@ export default function UsPage() {
         title="Us"
         subtitle={living.usSubtitle || 'Our story, our space'}
         imageSrc={C2_ROOM_HEADERS.us.src}
-        imageObjectFit={C2_ROOM_HEADERS.us.imageObjectFit}
         imageObjectPosition={C2_ROOM_HEADERS.us.imageObjectPosition}
         action={
           <button
