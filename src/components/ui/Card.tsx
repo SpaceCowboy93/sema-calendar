@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-export type CardVariant = 'default' | 'muted' | 'tint'
+export type CardVariant = 'default' | 'muted' | 'dim' | 'tint'
 export type CardRadius  = 'sm' | 'md' | 'lg'
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -16,9 +16,10 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const CARD_BG: Record<CardVariant, string> = {
-  default: 'rgba(255,255,255,0.82)',
-  muted:   'rgba(255,255,255,0.72)',
-  tint:    'rgba(45,41,38,0.04)',
+  default: 'var(--c2-surface)',
+  muted:   'var(--c2-surface-muted)',
+  dim:     'var(--c2-surface-dim)',
+  tint:    'var(--c2-tint)',
 }
 
 const CARD_RADIUS: Record<CardRadius, string> = {

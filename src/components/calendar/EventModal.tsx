@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 
 export const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Wishes'  },
@@ -414,45 +415,13 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             </div>
           </motion.div>
 
-          {/* Delete confirm */}
-          <AnimatePresence>
-            {showDelete && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-end justify-center p-4"
-              >
-                <div className="absolute inset-0 c2-backdrop" aria-hidden="true" onClick={() => setShowDelete(false)} />
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
-                >
-                  <div className="w-12 h-12 rounded-2xl c2-sheet-danger-soft flex items-center justify-center mx-auto mb-3">
-                    <Trash2 size={20} />
-                  </div>
-                  <h3 className="font-bold mb-1" style={{ color: '#2D2926' }}>Delete Event?</h3>
-                  <p className="text-sm mb-5" style={{ color: '#9B9590' }}>This can&apos;t be undone.</p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowDelete(false)}
-                      className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <DeleteConfirmSheet
+            open={showDelete}
+            title="Delete Event?"
+            message="This can't be undone."
+            onCancel={() => setShowDelete(false)}
+            onConfirm={handleDelete}
+          />
         </>
       )}
     </AnimatePresence>

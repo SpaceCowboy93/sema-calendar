@@ -138,7 +138,7 @@ export function DailyBriefingSheet({ open, onClose, onItemPress }: Props) {
             dragConstraints={{ top: 0 }}
             dragElastic={{ top: 0, bottom: 0.3 }}
             onDragEnd={(_, info) => { if (info.offset.y > 80) onClose() }}
-            className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white rounded-t-[2.5rem] shadow-modal max-w-lg mx-auto"
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col c2-sheet-bg rounded-t-[2.5rem] shadow-modal max-w-lg mx-auto"
             style={{ maxHeight: 'calc(100dvh - 48px)' }}
             role="dialog"
             aria-modal="true"

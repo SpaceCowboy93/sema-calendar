@@ -8,6 +8,7 @@ import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type F
 import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { C2Sheet, C2SheetBody, C2SheetFooter } from '@/components/ui'
 
 interface Props {
   open: boolean
@@ -211,61 +212,40 @@ export function FocusActivitySheet({
 
   return (
     <>
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onClose}
-              className="fixed inset-0 z-50 c2-backdrop"
-            />
+      <C2Sheet open={open} onClose={onClose} aria-label={isEdit ? 'Edit Activity' : 'New Activity'}>
+        {/* Custom header with trash button */}
+        <div className="px-5 pt-4 shrink-0">
+          <div className="c2-handle" aria-hidden="true" />
+          <div className="flex items-center justify-between mb-5 mt-1">
+            <div>
+              <h2 className="text-base font-bold text-gray-800">
+                {isEdit ? 'Edit Activity' : 'New Activity'}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">{DAYS[dayIndex]}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isEdit && (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label="Delete activity"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-danger-soft"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
 
-            {/* Sheet */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto flex flex-col"
-              style={{ maxHeight: 'calc(100dvh - 48px)' }}
-            >
-              {/* Non-scrolling header */}
-              <div className="px-5 pt-4 shrink-0">
-                {/* Drag handle */}
-                <div className="w-10 h-1 rounded-full bg-[rgba(180,165,140,0.4)] mx-auto mb-5" />
-
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-800">
-                      {isEdit ? 'Edit Activity' : 'New Activity'}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{DAYS[dayIndex]}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isEdit && (
-                      <button
-                        onClick={() => setConfirmDelete(true)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-danger-soft"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                    <button
-                      onClick={onClose}
-                      className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scrollable form content */}
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        {/* Scrollable form content */}
+        <C2SheetBody className="pb-4">
 
                 {/* Title */}
                 <div className="mb-4">
@@ -451,24 +431,21 @@ export function FocusActivitySheet({
                     onChange={e => handlePhotoFiles(e.target.files)}
                   />
                 </div>
-              </div>
+        </C2SheetBody>
 
-              {/* Pinned save footer */}
-              <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSave}
-                  disabled={!canSave || saving}
-                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 transition-opacity"
-                  style={{ background: primary }}
-                >
-                  {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Activity'}
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        {/* Pinned save footer */}
+        <C2SheetFooter>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 transition-opacity"
+            style={{ background: primary }}
+          >
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Activity'}
+          </motion.button>
+        </C2SheetFooter>
+      </C2Sheet>
 
       <DeleteConfirmSheet
         open={confirmDelete}

@@ -87,8 +87,8 @@ export function C2CloseButton({ onClose, label = 'Close', className, ...rest }: 
 // ── C2SheetHeader ─────────────────────────────────────────────────────────────
 
 interface SheetHeaderProps {
-  /** Main title shown in the header. */
-  title: string
+  /** Main title shown in the header. Not rendered when children is provided. */
+  title?: string
   /** Secondary descriptor below title. */
   subtitle?: string
   onClose?: () => void
@@ -113,7 +113,7 @@ export function C2SheetHeader({
       {children ?? (
         <div className="flex items-start justify-between mb-1">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold text-gray-800 leading-snug">{title}</h2>
+            <h2 className="text-base font-bold text-gray-800 leading-snug">{title ?? ''}</h2>
             {subtitle && (
               <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
             )}

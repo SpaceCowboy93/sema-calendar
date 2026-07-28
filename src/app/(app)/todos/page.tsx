@@ -10,6 +10,7 @@ import { USERS, type SharedTodo } from '@/types'
 import { cn } from '@/lib/utils'
 import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
 
 export default function TodosPage() {
   const currentUser = useAppStore(s => s.currentUser)!
@@ -535,24 +536,9 @@ function EditTodoModal({
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
-        {/* Non-scrolling header */}
-        <div className="px-5 pt-4 shrink-0">
-          <div className="drag-handle" />
+        <C2SheetHeader title="Edit Plan" onClose={onClose} />
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-gray-800">Edit Plan</h3>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable form content */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        <C2SheetBody className="pb-4">
           {/* Title */}
           <input
             type="text"
@@ -628,17 +614,16 @@ function EditTodoModal({
             onChange={e => setDate(e.target.value)}
             className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
           />
-        </div>
+        </C2SheetBody>
 
-        {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <C2SheetFooter>
           <button
             onClick={handleSave}
             disabled={!title.trim()}
             className="w-full py-4 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
             style={{ background: primaryColor }}
           >
-            Save Changes ✨
+            Save Changes
           </button>
 
           <button
@@ -648,52 +633,17 @@ function EditTodoModal({
           >
             Remove Plan
           </button>
-        </div>
+        </C2SheetFooter>
       </motion.div>
 
-      {/* Delete confirm */}
-      <AnimatePresence>
-        {showDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-6"
-          >
-            <div
-              className="absolute inset-0 c2-backdrop"
-              aria-hidden="true"
-              onClick={() => setShowDelete(false)}
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
-            >
-              <div className="w-12 h-12 rounded-2xl c2-sheet-danger-soft flex items-center justify-center mx-auto mb-3">
-                <Trash2 size={20} />
-              </div>
-              <h3 className="font-bold mb-1" style={{ color: '#2D2926' }}>Remove this plan?</h3>
-              <p className="text-sm mb-5" style={{ color: '#9B9590' }}>This can&apos;t be undone.</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDelete(false)}
-                  className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteConfirmSheet
+        open={showDelete}
+        title="Remove this plan?"
+        message="This can't be undone."
+        onCancel={() => setShowDelete(false)}
+        onConfirm={onDelete}
+        confirmLabel="Remove"
+      />
     </>
   )
 }

@@ -59,12 +59,6 @@ export { ListItem } from './ListItem'
 export type { ListItemProps } from './ListItem'
 
 // ── Pre-existing shared components ────────────────────────────────────────────
-export { C2Button }        from './C2Button'
-export type { C2ButtonProps, C2ButtonVariant } from './C2Button'
-
-export { C2Surface }       from './C2Surface'
-export type { C2SurfaceProps, C2SurfaceVariant } from './C2Surface'
-
 export { C2SectionLabel }  from './C2SectionLabel'
 export type { C2SectionLabelProps } from './C2SectionLabel'
 

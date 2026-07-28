@@ -8,6 +8,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import type { ShoppingList, ShoppingItem } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
+import { C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
 
 const RED = '#ef4444'
 
@@ -487,11 +488,11 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         className="fixed inset-0 z-[80] flex items-end justify-center p-4"
         onClick={() => setDeleteConfirmId(null)}
       >
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 c2-backdrop" />
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
           onClick={e => e.stopPropagation()}
-          className="relative bg-white rounded-3xl p-5 w-full max-w-xs text-center shadow-modal"
+          className="relative c2-sheet-bg rounded-3xl p-5 w-full max-w-xs text-center shadow-modal"
         >
           <p className="font-bold text-gray-800 mb-1">Remove item?</p>
           <p className="text-sm text-gray-400 mb-4">This can&apos;t be undone.</p>
@@ -517,38 +518,14 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/20"
-      />
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto flex flex-col"
-        style={{ maxHeight: 'calc(100dvh - 48px)' }}
-      >
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <div className="drag-handle mb-3" />
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-gray-800">
-              {mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'} ❤️
-            </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
-          {formContent}
-        </div>
-
-        <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
-          {saveButton}
-        </div>
-      </motion.div>
+      <C2Sheet open zIndex={60} onClose={onClose} aria-label={mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'}>
+        <C2SheetHeader
+          title={mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'}
+          onClose={onClose}
+        />
+        <C2SheetBody>{formContent}</C2SheetBody>
+        <C2SheetFooter>{saveButton}</C2SheetFooter>
+      </C2Sheet>
 
       {deleteConfirm}
     </>

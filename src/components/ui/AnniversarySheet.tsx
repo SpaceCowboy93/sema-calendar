@@ -10,6 +10,7 @@ import { type Countdown, type ChecklistEntry } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { Progress } from '@/components/ui/Progress'
+import { C2SheetBody, C2SheetFooter } from '@/components/ui'
 
 export const ANNIVERSARY_SUGGESTIONS: { icon: LucideIcon; text: string }[] = [
   { icon: Utensils, text: 'Plan a dinner reservation'     },
@@ -196,17 +197,22 @@ export function AnniversarySheet({
                   value={title}
                   onChange={e => { setTitle(e.target.value); mark() }}
                   className="text-base font-bold text-gray-800 bg-transparent outline-none w-full"
+                  aria-label="Milestone title"
                 />
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0">
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0"
+            >
               <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Scrollable form content */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        <C2SheetBody className="pb-4">
           <div className="c2-sheet-section px-4 py-3 mb-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
             <input
@@ -384,10 +390,10 @@ export function AnniversarySheet({
               </div>
             )}
           </div>
-        </div>
+        </C2SheetBody>
 
         {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
+        <C2SheetFooter>
           <div className="flex gap-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}
@@ -405,7 +411,7 @@ export function AnniversarySheet({
               Save
             </motion.button>
           </div>
-        </div>
+        </C2SheetFooter>
       </motion.div>
 
       <DeleteConfirmSheet
