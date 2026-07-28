@@ -319,7 +319,7 @@ function MemorySheet({
             <h3 className="text-base font-bold text-gray-800">
               {isEdit ? 'Edit Memory' : 'New Memory'}
             </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
+            <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
@@ -802,7 +802,7 @@ export default function UsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-800 text-sm truncate">{c.title}</p>
-                      <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label} 💕</p>
+                      <p className="text-xs font-medium mt-0.5" style={{ color: primary }}>{label}</p>
                       {c.romanticMessage && (
                         <p className="text-[11px] text-gray-400 italic mt-0.5 truncate">
                           &ldquo;{c.romanticMessage}&rdquo;

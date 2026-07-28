@@ -427,6 +427,7 @@ function CategoryHubModal({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />

@@ -887,7 +887,7 @@ function FinanceCategoryEditorSheet({
                 <FinanceCategoryIcon category={item.category} size={18} />
                 <h3 className="text-base font-bold text-gray-800">{item.category}</h3>
               </div>
-              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
+              <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                 <X size={16} />
               </button>
             </div>
@@ -1204,7 +1204,7 @@ function AddBudgetSheet({
           <div className="drag-handle mb-5" />
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-bold text-gray-800">New Budget Category</h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
+            <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>
@@ -1278,7 +1278,7 @@ function SavingsSheet({
               <h3 className="text-base font-bold text-gray-800">Savings Entry</h3>
               <p className="text-xs text-gray-400">{label}</p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
+            <button onClick={onClose} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
               <X size={16} />
             </button>
           </div>

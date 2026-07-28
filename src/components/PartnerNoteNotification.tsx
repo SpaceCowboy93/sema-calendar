@@ -215,7 +215,7 @@ export function PartnerNoteNotification() {
                                active:opacity-80 transition-opacity"
                     style={{ background: readSenderColor }}
                   >
-                    ❤️ Close with love
+                    Close with love
                   </button>
                 </motion.div>
               </motion.div>

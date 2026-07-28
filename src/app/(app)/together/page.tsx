@@ -654,19 +654,22 @@ export default function TogetherPage() {
                     <motion.div key="sent" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
                       className="flex flex-col items-center py-10 text-center">
                       <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: 2, duration: 0.4 }}
-                        className="text-5xl mb-4">💌</motion.div>
-                      <p className="font-bold text-gray-800 mb-1">Sent with love 💕</p>
+                        className="text-5xl mb-4" aria-hidden="true">💌</motion.div>
+                      <p className="font-bold text-gray-800 mb-1">Sent with love</p>
                       <p className="text-sm text-gray-400">{USERS[partnerUser].displayName} will see it when they open the app</p>
                     </motion.div>
                   ) : (
                     <motion.div key="compose" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h3 className="text-base font-bold text-gray-800">Leave a note 💌</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
+                          <h3 className="text-base font-bold text-gray-800">Leave a note</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].displayName}</p>
                         </div>
-                        <button onClick={() => { setNoteOpen(false); setNoteText('') }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
+                        <button
+                          onClick={() => { setNoteOpen(false); setNoteText('') }}
+                          aria-label="Close"
+                          className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
+                        >
                           <X size={16} />
                         </button>
                       </div>
@@ -687,7 +690,7 @@ export default function TogetherPage() {
                         className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
                         style={{ background: primary }}
                       >
-                        <Send size={15} /> Send with love 💌
+                        <Send size={15} /> Send with love
                       </motion.button>
                     </motion.div>
                   )}
@@ -731,7 +734,7 @@ export default function TogetherPage() {
                 className="w-full py-3 rounded-2xl text-white text-sm font-semibold"
                 style={{ background: primary }}
               >
-                💕 Close with love
+                Close with love
               </button>
             </motion.div>
           </motion.div>
