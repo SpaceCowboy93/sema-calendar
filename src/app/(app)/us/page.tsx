@@ -303,7 +303,7 @@ function MemorySheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -1003,7 +1003,7 @@ export default function UsPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setBoomBoomSheet(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -1078,7 +1078,7 @@ export default function UsPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setMoodPopup(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -1190,7 +1190,7 @@ export default function UsPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setAddCdOpen(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}

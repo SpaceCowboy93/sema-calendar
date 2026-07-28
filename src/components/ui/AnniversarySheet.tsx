@@ -168,7 +168,9 @@ export function AnniversarySheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={dirty ? handleSave : onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        aria-hidden="true"
+        className="fixed inset-0 z-50"
+        style={{ background: 'rgba(45,41,38,0.35)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -389,7 +391,8 @@ export function AnniversarySheet({
           <div className="flex gap-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0 active:opacity-80"
+              aria-label="Delete this milestone"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl c2-sheet-danger-soft shrink-0 active:opacity-80"
             >
               <Trash2 size={16} />
             </button>

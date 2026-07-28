@@ -67,3 +67,26 @@ export type { C2SurfaceProps, C2SurfaceVariant } from './C2Surface'
 
 export { C2SectionLabel }  from './C2SectionLabel'
 export type { C2SectionLabelProps } from './C2SectionLabel'
+
+// ── Sheet system ──────────────────────────────────────────────────────────────
+export {
+  C2Sheet,
+  C2SheetBackdrop,
+  C2DragHandle,
+  C2CloseButton,
+  C2SheetHeader,
+  C2SheetBody,
+  C2SheetFooter,
+  C2SheetSection,
+  C2FormField,
+} from './C2Sheet'
+
+// ── Dialog ────────────────────────────────────────────────────────────────────
+export { C2Dialog } from './C2Dialog'
+export type { C2DialogProps } from './C2Dialog'
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+export { C2Skeleton, C2CardSkeleton, C2ListSkeleton, C2SkeletonText } from './C2Skeleton'
+
+// ── Toast / Feedback ──────────────────────────────────────────────────────────
+export { C2ToastRegion, C2InlineError, C2ErrorState } from './C2Toast'

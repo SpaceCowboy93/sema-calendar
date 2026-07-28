@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
+import { C2ToastRegion } from '@/components/ui/C2Toast'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -75,6 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         onClick={() => { if (overlayCount === 0) setQuickAddOpen(true) }}
+        aria-label="Add something"
         aria-hidden={overlayCount > 0}
         tabIndex={overlayCount > 0 ? -1 : undefined}
         className="fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
@@ -91,6 +93,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PartnerNoteNotification />
 
       <GlobalImageLightbox />
+
+      <C2ToastRegion />
 
       <FullCreateSheet
         open={quickAddOpen}

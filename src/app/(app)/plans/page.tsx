@@ -557,7 +557,7 @@ export default function FinancePage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIncomeEditing(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -647,7 +647,7 @@ export default function FinancePage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setConfirmFinalize(false)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -692,7 +692,7 @@ export default function FinancePage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setDeleteTxId(null)}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -870,7 +870,7 @@ function FinanceCategoryEditorSheet({
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />
+        onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
@@ -1194,7 +1194,7 @@ function AddBudgetSheet({
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />
+        onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
@@ -1265,7 +1265,7 @@ function SavingsSheet({
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" />
+        onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}

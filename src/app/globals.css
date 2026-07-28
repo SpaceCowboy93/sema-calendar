@@ -104,6 +104,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   backdrop-filter: blur(4px);
 }
 
+/* C2 warm charcoal backdrop — replaces bg-black/30 */
+.c2-backdrop {
+  background: rgba(45, 41, 38, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
 /* Glass morphism nav */
 .glass-nav {
   background: rgba(253, 250, 245, 0.92);
@@ -273,4 +280,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: rgba(180, 165, 140, 0.40);
   border-radius: 9999px;
   margin: 0 auto 20px;
+}
+
+/* ── Skeleton shimmer ───────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+/* ── Focus ring ─────────────────────────────────────────────────────────── */
+/* Applied via focus-visible so keyboard-only users see focus indicators.  */
+:focus-visible {
+  outline: 2px solid rgba(143, 166, 141, 0.80);
+  outline-offset: 2px;
+}
+
+/* Remove focus ring on mouse click only */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

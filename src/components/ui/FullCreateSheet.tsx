@@ -313,7 +313,9 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={close}
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            aria-hidden="true"
+            className="fixed inset-0 z-50"
+            style={{ background: 'rgba(45,41,38,0.35)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
           />
 
           {/* Sheet */}
@@ -378,7 +380,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                     >
                       <Mail size={32} strokeWidth={1.5} />
                     </motion.div>
-                    <p className="font-bold text-gray-800">Sent with love</p>
+                    <p className="font-bold text-gray-800">Sent</p>
                   </motion.div>
                 ) : (
                   <motion.div

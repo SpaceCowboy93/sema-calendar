@@ -640,7 +640,7 @@ export default function TogetherPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { if (!noteSent) { setNoteOpen(false); setNoteText('') } }}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -711,7 +711,7 @@ export default function TogetherPage() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => { markRead(unreadNote.id); setReadingNote(false) }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-8"
+            className="fixed inset-0 z-50 c2-backdrop flex items-center justify-center p-8"
           >
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
