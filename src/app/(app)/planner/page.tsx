@@ -14,98 +14,8 @@ import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import { type CategoryType, CategoryHubSheet } from '@/components/ui/CategoryHub'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { WeeklyFocusSection } from '@/components/weekly-focus/WeeklyFocusSection'
-import { PageHeader } from '@/components/ui/PageHeader'
-
-/* ── Eucalyptus botanical — calm, airy, alternating round leaves ─────────── */
-function PlannerBotanical() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 340 320"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{
-        position: 'absolute', top: -20, right: -72,
-        width: 340, height: 320,
-        pointerEvents: 'none',
-      }}
-    >
-      <defs>
-        <filter id="pb-soft"><feGaussianBlur stdDeviation="1.0" /></filter>
-        <linearGradient id="pb-fade" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="white" stopOpacity="0" />
-          <stop offset="28%" stopColor="white" stopOpacity="0.4" />
-          <stop offset="48%" stopColor="white" stopOpacity="1" />
-          <stop offset="100%" stopColor="white" stopOpacity="1" />
-        </linearGradient>
-        <mask id="pb-mask">
-          <rect width="340" height="320" fill="url(#pb-fade)" />
-        </mask>
-      </defs>
-      <g mask="url(#pb-mask)" filter="url(#pb-soft)">
-        {/* Main eucalyptus stem — long curving arc */}
-        <path d="M330 15 Q295 60 275 110 Q252 168 238 240" stroke="#7A9680" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity="0.32" />
-        {/* Secondary stem */}
-        <path d="M310 8 Q268 55 248 120 Q228 190 218 270" stroke="#8FA68D" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.22" />
-
-        {/* Eucalyptus leaves — round/oval, alternating left-right along stem */}
-        {/* Pair 1 — near top */}
-        <g transform="translate(318,38) rotate(30)">
-          <ellipse cx="0" cy="-18" rx="13" ry="20" fill="#8FA68D" opacity="0.72" />
-          <path d="M0 0 L0 -36" stroke="#6A8870" strokeWidth="0.6" opacity="0.22" />
-        </g>
-        <g transform="translate(300,55) rotate(-22)">
-          <ellipse cx="0" cy="-16" rx="11" ry="18" fill="#7A9680" opacity="0.66" />
-        </g>
-        {/* Pair 2 */}
-        <g transform="translate(298,82) rotate(25)">
-          <ellipse cx="0" cy="-15" rx="12" ry="19" fill="#93AE90" opacity="0.62" />
-          <path d="M0 0 L0 -30" stroke="#6A8870" strokeWidth="0.6" opacity="0.20" />
-        </g>
-        <g transform="translate(278,96) rotate(-28)">
-          <ellipse cx="0" cy="-14" rx="10" ry="17" fill="#8FA68D" opacity="0.58" />
-        </g>
-        {/* Pair 3 */}
-        <g transform="translate(280,125) rotate(22)">
-          <ellipse cx="0" cy="-13" rx="11" ry="17" fill="#7A9680" opacity="0.58" />
-        </g>
-        <g transform="translate(260,138) rotate(-25)">
-          <ellipse cx="0" cy="-12" rx="9" ry="16" fill="#93AE90" opacity="0.52" />
-        </g>
-        {/* Pair 4 */}
-        <g transform="translate(264,168) rotate(20)">
-          <ellipse cx="0" cy="-12" rx="10" ry="16" fill="#8FA68D" opacity="0.50" />
-        </g>
-        <g transform="translate(245,180) rotate(-22)">
-          <ellipse cx="0" cy="-11" rx="9" ry="15" fill="#7A9680" opacity="0.46" />
-        </g>
-        {/* Pair 5 — lower, fading */}
-        <g transform="translate(248,210) rotate(18)">
-          <ellipse cx="0" cy="-10" rx="9" ry="14" fill="#93AE90" opacity="0.42" />
-        </g>
-        <g transform="translate(232,220) rotate(-20)">
-          <ellipse cx="0" cy="-9" rx="8" ry="13" fill="#8FA68D" opacity="0.38" />
-        </g>
-        {/* Pair 6 — very faint, lowest */}
-        <g transform="translate(232,250) rotate(16)">
-          <ellipse cx="0" cy="-8" rx="7" ry="12" fill="#7A9680" opacity="0.32" />
-        </g>
-        <g transform="translate(220,258) rotate(-18)">
-          <ellipse cx="0" cy="-7" rx="6" ry="11" fill="#8FA68D" opacity="0.28" />
-        </g>
-
-        {/* Side branch — small departure from main stem */}
-        <path d="M295 72 Q318 58 335 42" stroke="#8FA68D" strokeWidth="0.9" strokeLinecap="round" fill="none" opacity="0.18" />
-        <g transform="translate(335,42) rotate(50)">
-          <ellipse cx="0" cy="-10" rx="8" ry="13" fill="#93AE90" opacity="0.42" />
-        </g>
-        <g transform="translate(320,52) rotate(35)">
-          <ellipse cx="0" cy="-8" rx="6" ry="11" fill="#8FA68D" opacity="0.36" />
-        </g>
-      </g>
-    </svg>
-  )
-}
+import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
+import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export default function PlannerPage() {
@@ -203,22 +113,14 @@ export default function PlannerPage() {
 
       <C2PageBackground />
 
-      {/* Header with eucalyptus botanical */}
-      <div className="relative overflow-hidden">
-        {/* Botanical shadow layer */}
-        <div aria-hidden="true" style={{
-          position: 'absolute', top: 0, right: -60, width: 300, height: 240,
-          background: 'radial-gradient(ellipse at 70% 15%, rgba(80,110,88,0.05) 0%, transparent 65%)',
-          filter: 'blur(24px)',
-          pointerEvents: 'none',
-        }} />
-        <PlannerBotanical />
-        <PageHeader
-          eyebrow="Weekly view"
-          title="Planner"
-          subtitle={plannerSubtitle}
-        />
-      </div>
+      <SeMaRoomHeader
+        eyebrow="Weekly view"
+        title="Planner"
+        subtitle={plannerSubtitle}
+        imageSrc={C2_ROOM_HEADERS.planner.placeholderSrc}
+        imagePosition={C2_ROOM_HEADERS.planner.imagePosition}
+        textMaxWidth={C2_ROOM_HEADERS.planner.textMaxWidth}
+      />
 
       <WeeklyFocusSection />
 

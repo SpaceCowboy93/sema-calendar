@@ -92,8 +92,8 @@ export function SeMaRoomHeader({
       className={['relative overflow-hidden', className].filter(Boolean).join(' ')}
       style={{
         paddingInline: 20,
-        paddingTop: 'clamp(48px, 8vh, 68px)',
-        paddingBottom: 'clamp(28px, 5vh, 40px)',
+        paddingTop: 'clamp(48px, 7vh, 64px)',
+        paddingBottom: 'clamp(26px, 4vh, 36px)',
       }}
     >
       {/* Decorative room image — positioned absolute, behind text */}
@@ -151,10 +151,10 @@ export function SeMaRoomHeader({
                 <h1
                   style={{
                     fontFamily: 'var(--font-playfair)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(2rem, 8vw, 2.8rem)',
-                    lineHeight: 1.08,
-                    color: '#1A1814',
+                    fontWeight: 600,
+                    fontSize: 'clamp(2rem, 8vw, 2.75rem)',
+                    lineHeight: 1.1,
+                    color: 'var(--bj-charcoal)',
                     letterSpacing: '-0.015em',
                     marginBottom: subtitle || dateLabel ? 14 : 0,
                   }}

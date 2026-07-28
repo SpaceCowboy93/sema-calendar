@@ -26,6 +26,16 @@ export interface LivingMoment {
    */
   plannerSubtitle: string
   /**
+   * Finances page subtitle — money, savings and future-planning copy only.
+   * Empty string = use the static default in the caller.
+   */
+  financeSubtitle: string
+  /**
+   * Us page subtitle — relationship, memories and emotional copy only.
+   * Empty string = use the static default in the caller.
+   */
+  usSubtitle: string
+  /**
    * Shopping sheet eyebrow text — small line above the fixed Playfair title.
    * Default: "Shopping together". Changes contextually when real app data matches a moment.
    * Passed as `shoppingTitle` prop to ShoppingHubSheet.
@@ -112,6 +122,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🎉 Today is a very special day.',
       plannerSubtitle:  'A special day to celebrate.',
+      financeSubtitle:  'Saving for what matters.',
+      usSubtitle:       'A day that belongs to your story.',
       shoppingTitle:    'A little celebration ahead',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything needed for the special day.'
@@ -124,6 +136,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '❤️ Happy anniversary.',
       plannerSubtitle: 'A day worth remembering.',
+      financeSubtitle: 'Saving for what matters.',
+      usSubtitle:      'Another year of your story.',
       ...defaultShopping,
     }
   }
@@ -133,6 +147,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '☀️ Time to make memories.',
       plannerSubtitle:  'Adventure begins today.',
+      financeSubtitle:  'A good time to review your travel budget.',
+      usSubtitle:       'A little closer to your next adventure.',
       shoppingTitle:    'Getting ready to go',
       shoppingSubtitle: pendingCount > 0
         ? `A few final things before the adventure.`
@@ -145,6 +161,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '✈️ Adventure starts tomorrow.',
       plannerSubtitle:  'A few plans before your next adventure.',
+      financeSubtitle:  'A good time to review your travel budget.',
+      usSubtitle:       'A little closer to your next adventure.',
       shoppingTitle:    'Getting ready to go',
       shoppingSubtitle: pendingCount > 0
         ? 'A few final things before the adventure.'
@@ -157,6 +175,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '❤️ One more sleep until your anniversary.',
       plannerSubtitle: 'Tomorrow is a day to remember.',
+      financeSubtitle: 'Saving for what matters.',
+      usSubtitle:      'Tomorrow belongs to your story.',
       ...defaultShopping,
     }
   }
@@ -166,6 +186,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🎂 A birthday is tomorrow.',
       plannerSubtitle:  'A celebration is coming up.',
+      financeSubtitle:  'Saving for what matters.',
+      usSubtitle:       'A memory worth keeping.',
       shoppingTitle:    'A little celebration ahead',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything needed for the special day.'
@@ -178,6 +200,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🎄 Christmas is almost here.',
       plannerSubtitle:  'A festive week ahead.',
+      financeSubtitle:  'A good time to review year-end spending.',
+      usSubtitle:       'A memory worth keeping.',
       shoppingTitle:    'Gathering for Christmas',
       shoppingSubtitle: pendingCount > 0
         ? 'Just a few festive things left.'
@@ -190,6 +214,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    month === 12 ? '🥂 Tonight we celebrate.' : '✨ Happy New Year.',
       plannerSubtitle: month === 12 ? 'One last day of the year.' : 'A fresh start.',
+      financeSubtitle: month === 12 ? 'A good time to review the year.' : 'A clean slate for your goals.',
+      usSubtitle:      month === 12 ? 'Your story keeps growing.' : 'A new chapter begins.',
       ...defaultShopping,
     }
   }
@@ -201,6 +227,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     isToday ? '🍽️ Dinner plans tonight.' : '🍽️ Dinner plans tomorrow.',
       plannerSubtitle:  isToday ? 'Dinner plans in the schedule.' : 'Dinner plans tomorrow.',
+      financeSubtitle:  'Another step toward your plans.',
+      usSubtitle:       'Another day in your story.',
       shoppingTitle:    'Around the table',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything for dinner together.'
@@ -213,6 +241,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🌿 Picnic day ahead.',
       plannerSubtitle:  'A day outside together.',
+      financeSubtitle:  'Quiet progress toward your goals.',
+      usSubtitle:       'A memory worth keeping.',
       shoppingTitle:    'A day outside',
       shoppingSubtitle: pendingCount > 0 ? 'A few things to pack.' : 'All set for the picnic.',
     }
@@ -223,6 +253,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🔥 BBQ weekend ahead.',
       plannerSubtitle:  'A relaxed day planned.',
+      financeSubtitle:  'Quiet progress toward your goals.',
+      usSubtitle:       'Another day in your story.',
       shoppingTitle:    'Around the grill',
       shoppingSubtitle: pendingCount > 0 ? 'A few things to grab.' : 'All set for the BBQ.',
     }
@@ -233,6 +265,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:     '🎬 Movie night ahead.',
       plannerSubtitle:  'A cosy evening in the schedule.',
+      financeSubtitle:  'Another step toward your plans.',
+      usSubtitle:       'Your story keeps growing.',
       shoppingTitle:    'Tonight at home',
       shoppingSubtitle: pendingCount > 0 ? 'Snacks and little comforts.' : 'All set for movie night.',
     }
@@ -244,6 +278,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '📅 Busy day ahead.',
       plannerSubtitle: 'A full day, clearly arranged.',
+      financeSubtitle: 'Steady progress this month.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
@@ -253,6 +289,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '💌 Someone left you a little surprise.',
       plannerSubtitle: 'A message is waiting for you.',
+      financeSubtitle: 'Another step toward your plans.',
+      usSubtitle:      'Your story keeps growing.',
       ...defaultShopping,
     }
   }
@@ -262,6 +300,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '🛒 Kitchen restock day.',
       plannerSubtitle: 'There are a few errands to fit into the week.',
+      financeSubtitle: 'Another step toward your plans.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
@@ -271,6 +311,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
     return {
       homeSubtitle:    '🌿 A calm day together.',
       plannerSubtitle: 'A calm week ahead.',
+      financeSubtitle: 'A calm month, clearly understood.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
@@ -279,6 +321,8 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   return {
     homeSubtitle:    '',
     plannerSubtitle: '',
+    financeSubtitle: '',
+    usSubtitle:      '',
     ...defaultShopping,
   }
 }

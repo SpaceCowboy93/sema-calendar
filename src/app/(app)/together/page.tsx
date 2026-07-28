@@ -22,90 +22,12 @@ import {
 } from '@/components/ui/CategoryHub'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
+import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
+import { useDailyGreeting } from '@/hooks/useDailyGreeting'
 import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
 import { briefingStorageKey, type BriefingItem } from '@/lib/briefing'
 import { getLivingMoment } from '@/lib/livingMoment'
-
-/* ── Home botanical — balanced mixed foliage from upper right ─────────────── */
-function HomeBotanical() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 320 290"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{
-        position: 'absolute', top: -18, right: -68,
-        width: 320, height: 290,
-        pointerEvents: 'none',
-      }}
-    >
-      <defs>
-        <filter id="hb-soft"><feGaussianBlur stdDeviation="1.0" /></filter>
-        <linearGradient id="hb-fade" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="white" stopOpacity="0" />
-          <stop offset="28%" stopColor="white" stopOpacity="0.45" />
-          <stop offset="50%" stopColor="white" stopOpacity="1" />
-          <stop offset="100%" stopColor="white" stopOpacity="1" />
-        </linearGradient>
-        <mask id="hb-mask">
-          <rect width="320" height="290" fill="url(#hb-fade)" />
-        </mask>
-      </defs>
-      <g mask="url(#hb-mask)" filter="url(#hb-soft)">
-        {/* Main branch stems */}
-        <path d="M315 18 Q275 58 255 115 Q235 175 225 240" stroke="#7A8C60" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity="0.28" />
-        <path d="M298 8 Q258 50 240 108" stroke="#8FA68D" strokeWidth="1.0" strokeLinecap="round" fill="none" opacity="0.18" />
-
-        {/* Large leaves — top */}
-        <g transform="translate(308,32) rotate(152)">
-          <path d="M0 0 C15 -7 20 -36 0 -70 C-17 -38 -13 -8 0 0Z" fill="#7A8C60" opacity="0.74" />
-          <path d="M0 -1 L1 -68" stroke="#5A6C48" strokeWidth="0.6" opacity="0.22" />
-        </g>
-        <g transform="translate(278,22) rotate(130)">
-          <path d="M0 0 C13 -6 18 -32 0 -62 C-15 -34 -11 -7 0 0Z" fill="#8FA68D" opacity="0.66" />
-        </g>
-        <g transform="translate(312,85) rotate(165)">
-          <path d="M0 0 C13 -6 17 -30 0 -58 C-14 -32 -11 -7 0 0Z" fill="#6B7C52" opacity="0.68" />
-        </g>
-
-        {/* Medium leaves */}
-        <g transform="translate(260,58) rotate(138)">
-          <path d="M0 0 C11 -5 14 -24 0 -48 C-12 -26 -9 -6 0 0Z" fill="#93AE90" opacity="0.60" />
-        </g>
-        <g transform="translate(292,128) rotate(168)">
-          <path d="M0 0 C10 -5 13 -22 0 -44 C-11 -24 -9 -6 0 0Z" fill="#7A9870" opacity="0.56" />
-        </g>
-        <g transform="translate(243,95) rotate(142)">
-          <path d="M0 0 C9 -5 12 -22 0 -40 C-11 -23 -8 -6 0 0Z" fill="#8FA68D" opacity="0.52" />
-        </g>
-        <g transform="translate(275,170) rotate(172)">
-          <path d="M0 0 C9 -4 11 -20 0 -38 C-10 -21 -7 -5 0 0Z" fill="#7A8C60" opacity="0.48" />
-        </g>
-
-        {/* Small leaves */}
-        <g transform="translate(228,138) rotate(145)">
-          <path d="M0 0 C7 -4 9 -17 0 -30 C-8 -18 -6 -5 0 0Z" fill="#8FA68D" opacity="0.44" />
-        </g>
-        <g transform="translate(308,165) rotate(162)">
-          <path d="M0 0 C6 -4 8 -15 0 -26 C-7 -15 -5 -4 0 0Z" fill="#6B7C52" opacity="0.46" />
-        </g>
-        <g transform="translate(255,208) rotate(175)">
-          <path d="M0 0 C6 -3 8 -14 0 -24 C-7 -14 -5 -4 0 0Z" fill="#93AE90" opacity="0.38" />
-        </g>
-
-        {/* Tiny accents */}
-        <g transform="translate(218,178) rotate(148)">
-          <path d="M0 0 C4 -3 6 -11 0 -19 C-5 -11 -4 -3 0 0Z" fill="#7A9870" opacity="0.34" />
-        </g>
-        <g transform="translate(292,210) rotate(168)">
-          <path d="M0 0 C4 -2 5 -10 0 -17 C-5 -10 -3 -2 0 0Z" fill="#8FA68D" opacity="0.30" />
-        </g>
-      </g>
-    </svg>
-  )
-}
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -140,6 +62,8 @@ export default function TogetherPage() {
     events, countdowns, shoppingLists, todos, partnerNotes, currentUser,
     today: getTodayString(),
   }), [events, countdowns, shoppingLists, todos, partnerNotes, currentUser])
+
+  const { greeting, dateLabel } = useDailyGreeting()
 
   // Calendar state
   const [viewDate,      setViewDate]      = useState(new Date())
@@ -348,17 +272,15 @@ export default function TogetherPage() {
 
       <C2PageBackground />
 
-      {/* ── Page header with botanical framing ── */}
-      <div className="relative overflow-hidden">
-        <div aria-hidden="true" style={{
-          position: 'absolute', top: 0, right: -50, width: 280, height: 220,
-          background: 'radial-gradient(ellipse at 72% 12%, rgba(90,108,72,0.052) 0%, transparent 62%)',
-          filter: 'blur(26px)',
-          pointerEvents: 'none',
-        }} />
-        <HomeBotanical />
-        <PageHeader contextSubtitle={living.homeSubtitle || undefined} />
-      </div>
+      <SeMaRoomHeader
+        mode="greeting"
+        greeting={greeting ?? undefined}
+        subtitle={living.homeSubtitle || undefined}
+        dateLabel={dateLabel}
+        imageSrc={C2_ROOM_HEADERS.home.placeholderSrc}
+        imagePosition={C2_ROOM_HEADERS.home.imagePosition}
+        textMaxWidth={C2_ROOM_HEADERS.home.textMaxWidth}
+      />
 
       {/* ── Today's Briefing reopen pill ── */}
       {briefingChecked && !briefingOpen && (

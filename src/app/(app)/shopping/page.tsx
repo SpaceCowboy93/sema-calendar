@@ -16,6 +16,7 @@ import { getLivingMoment } from '@/lib/livingMoment'
 import { getTodayString, cn } from '@/lib/utils'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
+import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
 import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
@@ -307,7 +308,9 @@ export default function ShoppingPage() {
         eyebrow={eyebrow}
         title={<>This week&apos;s<br />kitchen</>}
         subtitle={subtitle}
-        imageSrc="/images/headers/shopping-c2-placeholder.png"
+        imageSrc={C2_ROOM_HEADERS.shopping.placeholderSrc}
+        imagePosition={C2_ROOM_HEADERS.shopping.imagePosition}
+        textMaxWidth={C2_ROOM_HEADERS.shopping.textMaxWidth}
       />
 
       {/* ══════════════════════════════════════════════════════════════════════
