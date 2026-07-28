@@ -9,6 +9,7 @@ import {
 import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'
+import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId, getTodayString } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
@@ -216,8 +217,7 @@ export default function FinancePage() {
         />
 
         {/* ── Month Selector ── */}
-        <div className="mx-4 mb-4 rounded-2xl px-4 py-3 flex items-center justify-between"
-          style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 8px rgba(45,41,38,0.05)' }}>
+        <div className="c2-card mx-4 mb-4 px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setMonthKey(prevKey(monthKey))}
             className="w-9 h-9 flex items-center justify-center rounded-xl active:bg-gray-100"
@@ -250,14 +250,13 @@ export default function FinancePage() {
         </div>
 
         {/* ── Total Savings Banner ── */}
-        <div className="mx-4 mb-4 rounded-2xl px-4 py-3.5 flex items-center gap-3"
-          style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 8px rgba(45,41,38,0.05)' }}>
+        <div className="c2-card mx-4 mb-4 px-4 py-3.5 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'rgba(63,107,79,0.09)' }}>
             <TrendingUp size={16} style={{ color: '#4a7c5e' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#a8b0a0' }}>Total Savings</p>
+            <p className="c2-label">Total Savings</p>
             <p className="text-2xl font-bold mt-0.5" style={{ color: '#1a1f18', fontFamily: 'var(--font-playfair)' }}>{fmt(totalSavings)}</p>
           </div>
           {thisMonthSavings !== 0 && (
@@ -311,7 +310,7 @@ export default function FinancePage() {
               </div>
 
               {/* Secondary flat rows */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.72)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
+              <div className="c2-card-muted overflow-hidden">
 
                 <motion.button
                   whileTap={{ scale: 0.99 }}
@@ -353,9 +352,7 @@ export default function FinancePage() {
             {/* Budget categories */}
             <div className="px-4 mb-5">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#a8b0a0' }}>
-                  Budget categories
-                </p>
+                <C2SectionLabel>Budget categories</C2SectionLabel>
                 <button
                   onClick={() => setAddBudgetOpen(true)}
                   className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full"
@@ -378,8 +375,7 @@ export default function FinancePage() {
                       transition={{ delay: idx * 0.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setEditingBudget(item)}
-                      className="w-full rounded-2xl p-3.5 text-left"
-                      style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.04)' }}
+                      className="c2-card w-full p-3.5 text-left"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-xl shrink-0">{item.emoji}</span>
@@ -414,9 +410,7 @@ export default function FinancePage() {
             {/* Savings transactions this month */}
             {thisMonthTx.length > 0 && (
               <div className="px-4 mb-5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#a8b0a0' }}>
-                  Savings this month
-                </p>
+                <C2SectionLabel className="mb-3">Savings this month</C2SectionLabel>
                 <div className="space-y-2">
                   {thisMonthTx.map(t => (
                     <motion.div
@@ -424,8 +418,7 @@ export default function FinancePage() {
                       layout
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="rounded-2xl px-4 py-3 flex items-center gap-3"
-                      style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 4px rgba(45,41,38,0.04)' }}
+                      className="c2-card px-4 py-3 flex items-center gap-3"
                     >
                       <div className={cn(
                         'w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0',
@@ -460,9 +453,7 @@ export default function FinancePage() {
             {monthShoppingLists.length > 0 && (
               <div className="px-4 mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#a8b0a0' }}>
-                    Shopping this month
-                  </p>
+                  <C2SectionLabel>Shopping this month</C2SectionLabel>
                   {monthShoppingTotal > 0 && (
                     <span className="text-[11px] font-semibold" style={{ color: '#7a8570' }}>{fmt(monthShoppingTotal)} total</span>
                   )}
@@ -478,8 +469,7 @@ export default function FinancePage() {
                         transition={{ delay: idx * 0.03 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setEditShoppingId(list.id)}
-                        className="w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left"
-                        style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 4px rgba(45,41,38,0.04)' }}
+                        className="c2-card w-full px-4 py-3 flex items-center gap-3 text-left"
                       >
                         {list.coverPhoto ? (
                           <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
@@ -727,8 +717,7 @@ function EmptyMonthState({
 }) {
   return (
     <div className="px-4">
-      <div className="rounded-3xl p-6 text-center"
-        style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 8px rgba(45,41,38,0.05)' }}>
+      <div className="c2-card-lg p-6 text-center">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
           style={{ background: 'rgba(63,107,79,0.08)' }}>
           <Wallet size={20} style={{ color: '#4a7c5e' }} />
@@ -762,8 +751,7 @@ function EmptyMonthState({
 function ReportCard({ report }: { report: FinanceMonthReport }) {
   const fmt2 = (n: number) => `€${Math.abs(n).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
   return (
-    <div className="mx-4 mb-4 rounded-2xl p-4"
-      style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 8px rgba(45,41,38,0.05)' }}>
+    <div className="c2-card mx-4 mb-4 p-4">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(63,107,79,0.09)' }}>
           <Sparkles size={14} style={{ color: '#4a7c5e' }} />

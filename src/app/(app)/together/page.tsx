@@ -28,6 +28,7 @@ import { useDailyGreeting } from '@/hooks/useDailyGreeting'
 import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
 import { briefingStorageKey, type BriefingItem } from '@/lib/briefing'
 import { getLivingMoment } from '@/lib/livingMoment'
+import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -410,11 +411,11 @@ export default function TogetherPage() {
 
         {/* ── Calendar events for selected date ── */}
         <div>
-          <h2 className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-3">
+          <C2SectionLabel as="h2" className="mb-3">
             {selectedDate === getTodayString()
               ? 'Today'
               : format(parseISO(selectedDate), 'EEEE, MMM d')}
-          </h2>
+          </C2SectionLabel>
 
           <AnimatePresence mode="popLayout">
             {selectedEvents.length === 0 ? (
@@ -560,7 +561,7 @@ export default function TogetherPage() {
         {/* ── Category Rooms ── */}
         {!isSearching && (
           <div className="pt-1 pb-2">
-            <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-4">Rooms</p>
+            <C2SectionLabel className="mb-4">Rooms</C2SectionLabel>
             <div className="space-y-0.5">
               {CATEGORY_DEFS.map((cat, i) => {
                 const st = catStats[cat.id]

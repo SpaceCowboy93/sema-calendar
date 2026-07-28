@@ -64,9 +64,13 @@ const config: Config = {
         },
       },
       boxShadow: {
-        // Warm charcoal shadows (not pure black) for organic, non-clinical feel
+        // Warm charcoal shadows — aligned with --c2-shadow-* tokens
+        xs:    '0 1px 4px rgba(45,41,38,0.04)',
+        sm:    '0 1px 6px rgba(45,41,38,0.05)',
+        card:  '0 1px 6px rgba(45,41,38,0.05)',   // alias
+        md:    '0 2px 12px rgba(45,41,38,0.06)',
         soft:  '0 4px 24px rgba(45,41,38,0.07)',
-        card:  '0 2px 12px rgba(45,41,38,0.05)',
+        lg:    '0 2px 16px rgba(45,41,38,0.08)',
         warm:  '0 4px 28px rgba(45,41,38,0.08)',
         modal: '0 -4px 40px rgba(45,41,38,0.13)',
       },

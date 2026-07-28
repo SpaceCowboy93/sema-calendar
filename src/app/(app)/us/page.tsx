@@ -17,6 +17,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
+import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
 import {
   USERS, OTHER_USER,
   type Memory, type Countdown, type MoodType, type UserName,
@@ -643,13 +644,12 @@ export default function UsPage() {
 
         {/* ── 2. Mood ── */}
         <section>
-          <h2 className="text-[11px] font-medium tracking-widest uppercase mb-4" style={{ color: '#9B9590' }}>How we feel today</h2>
+          <C2SectionLabel as="h2" className="mb-4">How we feel today</C2SectionLabel>
 
           <motion.button
             whileTap={{ scale: 0.985 }}
             onClick={() => setMoodVisible(v => !v)}
-            className="w-full text-left rounded-2xl overflow-hidden mb-3"
-            style={{ background: 'rgba(255,255,255,0.72)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
+            className="c2-card-muted w-full text-left overflow-hidden mb-3"
           >
             <div className="grid grid-cols-2 gap-2 p-3">
               {([currentUser, partnerUser] as UserName[]).map(uid => {
@@ -750,8 +750,7 @@ export default function UsPage() {
                     key={c.id}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => setSelectedCountdown(c)}
-                    className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
-                    style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
+                    className="c2-card w-full px-4 py-4 flex items-center gap-3 text-left relative overflow-hidden"
                   >
                     <div
                       className="absolute right-0 top-0 w-24 h-full opacity-10 pointer-events-none"
@@ -783,7 +782,7 @@ export default function UsPage() {
         {/* ── 5. Timeline ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#a8b0a0' }}>Timeline</h2>
+            <C2SectionLabel as="h2">Timeline</C2SectionLabel>
             <motion.button
               whileTap={{ scale: 0.93 }}
               onClick={() => setMemorySheet('new')}
@@ -828,8 +827,7 @@ export default function UsPage() {
                         <motion.button
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setMemorySheet(memory)}
-                          className="w-full rounded-2xl overflow-hidden text-left"
-                          style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
+                          className="c2-card w-full overflow-hidden text-left"
                         >
                           {memory.photos && memory.photos.length > 0 && (
                             <img
@@ -883,7 +881,7 @@ export default function UsPage() {
         {/* ── 6. Memory Highlights ── */}
         {memoriesWithPhotos.length > 0 && (
           <section>
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#a8b0a0' }}>Memory Highlights</h2>
+            <C2SectionLabel as="h2" className="mb-3">Memory Highlights</C2SectionLabel>
             <div
               className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-5 px-5"
               onPointerDown={e => { highlightDragX.current = e.clientX; highlightScrolling.current = false }}
@@ -912,27 +910,23 @@ export default function UsPage() {
 
         {/* ── 7. Relationship Stats ── */}
         <section className="pb-8">
-          <h2 className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: '#a8b0a0' }}>Relationship Stats</h2>
+          <C2SectionLabel as="h2" className="mb-3">Relationship Stats</C2SectionLabel>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="rounded-2xl p-4 text-center"
-              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
+            <div className="c2-card p-4 text-center">
               <p className="text-2xl font-bold" style={{ color: primary }}>{pastCountdowns.length}</p>
               <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>milestones</p>
             </div>
-            <div className="rounded-2xl p-4 text-center"
-              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
+            <div className="c2-card p-4 text-center">
               <p className="text-2xl font-bold" style={{ color: primary }}>{loveNotes.length}</p>
               <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>love notes</p>
             </div>
-            <div className="rounded-2xl p-4 text-center"
-              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
+            <div className="c2-card p-4 text-center">
               <p className="text-2xl font-bold" style={{ color: primary }}>
                 {goals.filter(g => g.categoryId === 'travel').length}
               </p>
               <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>trips</p>
             </div>
-            <div className="rounded-2xl p-4 text-center"
-              style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}>
+            <div className="c2-card p-4 text-center">
               <p className="text-2xl font-bold" style={{ color: primary }}>
                 {goals.filter(g => g.isCompleted).length}
               </p>
@@ -942,8 +936,7 @@ export default function UsPage() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => setBoomBoomSheet(true)}
-            className="w-full rounded-2xl p-4 flex items-center justify-between"
-            style={{ background: 'rgba(255,255,255,0.82)', boxShadow: '0 1px 6px rgba(45,41,38,0.05)' }}
+            className="c2-card w-full p-4 flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
