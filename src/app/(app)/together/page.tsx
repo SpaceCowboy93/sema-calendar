@@ -294,7 +294,7 @@ export default function TogetherPage() {
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-500 bg-white shadow-card"
           >
             <Sun size={12} style={{ color: primary }} />
-            Today's Briefing
+            Today&apos;s Briefing
           </motion.button>
         </div>
       )}
