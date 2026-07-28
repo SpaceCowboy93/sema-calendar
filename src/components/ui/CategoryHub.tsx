@@ -351,7 +351,7 @@ export function CategoryHubSheet({
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setEditingId(null)}
-              className="fixed inset-0 z-[60] bg-black/20"
+              className="fixed inset-0 z-[60] c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -972,7 +972,7 @@ export function ShoppingDetailSheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/20"
+        className="fixed inset-0 z-[60] c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -1489,7 +1489,7 @@ export function ShoppingDetailSheet({
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
-              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6"
+              className="fixed inset-0 z-[70] c2-backdrop flex items-center justify-center p-6"
             />
             <motion.div
               initial={{ scale: 0.88, opacity: 0 }}

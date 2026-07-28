@@ -661,7 +661,8 @@ function EditTodoModal({
             className="fixed inset-0 z-[60] flex items-center justify-center p-6"
           >
             <div
-              className="absolute inset-0 bg-black/40"
+              className="absolute inset-0 c2-backdrop"
+              aria-hidden="true"
               onClick={() => setShowDelete(false)}
             />
             <motion.div

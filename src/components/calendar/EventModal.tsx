@@ -423,7 +423,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[60] flex items-end justify-center p-4"
               >
-                <div className="absolute inset-0 bg-black/40" onClick={() => setShowDelete(false)} />
+                <div className="absolute inset-0 c2-backdrop" aria-hidden="true" onClick={() => setShowDelete(false)} />
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}

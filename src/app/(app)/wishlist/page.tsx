@@ -435,7 +435,7 @@ function WishDetailModal({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60] flex items-center justify-center p-6"
           >
-            <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmDelete(false)} />
+            <div className="absolute inset-0 c2-backdrop" aria-hidden="true" onClick={() => setShowConfirmDelete(false)} />
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
