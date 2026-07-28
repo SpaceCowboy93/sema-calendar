@@ -278,9 +278,8 @@ export default function TogetherPage() {
         greeting={greeting ?? undefined}
         subtitle={living.homeSubtitle || undefined}
         dateLabel={dateLabel}
-        imageSrc={C2_ROOM_HEADERS.home.placeholderSrc}
-        imagePosition={C2_ROOM_HEADERS.home.imagePosition}
-        textMaxWidth={C2_ROOM_HEADERS.home.textMaxWidth}
+        imageSrc={C2_ROOM_HEADERS.home.src}
+        imageObjectPosition={C2_ROOM_HEADERS.home.imageObjectPosition}
       />
 
       {/* ── Today's Briefing reopen pill ── */}

@@ -624,9 +624,8 @@ export default function UsPage() {
         eyebrow="Our space"
         title="Us"
         subtitle={living.usSubtitle || 'Our story, our space'}
-        imageSrc={C2_ROOM_HEADERS.us.placeholderSrc}
-        imagePosition={C2_ROOM_HEADERS.us.imagePosition}
-        textMaxWidth={C2_ROOM_HEADERS.us.textMaxWidth}
+        imageSrc={C2_ROOM_HEADERS.us.src}
+        imageObjectPosition={C2_ROOM_HEADERS.us.imageObjectPosition}
         action={
           <button
             onClick={() => { setCurrentUser(null); router.replace('/') }}

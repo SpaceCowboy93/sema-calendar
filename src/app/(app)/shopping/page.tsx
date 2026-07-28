@@ -308,9 +308,8 @@ export default function ShoppingPage() {
         eyebrow={eyebrow}
         title={<>This week&apos;s<br />kitchen</>}
         subtitle={subtitle}
-        imageSrc={C2_ROOM_HEADERS.shopping.placeholderSrc}
-        imagePosition={C2_ROOM_HEADERS.shopping.imagePosition}
-        textMaxWidth={C2_ROOM_HEADERS.shopping.textMaxWidth}
+        imageSrc={C2_ROOM_HEADERS.shopping.src}
+        imageObjectPosition={C2_ROOM_HEADERS.shopping.imageObjectPosition}
       />
 
       {/* ══════════════════════════════════════════════════════════════════════

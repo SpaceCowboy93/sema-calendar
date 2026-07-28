@@ -28,34 +28,19 @@ export type SeMaRoomHeaderProps = {
   /** Date string rendered below subtitle. */
   dateLabel?: string
 
-  /** Path to the room header image (served from /public). */
+  /** Path to the full-width botanical header image (served from /public). */
   imageSrc?: string
 
   /** Alt text — pass "" for purely decorative images. */
   imageAlt?: string
 
   /**
-   * Fine-grained CSS positioning for the image within the header.
-   * All values are CSS strings (e.g. "0", "-20px", "auto").
-   * Defaults position the image in the upper-right corner.
+   * CSS object-position for the background botanical artwork.
+   * Defaults to 'center center'. Use to tune which part of the
+   * composition is visible on mobile crops.
+   * Examples: 'right top', 'left bottom', 'center top'
    */
-  imagePosition?: {
-    top?: string
-    right?: string
-    bottom?: string
-    left?: string
-    /** CSS width of the image element. */
-    width?: string
-    /** Constrain the image further if needed. */
-    maxWidth?: string
-  }
-
-  /**
-   * Max-width of the text column. Use this to stop text from running
-   * under the image on narrow viewports.
-   * Defaults to '62%' when an imageSrc is provided, '100%' otherwise.
-   */
-  textMaxWidth?: string
+  imageObjectPosition?: string
 
   /** Right-aligned slot — e.g. Sign Out button. */
   action?: React.ReactNode
@@ -66,9 +51,12 @@ export type SeMaRoomHeaderProps = {
 /**
  * SeMaRoomHeader — shared presentational header for all C2 rooms.
  *
+ * Full-width botanical artwork fills the header as a background.
+ * A soft left-side gradient ensures typography remains legible over
+ * the watercolor paper composition.
+ *
  * Pure display component: no store reads, no Living Moment logic,
- * no generated SVG, no Framer Motion in this foundation version.
- * Callers own all data derivation and pass fully-resolved strings.
+ * no generated SVG, no Framer Motion.
  */
 export function SeMaRoomHeader({
   mode = 'static',
@@ -79,56 +67,61 @@ export function SeMaRoomHeader({
   dateLabel,
   imageSrc,
   imageAlt = '',
-  imagePosition,
-  textMaxWidth,
+  imageObjectPosition = 'center center',
   action,
   className,
 }: SeMaRoomHeaderProps) {
-  const pos = imagePosition ?? {}
-  const resolvedTextMaxWidth = textMaxWidth ?? (imageSrc ? '62%' : '100%')
-
   return (
     <header
       className={['relative overflow-hidden', className].filter(Boolean).join(' ')}
       style={{
-        paddingInline: 20,
-        paddingTop: 'clamp(48px, 7vh, 64px)',
-        paddingBottom: 'clamp(26px, 4vh, 36px)',
+        minHeight: 'clamp(180px, 42vw, 240px)',
+        background: 'var(--bj-cream)',
       }}
     >
-      {/* Decorative room image — positioned absolute, behind text */}
+      {/* Full-width botanical artwork — fills entire header */}
       {imageSrc && (
         <div
           aria-hidden="true"
-          className="pointer-events-none select-none"
-          style={{
-            position: 'absolute',
-            top:      pos.top      ?? '0',
-            right:    pos.right    ?? '0',
-            bottom:   pos.bottom   ?? 'auto',
-            left:     pos.left     ?? 'auto',
-            width:    pos.width    ?? '55%',
-            maxWidth: pos.maxWidth ?? '260px',
-            zIndex: 0,
-          }}
+          className="absolute inset-0 pointer-events-none select-none"
         >
           <Image
             src={imageSrc}
             alt={imageAlt}
             fill
-            sizes="(max-width: 480px) 55vw, 260px"
-            style={{ objectFit: 'contain', objectPosition: 'top right' }}
+            sizes="100vw"
+            style={{
+              objectFit: 'cover',
+              objectPosition: imageObjectPosition,
+            }}
             priority
+          />
+          {/*
+           * Soft left-to-right gradient — protects text legibility
+           * without blocking the botanical artwork on the right.
+           * Tuned to match the natural negative space in the compositions.
+           */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to right, rgba(253,250,245,0.82) 0%, rgba(253,250,245,0.50) 40%, rgba(253,250,245,0.10) 65%, transparent 85%)',
+            }}
           />
         </div>
       )}
 
-      {/* Text column — sits above image via z-index */}
+      {/* Text column — sits above artwork via z-index */}
       <div
-        className="flex items-start justify-between relative"
-        style={{ zIndex: 1 }}
+        className="relative z-10 flex items-start justify-between"
+        style={{
+          paddingInline: 20,
+          paddingTop: 'clamp(44px, 7vh, 60px)',
+          paddingBottom: 'clamp(22px, 4vh, 32px)',
+        }}
       >
-        <div style={{ maxWidth: resolvedTextMaxWidth, minWidth: 0 }}>
+        <div style={{ maxWidth: '62%', minWidth: 0 }}>
 
           {/* ── Static mode ── */}
           {mode === 'static' && (
@@ -168,10 +161,12 @@ export function SeMaRoomHeader({
           {/* ── Greeting mode ── */}
           {mode === 'greeting' && greeting && (
             <h1
-              className="text-3xl leading-snug text-gray-900"
+              className="leading-snug"
               style={{
                 fontFamily: 'var(--font-playfair)',
                 fontWeight: 600,
+                fontSize: 'clamp(1.75rem, 7vw, 2.5rem)',
+                color: 'var(--bj-charcoal)',
                 marginBottom: subtitle || dateLabel ? 8 : 0,
               }}
             >
@@ -191,7 +186,7 @@ export function SeMaRoomHeader({
 
           {/* Date label — shared between modes */}
           {dateLabel && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs" style={{ color: '#9B9590' }}>
               {dateLabel}
             </p>
           )}
@@ -199,7 +194,7 @@ export function SeMaRoomHeader({
 
         {/* Right-side action slot */}
         {action && (
-          <div className="ml-3 mt-1 shrink-0" style={{ zIndex: 1 }}>
+          <div className="ml-3 mt-1 shrink-0">
             {action}
           </div>
         )}

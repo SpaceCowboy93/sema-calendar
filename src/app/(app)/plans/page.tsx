@@ -211,9 +211,8 @@ export default function FinancePage() {
           eyebrow="Our money"
           title="Our Finances"
           subtitle={living.financeSubtitle || 'Planning our future together.'}
-          imageSrc={C2_ROOM_HEADERS.finances.placeholderSrc}
-          imagePosition={C2_ROOM_HEADERS.finances.imagePosition}
-          textMaxWidth={C2_ROOM_HEADERS.finances.textMaxWidth}
+          imageSrc={C2_ROOM_HEADERS.finances.src}
+          imageObjectPosition={C2_ROOM_HEADERS.finances.imageObjectPosition}
         />
 
         {/* ── Month Selector ── */}

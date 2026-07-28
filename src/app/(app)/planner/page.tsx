@@ -118,9 +118,8 @@ export default function PlannerPage() {
         eyebrow="Weekly view"
         title="Planner"
         subtitle={plannerSubtitle}
-        imageSrc={C2_ROOM_HEADERS.planner.placeholderSrc}
-        imagePosition={C2_ROOM_HEADERS.planner.imagePosition}
-        textMaxWidth={C2_ROOM_HEADERS.planner.textMaxWidth}
+        imageSrc={C2_ROOM_HEADERS.planner.src}
+        imageObjectPosition={C2_ROOM_HEADERS.planner.imageObjectPosition}
       />
 
       <WeeklyFocusSection />
