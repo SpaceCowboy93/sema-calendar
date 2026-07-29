@@ -68,6 +68,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Prevent fixed-position elements (FAB, nav) from contributing to
+     document.documentElement.scrollWidth in WebKit / Safari. */
+  overflow-x: hidden;
 }
 
 body {

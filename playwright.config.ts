@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const PORT = process.env.PLAYWRIGHT_PORT ? Number(process.env.PLAYWRIGHT_PORT) : 3100
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${PORT}`
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -9,9 +12,11 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'html',
   timeout: 30_000,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Disable animations so Framer Motion elements are immediately stable for clicks
+    reducedMotion: 'reduce',
   },
   projects: [
     {
@@ -42,6 +47,15 @@ export default defineConfig({
       },
     },
   ],
-  // Do NOT start the dev server automatically — the user must run `npm run dev` separately.
-  // This prevents accidental connections to production.
+  // Playwright starts and owns the dev server on a dedicated port (3100 by default).
+  // This avoids conflicts with manually-run servers on port 3000 and ensures tests
+  // always run against a fresh, known-good build of the current branch.
+  webServer: {
+    command: `npm run dev -- --port ${PORT}`,
+    url: BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    stdout: 'ignore',
+    stderr: 'pipe',
+  },
 })

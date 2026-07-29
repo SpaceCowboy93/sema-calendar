@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, MotionConfig } from 'framer-motion'
 import { Plus } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -59,6 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="h-dvh overflow-hidden">
       <main ref={mainRef} className="h-full overflow-y-auto overscroll-none pb-24">
         {children}
@@ -102,5 +103,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         primary={primary}
       />
     </div>
+    </MotionConfig>
   )
 }
