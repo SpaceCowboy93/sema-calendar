@@ -16,6 +16,7 @@ import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId, getTodayString } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
+import { calcMonth, buildReport, totalSavingsBalance, listCost } from '@/lib/financeCalc'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
@@ -70,24 +71,7 @@ function pctColor(pct: number) {
   if (pct > 80)  return '#E7B77C'
   return '#9EC9B3'
 }
-function buildReport(month: FinanceMonth, totalSaved: number): FinanceMonthReport {
-  const totalExpenses = month.budgetItems.reduce((a, b) => a + b.actual, 0)
-  const remaining     = month.income - totalExpenses
-  const savingsRate   = month.income > 0 ? Math.round((totalSaved / month.income) * 1000) / 10 : 0
-  const sorted        = [...month.budgetItems].sort((a, b) => b.actual - a.actual)
-  const topItem       = sorted.find(b => b.actual > 0)
-  const overBudget    = month.budgetItems.filter(b => b.planned > 0 && b.actual > b.planned)
-  return {
-    generatedAt: new Date().toISOString(),
-    totalIncome: month.income,
-    totalExpenses,
-    totalSaved,
-    remaining,
-    savingsRate,
-    topCategory: topItem ? `${topItem.emoji} ${topItem.category}` : undefined,
-    overBudgetCategories: overBudget.map(b => `${b.emoji} ${b.category}`),
-  }
-}
+// buildReport and related calculations live in src/lib/financeCalc.ts (single source of truth)
 
 async function scheduleMonthEndPush(monthKey: string) {
   try {
@@ -151,13 +135,15 @@ export default function FinancePage() {
   )
 
   const totalSavings = useMemo(
-    () => savingsTransactions.reduce((a, t) => a + t.amount, 0),
+    () => totalSavingsBalance(savingsTransactions),
     [savingsTransactions],
   )
-  const thisMonthSavings = useMemo(
-    () => savingsTransactions.filter(t => t.monthKey === monthKey).reduce((a, t) => a + t.amount, 0),
-    [savingsTransactions, monthKey],
+  // All derived values for the current month via shared calculation function
+  const monthCalc = useMemo(
+    () => currentMonth ? calcMonth(currentMonth, savingsTransactions) : null,
+    [currentMonth, savingsTransactions],
   )
+  const thisMonthSavings = monthCalc?.saved ?? 0
   const thisMonthTx = useMemo(
     () => [...savingsTransactions.filter(t => t.monthKey === monthKey)].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -171,7 +157,7 @@ export default function FinancePage() {
     [shoppingLists, monthKey],
   )
   const monthShoppingTotal = useMemo(
-    () => monthShoppingLists.reduce((s, l) => s + l.items.reduce((a, i) => a + (i.price ?? 0) * i.quantity, 0), 0),
+    () => monthShoppingLists.reduce((s, l) => s + listCost(l.items), 0),
     [monthShoppingLists],
   )
 
@@ -196,13 +182,13 @@ export default function FinancePage() {
 
   function handleFinalize() {
     if (!currentMonth) return
-    const report = buildReport(currentMonth, thisMonthSavings)
+    const report = buildReport(currentMonth, savingsTransactions)
     updateFinanceMonth(monthKey, { isFinalized: true, report })
     setConfirmFinalize(false)
   }
 
-  const totalExpenses = currentMonth?.budgetItems.reduce((a, b) => a + b.actual, 0) ?? 0
-  const remaining     = (currentMonth?.income ?? 0) - totalExpenses
+  const totalExpenses = monthCalc?.expenses ?? 0
+  const remaining     = monthCalc?.remaining ?? 0
 
   return (
     <div className="min-h-screen pb-32 relative z-0">
@@ -624,7 +610,7 @@ export default function FinancePage() {
           <AddBudgetSheet
             onSave={item => {
               updateFinanceMonth(monthKey, {
-                budgetItems: [...currentMonth.budgetItems, { ...item, id: Math.random().toString(36).slice(2) }],
+                budgetItems: [...currentMonth.budgetItems, { ...item, id: generateId() }],
               })
               setAddBudgetOpen(false)
             }}

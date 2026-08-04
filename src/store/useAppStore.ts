@@ -378,8 +378,9 @@ export const useAppStore = create<AppState>()(
 
       uploadEventPhoto: async (eventId, file) => {
         if (!file) return
+        // uploadPhoto already shows a toast on failure
         const url = await get().uploadPhoto(`events/${eventId}`, file)
-        if (!url) { toast.error('Photo upload failed. Please try again.'); return }
+        if (!url) return
         set(s => ({
           events: s.events.map(e =>
             e.id === eventId
@@ -1181,17 +1182,43 @@ export const useAppStore = create<AppState>()(
 
       // ── Generic upload helper ─────────────────────────────────────────────────
       uploadPhoto: async (folder, file) => {
+        // Pre-validate on the client to give instant feedback without a network round-trip
+        const MAX_BYTES   = 5 * 1024 * 1024
+        const VALID_TYPES = new Set([
+          'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+        ])
+        if (file.size > MAX_BYTES) {
+          const mb = (file.size / 1024 / 1024).toFixed(1)
+          toast.error(`Photo is ${mb} MB — maximum is 5 MB.`)
+          return null
+        }
+        const mimeType = file.type === 'image/jpg' ? 'image/jpeg' : (file.type || 'image/jpeg')
+        if (!VALID_TYPES.has(mimeType)) {
+          toast.error(`Unsupported file type "${file.type}". Use JPG, PNG, or WebP.`)
+          return null
+        }
+
         const form = new FormData()
         form.append('file', file)
         form.append('folder', folder)
-        const res = await fetch('/api/upload-photo', { method: 'POST', body: form })
-        if (!res.ok) {
-          const { error } = await res.json().catch(() => ({ error: 'Upload failed' }))
-          console.error('[Photo] Upload error:', error)
+
+        try {
+          const res = await fetch('/api/upload-photo', { method: 'POST', body: form })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+            const msg  = (body as { error?: string }).error ?? 'Upload failed'
+            console.error('[Photo] Upload error:', msg, { folder, mimeType, size: file.size })
+            toast.error(msg)
+            return null
+          }
+          const { url } = await res.json() as { url: string }
+          return url
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Network error during upload'
+          console.error('[Photo] Upload network error:', msg)
+          toast.error('Photo upload failed — check your connection and try again.')
           return null
         }
-        const { url } = await res.json()
-        return url as string
       },
 
       uploadGoalPhoto: async (goalId, file) => {

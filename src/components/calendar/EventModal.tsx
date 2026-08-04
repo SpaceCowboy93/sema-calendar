@@ -94,38 +94,41 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   async function handleSave() {
     if (!title.trim() || !currentUser || saving) return
     setSaving(true)
-    const data = {
-      title: title.trim(),
-      date: selectedDate,
-      startTime: startTime || undefined,
-      notes: notes.trim() || undefined,
-      color,
-      todos: todos.length ? todos : undefined,
-      photos: photos.length ? photos : undefined,
-      // For edit: photos[] are real URLs; for new: resolved after upload below
-      backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
-      createdBy: currentUser,
-    }
-    if (isEdit && event) {
-      updateEvent(event.id, data)
-    } else {
-      const nPending = pendingFiles.length
-      const newId = addEvent(data)
-      if (nPending > 0) {
-        for (const file of pendingFiles) {
-          await uploadEventPhoto(newId, file)
-        }
-        // Resolve real URL: blob previews occupy indices 0..nPending-1,
-        // real uploads are appended at nPending, nPending+1, ...
-        if (bgPhotoIdx !== null) {
-          const stored = useAppStore.getState().events.find(e => e.id === newId)
-          const bpUrl  = stored?.photos?.[nPending + bgPhotoIdx]
-          if (bpUrl) updateEvent(newId, { backgroundPhoto: bpUrl })
+    try {
+      const data = {
+        title: title.trim(),
+        date: selectedDate,
+        startTime: startTime || undefined,
+        notes: notes.trim() || undefined,
+        color,
+        todos: todos.length ? todos : undefined,
+        photos: photos.length ? photos : undefined,
+        // For edit: photos[] are real URLs; for new: resolved after upload below
+        backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
+        createdBy: currentUser,
+      }
+      if (isEdit && event) {
+        updateEvent(event.id, data)
+      } else {
+        const nPending = pendingFiles.length
+        const newId = addEvent(data)
+        if (nPending > 0) {
+          for (const file of pendingFiles) {
+            await uploadEventPhoto(newId, file)
+          }
+          // Resolve real URL: blob previews occupy indices 0..nPending-1,
+          // real uploads are appended at nPending, nPending+1, ...
+          if (bgPhotoIdx !== null) {
+            const stored = useAppStore.getState().events.find(e => e.id === newId)
+            const bpUrl  = stored?.photos?.[nPending + bgPhotoIdx]
+            if (bpUrl) updateEvent(newId, { backgroundPhoto: bpUrl })
+          }
         }
       }
+      onClose()
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    onClose()
   }
 
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {

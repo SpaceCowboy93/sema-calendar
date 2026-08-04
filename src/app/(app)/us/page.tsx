@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   format, parseISO,
   differenceInCalendarDays, differenceInYears, differenceInMonths, differenceInDays,
-  addYears, addMonths,
+  addYears, addMonths, startOfDay,
 } from 'date-fns'
 import {
   Plus, X, Trash2, Check, Camera, LogOut, Pencil, Heart,
@@ -641,7 +641,8 @@ export default function UsPage() {
     [memories]
   )
 
-  const daysTotal = differenceInCalendarDays(today, RELATIONSHIP_START)
+  // daysTotal is unused — kept as internal reference only
+  // const daysTotal = differenceInCalendarDays(today, RELATIONSHIP_START)
 
   function handleAddCountdown() {
     if (!newCdTitle.trim() || !newCdDate) return
@@ -774,13 +775,22 @@ export default function UsPage() {
           ) : (
             <div className="space-y-2">
               {pastCountdowns.map(c => {
-                const days   = differenceInCalendarDays(today, parseISO(c.date))
-                const years  = Math.floor(days / 365)
-                const months = Math.floor(days / 30)
+                // Two-step anchor:
+                //   1. parseISO(date + 'T12:00:00') — noon local time prevents the
+                //      "midnight UTC → previous calendar day" shift in UTC+ timezones.
+                //   2. startOfDay(...)              — normalise to midnight so
+                //      differenceInYears/Months doesn't count partial days as < 1 unit.
+                const milestoneDate = startOfDay(parseISO(c.date + 'T12:00:00'))
+                const todayStart    = startOfDay(today)
+                const years  = differenceInYears(todayStart, milestoneDate)
+                const afterY = addYears(milestoneDate, years)
+                const months = differenceInMonths(todayStart, afterY)
+                const afterM = addMonths(afterY, months)
+                const days   = differenceInCalendarDays(todayStart, afterM)
                 const label  = years >= 1
-                  ? `${years} year${years > 1 ? 's' : ''} together`
+                  ? `${years} year${years !== 1 ? 's' : ''} together`
                   : months >= 1
-                  ? `${months} month${months > 1 ? 's' : ''} together`
+                  ? `${months} month${months !== 1 ? 's' : ''} together`
                   : `${days} day${days !== 1 ? 's' : ''} together`
 
                 return (
