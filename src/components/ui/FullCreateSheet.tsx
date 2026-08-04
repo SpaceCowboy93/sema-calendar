@@ -198,6 +198,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
       if (type === 'note') {
         sendPartnerNote(title.trim())
         setSent(true)
+        setSaving(false)
         setTimeout(() => close(), 1800)
         return
       }
@@ -291,6 +292,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
     } catch (err) {
       console.error('[FullCreateSheet] save error:', err)
       setUploadError('Something went wrong. Please try again.')
+    } finally {
       setSaving(false)
     }
   }
@@ -302,9 +304,9 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
     <C2Sheet open={open} onClose={close} aria-label="Add something">
       <C2SheetHeader title="Add something" onClose={close} />
 
-      {/* Type selector chips — non-scrolling, between header and body */}
-      <div className="px-5 pb-4 shrink-0">
-        <ChipGroup>
+      {/* Type selector chips — full-bleed horizontal scroll between header and body */}
+      <div className="pb-3 shrink-0 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex gap-2 px-5 pb-1 min-w-max">
           {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
             const tc = TYPE_CONFIG[t]
             const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
@@ -320,7 +322,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
               />
             )
           })}
-        </ChipGroup>
+        </div>
       </div>
 
       <C2SheetBody>
@@ -371,6 +373,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           placeholder={cfg.placeholder}
                           rows={5}
                           autoFocus
+                          enterKeyHint="send"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
                                      transition-colors bg-transparent resize-none leading-snug"
@@ -382,6 +385,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           onChange={e => setTitle(e.target.value)}
                           placeholder={cfg.placeholder}
                           autoFocus
+                          enterKeyHint="next"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
                                      transition-colors bg-transparent"

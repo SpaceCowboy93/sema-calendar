@@ -323,17 +323,19 @@ export default function FinancePage() {
                 >
                   <TrendingUp size={15} style={{ color: '#9EC9B3', flexShrink: 0 }} />
                   <span className="flex-1 text-sm text-gray-600">Income</span>
-                  <span className="text-sm font-semibold text-gray-800">{fmt(currentMonth.income)}</span>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold text-gray-800">{fmt(currentMonth.income)}</span>
+                  </div>
                 </motion.button>
 
                 <div style={{ height: 1, background: 'rgba(45,41,38,0.05)', margin: '0 16px' }} />
 
                 <div className="px-4 py-3.5 flex items-center gap-3">
                   <TrendingDown size={15} style={{ color: '#D88A8A', flexShrink: 0 }} />
-                  <span className="flex-1 text-sm text-gray-600">Expenses</span>
-                  <div className="text-right">
+                  <span className="flex-1 text-sm text-gray-600 min-w-0 truncate">Expenses</span>
+                  <div className="text-right shrink-0">
                     <span className="text-sm font-semibold" style={{ color: '#D88A8A' }}>{fmt(totalExpenses)}</span>
-                    <span className="text-[10px] text-gray-400 ml-1.5">of {fmt(currentMonth.budgetItems.reduce((a, b) => a + b.planned, 0))}</span>
+                    <span className="block text-[10px] text-gray-400">of {fmt(currentMonth.budgetItems.reduce((a, b) => a + b.planned, 0))}</span>
                   </div>
                 </div>
 
@@ -346,9 +348,11 @@ export default function FinancePage() {
                 >
                   <Sparkles size={15} style={{ color: '#C9A96E', flexShrink: 0 }} />
                   <span className="flex-1 text-sm text-gray-600">Saved this month</span>
-                  <span className="text-sm font-semibold" style={{ color: thisMonthSavings >= 0 ? '#9EC9B3' : '#D88A8A' }}>
-                    {thisMonthSavings >= 0 ? '' : '-'}{fmt(thisMonthSavings)}
-                  </span>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold" style={{ color: thisMonthSavings >= 0 ? '#9EC9B3' : '#D88A8A' }}>
+                      {thisMonthSavings >= 0 ? '' : '-'}{fmt(thisMonthSavings)}
+                    </span>
+                  </div>
                 </motion.button>
               </div>
             </div>

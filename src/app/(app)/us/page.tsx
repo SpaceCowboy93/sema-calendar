@@ -716,8 +716,8 @@ export default function UsPage() {
               })}
             </div>
             <div className="flex items-center justify-center gap-1 pb-3">
-              <Pencil size={10} className="text-gray-300" />
-              <span className="text-[10px] text-gray-300 font-medium">Tap to update your mood</span>
+              <Pencil size={11} className="text-gray-400" />
+              <span className="text-[11px] text-gray-500 font-medium">Tap to update your mood</span>
             </div>
           </motion.button>
 

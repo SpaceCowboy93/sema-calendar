@@ -28,6 +28,7 @@ const DEFAULT_BUDGET_ITEMS: BudgetItem[] = [
 ]
 import { generateId, getTodayString } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { toast } from '@/store/useToastStore'
 
 interface AppState {
   // Session
@@ -378,7 +379,7 @@ export const useAppStore = create<AppState>()(
       uploadEventPhoto: async (eventId, file) => {
         if (!file) return
         const url = await get().uploadPhoto(`events/${eventId}`, file)
-        if (!url) { alert('Upload failed'); return }
+        if (!url) { toast.error('Photo upload failed. Please try again.'); return }
         set(s => ({
           events: s.events.map(e =>
             e.id === eventId

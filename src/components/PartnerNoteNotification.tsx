@@ -121,13 +121,13 @@ export function PartnerNoteNotification() {
             />
 
             {/* Card */}
-            <div className="fixed inset-0 z-[61] flex items-center justify-center p-6 pointer-events-none">
+            <div className="fixed inset-0 z-[61] flex items-center justify-center p-6 pointer-events-none overflow-y-auto">
               <motion.div
                 initial={{ scale: 0.82, opacity: 0, y: 32 }}
                 animate={{ scale: 1,    opacity: 1, y: 0  }}
                 exit={   { scale: 0.88, opacity: 0, y: 16 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                className="w-full max-w-sm rounded-3xl overflow-hidden shadow-modal pointer-events-auto bg-white"
+                className="w-full max-w-sm rounded-3xl overflow-hidden shadow-modal pointer-events-auto bg-white my-auto"
               >
                 {/* Header */}
                 <div
@@ -201,10 +201,10 @@ export function PartnerNoteNotification() {
                   className="px-6 py-5"
                 >
                   <div
-                    className="rounded-2xl px-5 py-4 mb-5"
-                    style={{ background: `${readSenderColor}0e` }}
+                    className="rounded-2xl px-5 py-4 mb-5 overflow-y-auto"
+                    style={{ background: `${readSenderColor}0e`, maxHeight: '40vh' }}
                   >
-                    <p className="text-sm text-gray-700 leading-relaxed italic text-center">
+                    <p className="text-sm text-gray-700 leading-relaxed italic text-center break-words">
                       &ldquo;{readingNote.content}&rdquo;
                     </p>
                   </div>

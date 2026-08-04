@@ -149,55 +149,60 @@ export function FocusActivitySheet({
   async function handleSave() {
     const titleTrimmed = title.trim()
     if (!titleTrimmed) { titleRef.current?.focus(); return }
+    if (saving) return
 
     setSaving(true)
-    const checklistData = checklist.length > 0 ? checklist : undefined
-    const timeTrimmed   = time.trim() || undefined
-    const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
+    try {
+      const checklistData = checklist.length > 0 ? checklist : undefined
+      const timeTrimmed   = time.trim() || undefined
+      const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
+      const priorityVal   = priority !== 'none' ? priority : undefined
 
-    const priorityVal = priority !== 'none' ? priority : undefined
+      if (isEdit && activity) {
+        updateFocusActivity(activity.id, {
+          title:     titleTrimmed,
+          time:      timeTrimmed,
+          reminder:  reminderVal,
+          priority:  priorityVal,
+          notes:     notes.trim() || undefined,
+          checklist: checklistData,
+        })
+      } else {
+        const newId = addFocusActivity({
+          weekKey,
+          dayIndex,
+          title:     titleTrimmed,
+          time:      timeTrimmed,
+          reminder:  reminderVal,
+          priority:  priorityVal,
+          notes:     notes.trim() || undefined,
+          checklist: checklistData,
+          owner,
+        })
 
-    if (isEdit && activity) {
-      updateFocusActivity(activity.id, {
-        title:     titleTrimmed,
-        time:      timeTrimmed,
-        reminder:  reminderVal,
-        priority:  priorityVal,
-        notes:     notes.trim() || undefined,
-        checklist: checklistData,
-      })
-    } else {
-      const newId = addFocusActivity({
-        weekKey,
-        dayIndex,
-        title:     titleTrimmed,
-        time:      timeTrimmed,
-        reminder:  reminderVal,
-        priority:  priorityVal,
-        notes:     notes.trim() || undefined,
-        checklist: checklistData,
-        owner,
-      })
-
-      if (photos.length > 0 && newId) {
-        for (const preview of photos) {
-          if (preview.startsWith('blob:')) {
-            try {
-              const res  = await fetch(preview)
-              const blob = await res.blob()
-              const file = new File([blob], 'photo.jpg', { type: blob.type })
-              await uploadFocusActivityPhoto(newId, file)
-              URL.revokeObjectURL(preview)
-            } catch {
-              // skip silently
+        if (photos.length > 0 && newId) {
+          for (const preview of photos) {
+            if (preview.startsWith('blob:')) {
+              try {
+                const res  = await fetch(preview)
+                const blob = await res.blob()
+                const file = new File([blob], 'photo.jpg', { type: blob.type })
+                await uploadFocusActivityPhoto(newId, file)
+                URL.revokeObjectURL(preview)
+              } catch {
+                // skip failed photo silently — activity is already saved
+              }
             }
           }
         }
       }
-    }
 
-    setSaving(false)
-    onClose()
+      onClose()
+    } catch {
+      // restore button state on unexpected error
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleDelete() {
@@ -257,6 +262,8 @@ export function FocusActivitySheet({
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="What are you planning?"
+                    inputMode="text"
+                    enterKeyHint="done"
                     className="w-full text-sm text-gray-800 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent"
                     onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
                   />
@@ -291,21 +298,26 @@ export function FocusActivitySheet({
                     <p className="text-xs text-gray-300">Set a time above to enable reminders</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {REMINDER_OPTIONS.map(opt => (
+                      {REMINDER_OPTIONS.map(opt => {
+                        const isActive = reminder === opt.value
+                        return (
                         <button
                           key={opt.value}
+                          type="button"
                           onClick={() => setReminder(opt.value)}
+                          aria-pressed={isActive}
                           className={cn(
-                            'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
-                            reminder === opt.value
+                            'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
+                            isActive
                               ? 'text-white'
-                              : 'bg-gray-100 text-gray-500 active:bg-gray-200',
+                              : 'bg-gray-100 text-gray-500',
                           )}
-                          style={reminder === opt.value ? { background: primary } : undefined}
+                          style={isActive ? { background: primary } : undefined}
                         >
                           {opt.label}
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -317,21 +329,26 @@ export function FocusActivitySheet({
                     <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
                   <div className="flex gap-1.5">
-                    {PRIORITY_OPTIONS.map(opt => (
+                    {PRIORITY_OPTIONS.map(opt => {
+                      const isActive = priority === opt.value
+                      return (
                       <button
                         key={opt.value}
+                        type="button"
                         onClick={() => setPriority(opt.value)}
+                        aria-pressed={isActive}
                         className={cn(
-                          'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
-                          priority === opt.value
+                          'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
+                          isActive
                             ? 'text-white'
-                            : 'bg-gray-100 text-gray-500 active:bg-gray-200',
+                            : 'bg-gray-100 text-gray-500',
                         )}
-                        style={priority === opt.value ? { background: primary } : undefined}
+                        style={isActive ? { background: primary } : undefined}
                       >
                         {opt.label}
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -346,6 +363,7 @@ export function FocusActivitySheet({
                     onChange={e => setNotes(e.target.value)}
                     placeholder="Any notes..."
                     rows={2}
+                    enterKeyHint="enter"
                     className="w-full text-sm text-gray-700 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent resize-none leading-relaxed"
                   />
                 </div>
@@ -394,6 +412,8 @@ export function FocusActivitySheet({
                       value={newItem}
                       onChange={e => setNewItem(e.target.value)}
                       placeholder="Add item..."
+                      inputMode="text"
+                      enterKeyHint="done"
                       className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent border-b border-gray-100 pb-1"
                       onKeyDown={e => {
                         if (e.key === 'Enter') { e.preventDefault(); addChecklistItem() }

@@ -6,7 +6,7 @@ import { Plus, Mail, type LucideIcon, CalendarCheck2, Sparkles, Gift, Heart, Fil
 import { useAppStore } from '@/store/useAppStore'
 import type { EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'
-import { Chip, ChipGroup, C2Sheet, C2SheetHeader, C2SheetBody } from '@/components/ui'
+import { Chip, C2Sheet, C2SheetHeader, C2SheetBody } from '@/components/ui'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
@@ -87,9 +87,9 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
     <C2Sheet open={open} onClose={close} aria-label="Add something">
       <C2SheetHeader title="Add something" onClose={close} />
 
-      <C2SheetBody className="pb-8">
-        {/* Type chips — always visible */}
-        <ChipGroup className="mb-5">
+      {/* Type chips — full-bleed horizontal scroll */}
+      <div className="pb-3 shrink-0 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex gap-2 px-5 pb-1 min-w-max">
           {TYPES.map(t => (
             <Chip
               key={t.id}
@@ -100,7 +100,10 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
               onClick={() => { setType(t.id); setColor(TYPE_COLOR[t.id]); setTitle(''); setNotes('') }}
             />
           ))}
-        </ChipGroup>
+        </div>
+      </div>
+
+      <C2SheetBody className="pb-8">
 
         <AnimatePresence mode="wait">
           {sent ? (
