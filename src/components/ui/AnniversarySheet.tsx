@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { differenceInCalendarDays, parseISO } from 'date-fns'
+import { differenceInCalendarDays, differenceInYears, differenceInMonths, addYears, addMonths, startOfDay, parseISO } from 'date-fns'
 import { Plus, X, Check, Camera, Trash2, Pencil, Mail, type LucideIcon, Utensils, Flower2, Gift, BookOpen, Flame, Wine, Heart, Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Star, Sun, Plane } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
@@ -149,19 +149,26 @@ export function AnniversarySheet({
   const doneCount  = entries.filter(e => e.isCompleted).length
   const totalCount = entries.length
 
-  const daysSince = differenceInCalendarDays(new Date(), parseISO(countdown.date))
-  const isFuture  = daysSince < 0
-  const absDays   = Math.abs(daysSince)
-  const ageLabel  = isFuture
+  // Use the same two-step noon anchor as us/page.tsx to avoid UTC date-shift
+  // bugs in UTC+ timezones, then use calendar-aware date-fns functions.
+  const todayStart     = startOfDay(new Date())
+  const milestoneStart = startOfDay(parseISO(countdown.date + 'T12:00:00'))
+  const daysSince      = differenceInCalendarDays(todayStart, milestoneStart)
+  const isFuture       = daysSince < 0
+  const absDays        = Math.abs(daysSince)
+  const ageLabel       = isFuture
     ? (absDays === 0 ? 'Today!' : `in ${absDays} day${absDays !== 1 ? 's' : ''}`)
     : (() => {
-        const years  = Math.floor(absDays / 365)
-        const months = Math.floor(absDays / 30)
+        const years  = differenceInYears(todayStart, milestoneStart)
+        const afterY = addYears(milestoneStart, years)
+        const months = differenceInMonths(todayStart, afterY)
+        const afterM = addMonths(afterY, months)
+        const days   = differenceInCalendarDays(todayStart, afterM)
         return years >= 1
-          ? `${years} year${years > 1 ? 's' : ''} ago`
+          ? `${years} year${years !== 1 ? 's' : ''} ago`
           : months >= 1
-          ? `${months} month${months > 1 ? 's' : ''} ago`
-          : `${absDays} day${absDays !== 1 ? 's' : ''} ago`
+          ? `${months} month${months !== 1 ? 's' : ''} ago`
+          : `${days} day${days !== 1 ? 's' : ''} ago`
       })()
 
   return (

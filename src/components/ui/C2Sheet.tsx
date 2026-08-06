@@ -263,6 +263,11 @@ export function C2Sheet({
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  // Keep a stable ref to onClose so the focus-trap effect never re-fires
+  // just because the parent re-renders and passes a new function reference.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+
   // Trap focus inside sheet when open
   useEffect(() => {
     if (!open) return
@@ -281,7 +286,7 @@ export function C2Sheet({
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab') return
@@ -306,12 +311,12 @@ export function C2Sheet({
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    // Auto-focus first interactive element
+    // Auto-focus first interactive element (only on open, not on every re-render)
     const first = panel.querySelector<HTMLElement>(focusableSelectors)
     if (first) first.focus()
 
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+  }, [open])
 
   return (
     <AnimatePresence>

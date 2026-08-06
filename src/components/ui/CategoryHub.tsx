@@ -939,7 +939,7 @@ export function ShoppingDetailSheet({
     if (!editingItemId || !editName.trim()) return
     onUpdateItem(editingItemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty) || 1,
+      quantity: parseFloat(editQty) || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim() || undefined,
     })

@@ -198,11 +198,16 @@ function collectDatedItems(
     }
   })
 
-  // Focus activities: one reminder at the user-configured offset
+  // Focus activities: one push notification per configured reminder offset
   ;(store.focusActivities ?? []).forEach(a => {
-    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
-    const offsetMs = FOCUS_OFFSET_MS[a.reminder]
-    if (offsetMs === undefined) return
+    if (a.isCompleted || !a.time) return
+    // Support both new `reminders` array and legacy `reminder` single value
+    const activeReminders = a.reminders && a.reminders.length > 0
+      ? a.reminders
+      : a.reminder && a.reminder !== 'none'
+      ? [a.reminder]
+      : []
+    if (activeReminders.length === 0) return
 
     const monday  = getWeekStartDate(a.weekKey)
     const actDate = new Date(monday)
@@ -211,14 +216,23 @@ function collectDatedItems(
     if (isNaN(h) || isNaN(m)) return
     actDate.setHours(h, m, 0, 0)
 
-    const fireAtMs = actDate.getTime() - offsetMs
-    if (fireAtMs <= Date.now()) return
+    const scheduledReminders = activeReminders
+      .map(r => {
+        const offsetMs = FOCUS_OFFSET_MS[r]
+        if (offsetMs === undefined) return null
+        const fireAtMs = actDate.getTime() - offsetMs
+        if (fireAtMs <= Date.now()) return null
+        return { fireAt: new Date(fireAtMs).toISOString(), label: r }
+      })
+      .filter(Boolean) as { fireAt: string; label: string }[]
+
+    if (scheduledReminders.length === 0) return
 
     items.push({
       id:        a.id,
       type:      'focus',
       title:     a.title,
-      reminders: [{ fireAt: new Date(fireAtMs).toISOString(), label: a.reminder }],
+      reminders: scheduledReminders,
     })
   })
 

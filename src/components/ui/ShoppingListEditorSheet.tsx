@@ -149,7 +149,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     if (!list || !editingItemId || !editName.trim()) return
     updateStoreItem(list.id, editingItemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty) || 1,
+      quantity: parseFloat(editQty) || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim() || undefined,
       photo:    editPhoto,

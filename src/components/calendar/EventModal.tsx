@@ -41,6 +41,8 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [color, setColor]           = useState<CalendarEvent['color']>('seval')
   const [todos, setTodos]           = useState<EventTodo[]>([])
   const [newTodo, setNewTodo]       = useState('')
+  const [editingTodoId,   setEditingTodoId]   = useState<string | null>(null)
+  const [editingTodoText, setEditingTodoText] = useState('')
   const [showDelete, setShowDelete] = useState(false)
   const [photos, setPhotos]         = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -170,6 +172,21 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setTodos(prev => prev.filter(t => t.id !== id))
   }
 
+  function startEditTodo(id: string, title: string) {
+    setEditingTodoId(id)
+    setEditingTodoText(title)
+  }
+
+  function commitEditTodo() {
+    if (!editingTodoId) return
+    const text = editingTodoText.trim()
+    if (text) {
+      setTodos(prev => prev.map(t => t.id === editingTodoId ? { ...t, title: text } : t))
+    }
+    setEditingTodoId(null)
+    setEditingTodoText('')
+  }
+
   const activeColor = COLOR_OPTIONS.find(c => c.value === color)
 
   return (
@@ -286,12 +303,29 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                       >
                         {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
                       </button>
-                      <span className={cn(
-                        'flex-1 text-sm',
-                        todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
-                      )}>
-                        {todo.title}
-                      </span>
+                      {editingTodoId === todo.id ? (
+                        <input
+                          autoFocus
+                          value={editingTodoText}
+                          onChange={e => setEditingTodoText(e.target.value)}
+                          onBlur={commitEditTodo}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); commitEditTodo() }
+                            if (e.key === 'Escape') { setEditingTodoId(null) }
+                          }}
+                          className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5"
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            'flex-1 text-sm',
+                            todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                          )}
+                          onClick={() => !todo.isCompleted && startEditTodo(todo.id, todo.title)}
+                        >
+                          {todo.title}
+                        </span>
+                      )}
                       <button
                         onClick={() => removeTodo(todo.id)}
                         className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400

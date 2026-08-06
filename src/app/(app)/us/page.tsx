@@ -625,7 +625,7 @@ export default function UsPage() {
 
   // Computed
   const pastCountdowns = countdowns
-    .filter(c => c.date < todayStr)
+    .filter(c => c.date <= todayStr)
     .sort((a, b) => b.date.localeCompare(a.date))
 
   const sortedMemories = useMemo(

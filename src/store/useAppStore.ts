@@ -145,7 +145,7 @@ interface AppState {
     weekKey: string; dayIndex: number; title: string
     time?: string; notes?: string
     checklist?: FocusChecklistItem[]; photos?: string[]
-    reminder?: FocusReminder; priority?: FocusPriority
+    reminder?: FocusReminder; reminders?: FocusReminder[]; priority?: FocusPriority
     owner?: UserName | 'both'
   }) => string
   updateFocusActivity: (id: string, updates: Partial<FocusActivity>) => void
@@ -1112,6 +1112,7 @@ export const useAppStore = create<AppState>()(
           createdAt:   now,
           updatedAt:   now,
           reminder:    data.reminder,
+          reminders:   data.reminders,
           priority:    data.priority,
         }
         set(s => ({ focusActivities: [...s.focusActivities, activity] }))

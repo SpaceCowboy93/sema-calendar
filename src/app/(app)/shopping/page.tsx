@@ -264,7 +264,7 @@ export default function ShoppingPage() {
     if (!editingItem || !editName.trim()) return
     updateItem(editingItem.listId, editingItem.itemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty)     || 1,
+      quantity: parseFloat(editQty)    || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim()      || undefined,
     })

@@ -61,11 +61,13 @@ export function FocusActivitySheet({
   // ── Form state ──
   const [title,         setTitle]         = useState('')
   const [time,          setTime]          = useState('')
-  const [reminder,      setReminder]      = useState<FocusReminder>('none')
+  const [reminders,     setReminders]     = useState<FocusReminder[]>([])
   const [notes,         setNotes]         = useState('')
   const [priority,      setPriority]      = useState<FocusPriority | 'none'>('none')
   const [checklist,     setChecklist]     = useState<FocusChecklistItem[]>([])
   const [newItem,       setNewItem]       = useState('')
+  const [editingChecklistId,   setEditingChecklistId]   = useState<string | null>(null)
+  const [editingChecklistText, setEditingChecklistText] = useState('')
   const [photos,        setPhotos]        = useState<string[]>([])
   const [uploading,     setUploading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -86,7 +88,14 @@ export function FocusActivitySheet({
     if (activity) {
       setTitle(activity.title)
       setTime(activity.time ?? '')
-      setReminder(activity.reminder ?? 'none')
+      // Prefer new `reminders` array; fall back to legacy single `reminder`
+      setReminders(
+        activity.reminders
+          ? [...activity.reminders]
+          : activity.reminder && activity.reminder !== 'none'
+          ? [activity.reminder]
+          : []
+      )
       setPriority(activity.priority ?? 'none')
       setNotes(activity.notes ?? '')
       setChecklist(activity.checklist ? [...activity.checklist] : [])
@@ -94,7 +103,7 @@ export function FocusActivitySheet({
     } else {
       setTitle(suggestedTitle ?? '')
       setTime('')
-      setReminder('none')
+      setReminders([])
       setPriority('none')
       setNotes('')
       setChecklist([])
@@ -120,6 +129,21 @@ export function FocusActivitySheet({
 
   function removeChecklistItem(id: string) {
     setChecklist(prev => prev.filter(i => i.id !== id))
+  }
+
+  function startEditChecklistItem(id: string, text: string) {
+    setEditingChecklistId(id)
+    setEditingChecklistText(text)
+  }
+
+  function commitEditChecklistItem() {
+    if (!editingChecklistId) return
+    const text = editingChecklistText.trim()
+    if (text) {
+      setChecklist(prev => prev.map(i => i.id === editingChecklistId ? { ...i, text } : i))
+    }
+    setEditingChecklistId(null)
+    setEditingChecklistText('')
   }
 
   // ── Photo upload ──
@@ -153,16 +177,18 @@ export function FocusActivitySheet({
 
     setSaving(true)
     try {
-      const checklistData = checklist.length > 0 ? checklist : undefined
-      const timeTrimmed   = time.trim() || undefined
-      const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
-      const priorityVal   = priority !== 'none' ? priority : undefined
+      const checklistData  = checklist.length > 0 ? checklist : undefined
+      const timeTrimmed    = time.trim() || undefined
+      // Only keep reminders that make sense when a time is set
+      const remindersVal   = timeTrimmed && reminders.length > 0 ? reminders : undefined
+      const priorityVal    = priority !== 'none' ? priority : undefined
 
       if (isEdit && activity) {
         updateFocusActivity(activity.id, {
           title:     titleTrimmed,
           time:      timeTrimmed,
-          reminder:  reminderVal,
+          reminders: remindersVal,
+          reminder:  undefined,
           priority:  priorityVal,
           notes:     notes.trim() || undefined,
           checklist: checklistData,
@@ -173,7 +199,7 @@ export function FocusActivitySheet({
           dayIndex,
           title:     titleTrimmed,
           time:      timeTrimmed,
-          reminder:  reminderVal,
+          reminders: remindersVal,
           priority:  priorityVal,
           notes:     notes.trim() || undefined,
           checklist: checklistData,
@@ -280,42 +306,48 @@ export function FocusActivitySheet({
                     value={time}
                     onChange={e => {
                       setTime(e.target.value)
-                      // Clear reminder if time is removed
-                      if (!e.target.value) setReminder('none')
+                      // Clear reminders if time is removed
+                      if (!e.target.value) setReminders([])
                     }}
                     className="text-sm text-gray-700 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent w-full"
                   />
                 </div>
 
-                {/* Reminder */}
+                {/* Reminders (multi-select) */}
                 <div className="mb-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
-                    Reminder{' '}
-                    <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Reminders{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional, tap to toggle)</span>
                   </label>
 
                   {!hasTime ? (
                     <p className="text-xs text-gray-300">Set a time above to enable reminders</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {REMINDER_OPTIONS.map(opt => {
-                        const isActive = reminder === opt.value
+                      {REMINDER_OPTIONS.filter(opt => opt.value !== 'none').map(opt => {
+                        const isActive = reminders.includes(opt.value)
                         return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setReminder(opt.value)}
-                          aria-pressed={isActive}
-                          className={cn(
-                            'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
-                            isActive
-                              ? 'text-white'
-                              : 'bg-gray-100 text-gray-500',
-                          )}
-                          style={isActive ? { background: primary } : undefined}
-                        >
-                          {opt.label}
-                        </button>
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() =>
+                              setReminders(prev =>
+                                isActive
+                                  ? prev.filter(r => r !== opt.value)
+                                  : [...prev, opt.value]
+                              )
+                            }
+                            aria-pressed={isActive}
+                            className={cn(
+                              'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
+                              isActive
+                                ? 'text-white'
+                                : 'bg-gray-100 text-gray-500',
+                            )}
+                            style={isActive ? { background: primary } : undefined}
+                          >
+                            {opt.label}
+                          </button>
                         )
                       })}
                     </div>
@@ -393,9 +425,26 @@ export function FocusActivitySheet({
                               </svg>
                             )}
                           </button>
-                          <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                            {item.text}
-                          </span>
+                          {editingChecklistId === item.id ? (
+                            <input
+                              autoFocus
+                              value={editingChecklistText}
+                              onChange={e => setEditingChecklistText(e.target.value)}
+                              onBlur={commitEditChecklistItem}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') { e.preventDefault(); commitEditChecklistItem() }
+                                if (e.key === 'Escape') { setEditingChecklistId(null) }
+                              }}
+                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5"
+                            />
+                          ) : (
+                            <span
+                              className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                              onClick={() => !item.done && startEditChecklistItem(item.id, item.text)}
+                            >
+                              {item.text}
+                            </span>
+                          )}
                           <button
                             onClick={() => removeChecklistItem(item.id)}
                             className="text-gray-300 active:text-gray-500"

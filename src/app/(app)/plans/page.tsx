@@ -848,9 +848,14 @@ function FinanceCategoryEditorSheet({
   }
 
   function save() {
+    // If expense line items are present, auto-compute actual spending from them
+    const itemsTotal = catItems.reduce((sum, ci) => sum + ci.quantity * ci.unitPrice, 0)
+    const actualValue = catItems.length > 0 && itemsTotal > 0
+      ? itemsTotal
+      : parseFloat(actual.replace(',', '.')) || 0
     onSave({
       planned: parseFloat(planned.replace(',', '.')) || 0,
-      actual:  parseFloat(actual.replace(',', '.')) || 0,
+      actual:  actualValue,
       note:    note.trim() || undefined,
       photos:  photos.length > 0 ? photos : undefined,
       items:   catItems.length > 0 ? catItems : undefined,
@@ -897,15 +902,29 @@ function FinanceCategoryEditorSheet({
             </div>
 
             {/* Actual Spending */}
-            <div className="bg-gray-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Actual Spending</p>
-              <div className="flex items-center gap-1">
-                <span className="text-gray-400 font-semibold">{CURRENCY}</span>
-                <input type="number" value={actual} onChange={e => setActual(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
-              </div>
-            </div>
+            {(() => {
+              const itemsTotal = catItems.reduce((sum, ci) => sum + ci.quantity * ci.unitPrice, 0)
+              const autoSum = catItems.length > 0 && itemsTotal > 0
+              return (
+                <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Actual Spending{autoSum ? ' · auto from items' : ''}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-400 font-semibold">{CURRENCY}</span>
+                    {autoSum ? (
+                      <span className="flex-1 text-base font-semibold text-gray-800">
+                        {itemsTotal.toFixed(2)}
+                      </span>
+                    ) : (
+                      <input type="number" value={actual} onChange={e => setActual(e.target.value)}
+                        placeholder="0"
+                        className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Note */}
             <div className="bg-gray-50 rounded-2xl px-4 py-3">
