@@ -314,7 +314,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                             if (e.key === 'Enter') { e.preventDefault(); commitEditTodo() }
                             if (e.key === 'Escape') { setEditingTodoId(null) }
                           }}
-                          className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5"
+                          className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
                         />
                       ) : (
                         <span

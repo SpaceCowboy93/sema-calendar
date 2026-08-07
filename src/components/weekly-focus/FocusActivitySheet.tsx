@@ -291,7 +291,7 @@ export function FocusActivitySheet({
                     placeholder="What are you planning?"
                     inputMode="text"
                     enterKeyHint="done"
-                    className="w-full text-sm text-gray-800 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent"
+                    className="w-full text-sm text-gray-800 placeholder:text-gray-300 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
                     onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
                   />
                 </div>
@@ -396,7 +396,7 @@ export function FocusActivitySheet({
                     placeholder="Any notes..."
                     rows={2}
                     enterKeyHint="enter"
-                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent resize-none leading-relaxed"
+                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-4 py-3 outline-none resize-none leading-relaxed"
                   />
                 </div>
 
@@ -435,7 +435,7 @@ export function FocusActivitySheet({
                                 if (e.key === 'Enter') { e.preventDefault(); commitEditChecklistItem() }
                                 if (e.key === 'Escape') { setEditingChecklistId(null) }
                               }}
-                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 focus-visible:shadow-none"
+                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
                             />
                           ) : (
                             <button
@@ -464,7 +464,7 @@ export function FocusActivitySheet({
                       placeholder="Add item..."
                       inputMode="text"
                       enterKeyHint="done"
-                      className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent border-b border-gray-100 pb-1"
+                      className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-gray-50 rounded-xl px-3 py-2"
                       onKeyDown={e => {
                         if (e.key === 'Enter') { e.preventDefault(); addChecklistItem() }
                       }}

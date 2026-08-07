@@ -301,10 +301,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   100% { opacity: 1; }
 }
 
+/* ── Default input border-radius ────────────────────────────────────────────── */
+/* Root cause of square focus rings: transparent inputs inside rounded container  *
+ * divs have border-radius:0 by default. CSS box-shadow follows the element's     *
+ * OWN border-radius — so the ring appears square even when the wrapper is        *
+ * visually rounded.                                                               *
+ *                                                                                 *
+ * Fix: give every text-entry element a 1rem (16px) default radius. For           *
+ * bg-transparent inputs this has no visible effect on the field itself — only    *
+ * the focus ring shape is affected. Explicit Tailwind rounded-* classes on       *
+ * individual elements override this (class selector 0,1,0 > element 0,0,1).     */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  border-radius: 1rem; /* 16px — matches rounded-2xl used by SeMa field wrappers */
+}
+
 /* ── Focus ring ─────────────────────────────────────────────────────────── */
 /* Applied via focus-visible so keyboard-only users see focus indicators.   *
- * Soft SeMa sage treatment — no hard green boxes, no thick outlines.       *
- * Outline in modern Chrome follows border-radius automatically.             */
+ * Soft SeMa sage treatment — thin border + ambient glow, follows radius.   */
 
 /* Non-form elements (buttons, links, etc.) — thin, low-opacity sage line */
 :focus-visible {
@@ -322,15 +337,32 @@ input, textarea, select {
   transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 
-/* Form controls: single soft ambient glow instead of a hard double-ring.
-   box-shadow follows each element's own border-radius automatically,
-   so rounded-2xl inputs get a rounded glow — no square rectangle ever.
+/* Form controls: soft ambient glow. box-shadow follows the 1rem border-radius
+   set above — every input now gets a rounded focus ring automatically.
    Specificity (0,1,1) wins over :focus-visible (0,1,0). */
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(143, 166, 141, 0.18), 0 0 10px rgba(143, 166, 141, 0.10);
+}
+
+/* ── c2-sheet-section focus highlight ───────────────────────────────────── */
+/* FullCreateSheet wraps each field group in c2-sheet-section (the visual     *
+ * rounded card). The textarea/input inside is transparent — highlight the    *
+ * WHOLE card via :focus-within rather than ringing the individual input,     *
+ * which would appear as a floating ring inside the card.                     */
+.c2-sheet-section {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.c2-sheet-section:focus-within {
+  border-color: rgba(143, 166, 141, 0.45);
+  box-shadow: 0 0 0 2px rgba(143, 166, 141, 0.10), 0 2px 8px rgba(143, 166, 141, 0.08);
+}
+/* Suppress the individual input ring inside a section card */
+.c2-sheet-section input:focus-visible,
+.c2-sheet-section textarea:focus-visible {
+  box-shadow: none;
 }
 
 /* Ghost / transparent inline-edit inputs (checklist, inline forms).

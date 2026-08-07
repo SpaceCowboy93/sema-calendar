@@ -392,7 +392,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           enterKeyHint="send"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
-                                     transition-colors bg-transparent resize-none leading-snug"
+                                     transition-colors bg-transparent resize-none leading-snug rounded-none focus-visible:shadow-none"
                         />
                       ) : (
                         <input
@@ -404,7 +404,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           enterKeyHint="next"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
-                                     transition-colors bg-transparent"
+                                     transition-colors bg-transparent rounded-none focus-visible:shadow-none"
                         />
                       )}
                     </div>
@@ -482,7 +482,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                                         if (e.key === 'Enter')  { e.preventDefault(); commitEditCheck() }
                                         if (e.key === 'Escape') { setEditingCheckId(null) }
                                       }}
-                                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 focus-visible:shadow-none"
+                                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
                                     />
                                   ) : (
                                     <button
