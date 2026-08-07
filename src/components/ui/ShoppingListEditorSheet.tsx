@@ -10,6 +10,7 @@ import { generateId, cn } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 const RED = '#ef4444'
 
@@ -255,8 +256,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
       />
       <div className="flex gap-2">
         <DatePicker value={date} onChange={setDate} placeholder="Date (optional)" className="flex-1" />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)}
-          className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
+        <TimePicker value={time} onChange={setTime} className="flex-1" />
       </div>
       <textarea
         value={notes} onChange={e => setNotes(e.target.value)}

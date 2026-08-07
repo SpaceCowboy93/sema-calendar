@@ -10,6 +10,7 @@ import { generateId, cn } from '@/lib/utils'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import { Chip, ChipGroup, C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
@@ -412,12 +413,11 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 shrink-0" />
-                              <input
-                                type="time"
+                              <TimePicker
                                 value={time}
-                                onChange={e => setTime(e.target.value)}
-                                className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                                           outline-none shadow-card"
+                                onChange={setTime}
+                                className="flex-1"
+                                triggerClassName="bg-white rounded-xl px-3 py-1.5 shadow-card"
                               />
                               <span className="text-xs text-gray-400 shrink-0">start time</span>
                             </div>

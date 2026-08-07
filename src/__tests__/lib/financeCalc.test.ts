@@ -279,3 +279,39 @@ describe('buildReport', () => {
     expect(report.totalSaved).toBe(dash.saved)
   })
 })
+
+// ── Finance decimal regression ────────────────────────────────────────────────
+// These tests guard against integer-snapping in quantity × price calculations.
+
+describe('Finance decimal regression — quantity × price precision', () => {
+  it('1.25 × €1 = €1.25', () => {
+    expect(listCost([{ quantity: 1.25, price: 1 }])).toBeCloseTo(1.25)
+  })
+
+  it('1.25 × €10 = €12.50', () => {
+    expect(listCost([{ quantity: 1.25, price: 10 }])).toBeCloseTo(12.50)
+  })
+
+  it('0.25 × €8 = €2.00', () => {
+    expect(listCost([{ quantity: 0.25, price: 8 }])).toBeCloseTo(2.00)
+  })
+
+  it('0.5 × €3.50 = €1.75', () => {
+    expect(listCost([{ quantity: 0.5, price: 3.50 }])).toBeCloseTo(1.75)
+  })
+
+  it('2.75 × €4 = €11.00', () => {
+    expect(listCost([{ quantity: 2.75, price: 4 }])).toBeCloseTo(11.00)
+  })
+
+  it('calcMonth preserves decimal actual spending in remaining', () => {
+    const decimalMonth = makeMonth({
+      budgetItems: [
+        { id: 'b1', category: 'Food', emoji: '🛒', planned: 500, actual: 123.45 },
+      ],
+    })
+    const c = calcMonth(decimalMonth, [])
+    expect(c.expenses).toBeCloseTo(123.45)
+    expect(c.remaining).toBeCloseTo(5000 - 123.45)
+  })
+})

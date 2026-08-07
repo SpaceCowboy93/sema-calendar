@@ -9,6 +9,7 @@ import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 export const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Wishes'  },
@@ -261,12 +262,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8" />
-                  <input
-                    type="time"
+                  <TimePicker
                     value={startTime}
-                    onChange={e => setStartTime(e.target.value)}
-                    className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                               outline-none shadow-card"
+                    onChange={setStartTime}
+                    className="flex-1"
+                    triggerClassName="bg-white rounded-xl px-3 py-1.5 shadow-card"
                   />
                   <span className="text-xs text-gray-400">start time (optional)</span>
                 </div>

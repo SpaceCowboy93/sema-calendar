@@ -8,6 +8,7 @@ import type { EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'
 import { Chip, C2Sheet, C2SheetHeader, C2SheetBody } from '@/components/ui'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
@@ -181,11 +182,11 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
               {showDatetime && (
                 <div className="flex gap-2">
                   <DatePicker value={date} onChange={setDate} className="flex-1" />
-                  <input
-                    type="time"
+                  <TimePicker
                     value={time}
-                    onChange={e => setTime(e.target.value)}
-                    className="w-28 text-sm text-gray-600 c2-sheet-section px-3 py-3 outline-none"
+                    onChange={setTime}
+                    className="w-28"
+                    triggerClassName="c2-sheet-section px-3 py-3"
                   />
                 </div>
               )}

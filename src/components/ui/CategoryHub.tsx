@@ -16,6 +16,7 @@ import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatTime } from '@/lib/utils'
 import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 import {
   USERS,
   type UserName, type WishlistCategory, type GoalCategory,
@@ -393,8 +394,8 @@ export function CategoryHubSheet({
                     </div>
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                       <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Time</p>
-                      <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
-                        className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+                      <TimePicker value={editTime} onChange={setEditTime}
+                        triggerClassName="bg-transparent px-0 py-0 rounded-none" />
                     </div>
                   </div>
                 </div>

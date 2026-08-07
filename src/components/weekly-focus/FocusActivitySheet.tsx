@@ -9,6 +9,7 @@ import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { C2Sheet, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 interface Props {
   open: boolean
@@ -301,15 +302,14 @@ export function FocusActivitySheet({
                     Time{' '}
                     <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
-                  <input
-                    type="time"
+                  <TimePicker
                     value={time}
-                    onChange={e => {
-                      setTime(e.target.value)
+                    onChange={v => {
+                      setTime(v)
                       // Clear reminders if time is removed
-                      if (!e.target.value) setReminders([])
+                      if (!v) setReminders([])
                     }}
-                    className="text-sm text-gray-700 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent w-full"
+                    triggerClassName="bg-gray-50"
                   />
                 </div>
 

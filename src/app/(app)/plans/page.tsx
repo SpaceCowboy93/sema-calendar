@@ -27,10 +27,6 @@ const CURRENCY = '€'
 
 /* ── helpers ─────────────────────────────────────────────────────────────────── */
 function fmt(n: number) {
-  return `${CURRENCY}${Math.abs(n).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-}
-/** Like fmt but preserves up to 2 decimal places when the value is not a whole number */
-function fmtD(n: number) {
   const abs  = Math.abs(n)
   const opts = Number.isInteger(abs)
     ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
@@ -905,7 +901,7 @@ function FinanceCategoryEditorSheet({
               <div className="flex items-center gap-1">
                 <span className="text-gray-400 font-semibold">{CURRENCY}</span>
                 <input type="number" value={planned} onChange={e => setPlanned(e.target.value)}
-                  placeholder="0"
+                  placeholder="0" min="0" step="any" inputMode="decimal"
                   className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
               </div>
             </div>
@@ -927,7 +923,7 @@ function FinanceCategoryEditorSheet({
                       </span>
                     ) : (
                       <input type="number" value={actual} onChange={e => setActual(e.target.value)}
-                        placeholder="0"
+                        placeholder="0" min="0" step="any" inputMode="decimal"
                         className="flex-1 text-base font-semibold text-gray-800 bg-transparent outline-none" />
                     )}
                   </div>
@@ -978,6 +974,7 @@ function FinanceCategoryEditorSheet({
                 />
                 <input
                   type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} placeholder="€"
+                  min="0" step="any" inputMode="decimal"
                   className="w-14 text-xs bg-gray-50 rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0"
                 />
                 <button
@@ -1059,11 +1056,11 @@ function ItemRow({ item, onEdit, onDelete }: { item: FinanceCategoryItem; onEdit
           <p className="text-sm font-medium text-gray-700 truncate">{item.name}</p>
         </div>
         <p className="text-[10px] text-gray-400">
-          {item.quantity} × {fmtD(item.unitPrice)}
+          {item.quantity} × {fmt(item.unitPrice)}
           {item.note ? ` · ${item.note}` : ''}
         </p>
       </div>
-      <p className="text-sm font-bold text-gray-700 shrink-0">{fmtD(item.quantity * item.unitPrice)}</p>
+      <p className="text-sm font-bold text-gray-700 shrink-0">{fmt(item.quantity * item.unitPrice)}</p>
       <button
         onClick={onEdit}
         className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 active:bg-gray-100 shrink-0"
@@ -1145,12 +1142,13 @@ function ItemForm({
             value={unitPrice}
             onChange={e => setUnitPrice(e.target.value)}
             placeholder="Unit price"
+            min="0" step="any" inputMode="decimal"
             className="flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none"
           />
         </div>
         {lineTotal > 0 && (
           <div className="bg-white/80 rounded-xl px-3 py-2 flex items-center shrink-0">
-            <span className="text-sm font-bold" style={{ color: '#9EC9B3' }}>{fmtD(lineTotal)}</span>
+            <span className="text-sm font-bold" style={{ color: '#9EC9B3' }}>{fmt(lineTotal)}</span>
           </div>
         )}
       </div>

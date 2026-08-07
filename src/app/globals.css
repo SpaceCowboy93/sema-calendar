@@ -310,7 +310,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    Keyboard users still see a clear focus indicator — just SeMa-branded. */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(143, 166, 141, 0.40);
+  box-shadow: 0 0 0 1.5px rgba(143, 166, 141, 0.50), 0 0 0 4px rgba(143, 166, 141, 0.12);
+  transition: box-shadow 150ms ease;
 }
 
 /* ── Reduced motion ─────────────────────────────────────────────────────── */
