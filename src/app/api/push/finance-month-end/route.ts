@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 // POST — schedule a month-end finance push notification for both users
 // Body: { monthKey: 'YYYY-MM', fireAt: ISO string }
@@ -27,7 +20,8 @@ export async function POST(req: NextRequest) {
     const [year, month] = monthKey.split('-').map(Number)
     const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 
-    const supabase = adminClient()
+    const supabase = getAdminClient()
+    if (!supabase) return supabaseUnavailable()
 
     const rows = ['seval', 'mateo'].map(user => ({
       couple_id:            'sema',

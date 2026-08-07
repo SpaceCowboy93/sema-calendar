@@ -2,12 +2,15 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
+import { X, Camera, Plus, Pencil, ShoppingBag, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import type { ShoppingList, ShoppingItem } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
+import { C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 const RED = '#ef4444'
 
@@ -129,7 +132,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(), photo: itemPhoto,
       }])
     } else if (list) {
-      addStoreItem(list.id, itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
+      addStoreItem(list.id, itemName.trim(), parseFloat(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
     }
     setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes(''); setItemPhoto(undefined)
   }, [mode, list, itemName, itemQty, itemPrice, itemNotes, itemPhoto, addStoreItem])
@@ -148,7 +151,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     if (!list || !editingItemId || !editName.trim()) return
     updateStoreItem(list.id, editingItemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty) || 1,
+      quantity: parseFloat(editQty) || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim() || undefined,
       photo:    editPhoto,
@@ -171,6 +174,12 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     const validPhotos = photos.filter(p => p.length > 0)
     try {
       if (mode === 'create') {
+        // Include any item the user typed but didn't press + to confirm yet
+        const pendingItem: DraftItem | null = itemName.trim()
+          ? { id: generateId(), name: itemName.trim(), qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(), photo: itemPhoto }
+          : null
+        const allItems = pendingItem ? [...draftItems, pendingItem] : draftItems
+
         const id = createList({
           name: name.trim(),
           storeName: storeName.trim() || undefined,
@@ -180,8 +189,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           photos: validPhotos.length ? validPhotos : undefined,
           coverPhoto: validPhotos[0] || undefined,
         })
-        for (const it of draftItems) {
-          addStoreItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
+        for (const it of allItems) {
+          addStoreItem(id, it.name, parseFloat(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
         }
         onSave(id)
       } else if (list) {
@@ -202,7 +211,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   }
 
   /* ── Computed ─────────────────────────────────────────────────────────── */
-  const draftTotal  = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0)
+  const draftTotal  = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseFloat(it.qty) || 1), 0)
   const editTotal   = mode === 'edit' && list ? listTotal(list) : 0
   const displayTotal = mode === 'create' ? draftTotal : editTotal
   const liveItems   = mode === 'edit' ? (list?.items ?? []) : []
@@ -252,10 +261,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
       />
       <div className="flex gap-2">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)}
-          className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
+        <DatePicker value={date} onChange={setDate} placeholder="Date (optional)" className="flex-1" />
+        <TimePicker value={time} onChange={setTime} className="flex-1" />
       </div>
       <textarea
         value={notes} onChange={e => setNotes(e.target.value)}
@@ -304,9 +311,12 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
               placeholder="Item name…"
               className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100 min-w-0"
             />
-            <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
+            <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)}
+              onFocus={e => e.target.select()}
+              min="0" step="any" inputMode="decimal"
               className="w-10 text-xs text-center bg-white rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0" />
             <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+              min="0" step="any" inputMode="decimal"
               className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0" />
             <button
               onClick={handleAddItem} disabled={!itemName.trim()}
@@ -336,7 +346,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                     <p className="text-[10px] text-gray-400">
                       ×{it.qty}
                       {it.price ? ` · €${parseFloat(it.price).toFixed(2)}` : ''}
-                      {parseFloat(it.price) > 0 && parseInt(it.qty) > 1 ? ` = €${(parseFloat(it.price) * parseInt(it.qty)).toFixed(2)}` : ''}
+                      {parseFloat(it.price) > 0 && parseFloat(it.qty) > 1 ? ` = €${(parseFloat(it.price) * parseFloat(it.qty)).toFixed(2)}` : ''}
                       {it.notes ? ` · ${it.notes}` : ''}
                     </p>
                   </div>
@@ -391,11 +401,14 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                           className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-1.5 outline-none min-w-0"
                         />
                         <input
-                          type="number" value={editQty} onChange={e => setEditQty(e.target.value)} min="1"
+                          type="number" value={editQty} onChange={e => setEditQty(e.target.value)}
+                          onFocus={e => e.target.select()}
+                          min="0" step="any" inputMode="decimal"
                           className="w-12 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1.5 outline-none shrink-0"
                         />
                         <input
                           type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="€"
+                          min="0" step="any" inputMode="decimal"
                           className="w-16 text-xs bg-gray-50 rounded-lg px-2 py-1.5 outline-none shrink-0"
                         />
                       </div>
@@ -403,9 +416,9 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                         type="text" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Note (optional)"
                         className="w-full text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5 outline-none"
                       />
-                      {parseFloat(editPrice) > 0 && parseInt(editQty) > 1 && (
+                      {parseFloat(editPrice) > 0 && parseFloat(editQty) > 0 && (
                         <p className="text-[10px] text-gray-400 pl-1">
-                          Line total: €{(parseFloat(editPrice) * parseInt(editQty)).toFixed(2)}
+                          Line total: €{(parseFloat(editPrice) * parseFloat(editQty)).toFixed(2)}
                         </p>
                       )}
                       <div className="flex gap-1.5">
@@ -487,17 +500,17 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         className="fixed inset-0 z-[80] flex items-end justify-center p-4"
         onClick={() => setDeleteConfirmId(null)}
       >
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 c2-backdrop" />
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
           onClick={e => e.stopPropagation()}
-          className="relative bg-white rounded-3xl p-5 w-full max-w-xs text-center shadow-modal"
+          className="relative c2-sheet-bg rounded-3xl p-5 w-full max-w-xs text-center shadow-modal"
         >
           <p className="font-bold text-gray-800 mb-1">Remove item?</p>
           <p className="text-sm text-gray-400 mb-4">This can&apos;t be undone.</p>
           <div className="flex gap-2">
-            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm">Cancel</button>
-            <button onClick={() => confirmDeleteItem(deleteConfirmId)} className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm">Remove</button>
+            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 rounded-2xl c2-sheet-cancel font-medium text-sm">Cancel</button>
+            <button onClick={() => confirmDeleteItem(deleteConfirmId)} className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm">Remove</button>
           </div>
         </motion.div>
       </motion.div>
@@ -517,38 +530,14 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/20"
-      />
-      <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
-                   max-w-lg mx-auto flex flex-col"
-        style={{ maxHeight: 'calc(100dvh - 48px)' }}
-      >
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <div className="drag-handle mb-3" />
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-gray-800">
-              {mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'} ❤️
-            </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
-          {formContent}
-        </div>
-
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
-          {saveButton}
-        </div>
-      </motion.div>
+      <C2Sheet open zIndex={60} onClose={onClose} aria-label={mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'}>
+        <C2SheetHeader
+          title={mode === 'create' ? 'New Shopping List' : 'Edit Shopping List'}
+          onClose={onClose}
+        />
+        <C2SheetBody>{formContent}</C2SheetBody>
+        <C2SheetFooter>{saveButton}</C2SheetFooter>
+      </C2Sheet>
 
       {deleteConfirm}
     </>

@@ -2,28 +2,30 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays } from 'lucide-react'
+import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays, type LucideIcon, Globe, Coins, Dumbbell, Leaf, BookOpen, Palette, Trophy, PartyPopper } from '@/design/iconSystem'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { type Goal, type GoalCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { EmptyState, Progress, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 /* ─── Category config ─────────────────────────────────────────────────────────── */
 const GOAL_CATEGORIES: Record<GoalCategory, {
-  emoji: string
+  icon: LucideIcon
   label: string
   gradient: string
   lightBg: string
   accent: string
 }> = {
-  travel:     { emoji: '✈️',  label: 'Travel',            gradient: 'from-sky-400 to-blue-500',       lightBg: 'bg-sky-50',    accent: '#0ea5e9' },
-  money:      { emoji: '💰',  label: 'Money',             gradient: 'from-emerald-400 to-green-500',  lightBg: 'bg-emerald-50',accent: '#10b981' },
-  fitness:    { emoji: '🏃',  label: 'Fitness',           gradient: 'from-orange-400 to-red-500',     lightBg: 'bg-orange-50', accent: '#f97316' },
-  life:       { emoji: '🌍',  label: 'Life',              gradient: 'from-violet-400 to-purple-500',  lightBg: 'bg-violet-50', accent: '#8b5cf6' },
-  learning:   { emoji: '📚',  label: 'Learning & Growth', gradient: 'from-yellow-400 to-amber-500',   lightBg: 'bg-yellow-50', accent: '#f59e0b' },
-  hobbies:    { emoji: '🎨',  label: 'Hobbies',           gradient: 'from-pink-400 to-rose-500',      lightBg: 'bg-pink-50',   accent: '#ec4899' },
-  challenges: { emoji: '🎯',  label: 'Fun Challenges',    gradient: 'from-teal-400 to-cyan-500',      lightBg: 'bg-teal-50',   accent: '#14b8a6' },
+  travel:     { icon: Globe,    label: 'Travel',            gradient: 'from-sky-400 to-blue-500',       lightBg: 'bg-sky-50',    accent: '#0ea5e9' },
+  money:      { icon: Coins,    label: 'Money',             gradient: 'from-emerald-400 to-green-500',  lightBg: 'bg-emerald-50',accent: '#10b981' },
+  fitness:    { icon: Dumbbell, label: 'Fitness',           gradient: 'from-orange-400 to-red-500',     lightBg: 'bg-orange-50', accent: '#f97316' },
+  life:       { icon: Leaf,     label: 'Life',              gradient: 'from-violet-400 to-purple-500',  lightBg: 'bg-violet-50', accent: '#8b5cf6' },
+  learning:   { icon: BookOpen, label: 'Learning & Growth', gradient: 'from-yellow-400 to-amber-500',   lightBg: 'bg-yellow-50', accent: '#f59e0b' },
+  hobbies:    { icon: Palette,  label: 'Hobbies',           gradient: 'from-pink-400 to-rose-500',      lightBg: 'bg-pink-50',   accent: '#ec4899' },
+  challenges: { icon: Trophy,   label: 'Fun Challenges',    gradient: 'from-teal-400 to-cyan-500',      lightBg: 'bg-teal-50',   accent: '#14b8a6' },
 }
 
 const CATEGORY_ORDER: GoalCategory[] = [
@@ -92,13 +94,14 @@ function CelebrationOverlay({ active, onDone }: { active: boolean; onDone: () =>
                        flex items-center gap-3 mx-6"
             style={{ top: '38%' }}
           >
-            <motion.span
+            <motion.div
               animate={{ rotate: [0, -15, 15, -10, 10, 0] }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="text-3xl"
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(158,201,179,0.2)', color: '#7BBBA5' }}
             >
-              🎉
-            </motion.span>
+              <PartyPopper size={22} strokeWidth={1.5} />
+            </motion.div>
             <div>
               <p className="font-bold text-gray-800 text-sm">Goal Completed!</p>
               <p className="text-xs text-gray-400 mt-0.5">Amazing work together</p>
@@ -134,15 +137,7 @@ export default function GoalsPage() {
             : `${completedGoals}/${totalGoals} dreams achieved`}
         </p>
         {totalGoals > 0 && (
-          <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${(completedGoals / totalGoals) * 100}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="h-full rounded-full"
-              style={{ background: primaryColor }}
-            />
-          </div>
+          <Progress value={(completedGoals / totalGoals) * 100} color={primaryColor} className="mt-3" />
         )}
       </div>
 
@@ -168,7 +163,9 @@ export default function GoalsPage() {
               <div className="absolute inset-0 bg-white/10 rounded-3xl" />
 
               <div className="relative z-10">
-                <span className="text-3xl">{cfg.emoji}</span>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center mb-1">
+                  <cfg.icon size={20} strokeWidth={1.75} className="text-white" />
+                </div>
                 <p className="text-white font-bold text-sm mt-2 leading-tight">{cfg.label}</p>
                 {catGoals.length > 0 ? (
                   <p className="text-white/70 text-xs mt-1">{done}/{catGoals.length} done</p>
@@ -245,7 +242,7 @@ function CategoryModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
 
       {/* Sheet */}
@@ -254,7 +251,7 @@ function CategoryModal({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         {/* Gradient header */}
@@ -262,7 +259,9 @@ function CategoryModal({
           <div className="drag-handle mb-3 bg-white/40" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-4xl">{cfg.emoji}</span>
+              <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center">
+                <cfg.icon size={22} strokeWidth={1.75} className="text-white" />
+              </div>
               <div>
                 <h2 className="text-lg font-bold text-white">{cfg.label}</h2>
                 <p className="text-white/70 text-xs">
@@ -274,6 +273,7 @@ function CategoryModal({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white"
             >
               <X size={16} />
@@ -309,11 +309,12 @@ function CategoryModal({
           </AnimatePresence>
 
           {pending.length === 0 && done.length === 0 && !showForm && (
-            <div className="flex flex-col items-center py-10 text-center">
-              <Target size={40} className="text-gray-200 mb-3" />
-              <p className="font-semibold text-gray-500 mb-1">No dreams here yet 🌟</p>
-              <p className="text-sm text-gray-400">Tap + to add your first dream</p>
-            </div>
+            <EmptyState
+              icon={Target}
+              title="No dreams here yet"
+              description="Tap + to add your first dream"
+              className="py-10"
+            />
           )}
 
           <AnimatePresence mode="popLayout">
@@ -513,15 +514,7 @@ function GoalCard({
                     {goal.progressCurrent}/{goal.progressTarget}
                   </span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
-                    className="h-full rounded-full"
-                    style={{ background: accent }}
-                  />
-                </div>
+                <Progress value={pct} color={accent} />
               </div>
               {!isMaxed && (
                 <button
@@ -623,12 +616,7 @@ function GoalForm({
           <CalendarDays size={10} />
           Target date — adds to calendar
         </p>
-        <input
-          type="date"
-          value={targetDate}
-          onChange={e => setTargetDate(e.target.value)}
-          className="w-full text-xs text-gray-600 bg-white/60 rounded-xl px-3 py-2 outline-none"
-        />
+        <DatePicker value={targetDate} onChange={setTargetDate} />
       </div>
 
       {/* Counter toggle */}
@@ -721,33 +709,19 @@ function GoalEditModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
-        {/* Non-scrolling header */}
-        <div className="px-5 pt-4 shrink-0">
-          <div className="drag-handle" />
+        <C2SheetHeader title="Edit Dream" onClose={onClose} />
 
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-gray-800">Edit Dream</h3>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable form content */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        <C2SheetBody className="pb-4">
           <input
             type="text"
             value={title}
@@ -780,12 +754,7 @@ function GoalEditModal({
               Clearing the date will remove this goal from the calendar.
             </p>
           )}
-          <input
-            type="date"
-            value={targetDate}
-            onChange={e => setTargetDate(e.target.value)}
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 mb-4 outline-none"
-          />
+          <DatePicker value={targetDate} onChange={setTargetDate} className="mb-4" />
 
           {useCounter && (
             <>
@@ -814,29 +783,25 @@ function GoalEditModal({
                     />
                   </div>
                 </div>
-                <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      background: accent,
-                      width: `${Math.min((parseInt(progressCurrent) / (parseInt(progressTarget) || 1)) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
+                <Progress
+                  value={Math.min((parseInt(progressCurrent) / (parseInt(progressTarget) || 1)) * 100, 100)}
+                  color={accent}
+                  trackColor="rgba(255,255,255,0.6)"
+                  animated={false}
+                />
               </div>
             </>
           )}
-        </div>
+        </C2SheetBody>
 
-        {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <C2SheetFooter>
           <button
             onClick={handleSave}
             disabled={!title.trim()}
             className="w-full py-4 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
             style={{ background: accent }}
           >
-            Save Changes ✨
+            Save Changes
           </button>
 
           <button
@@ -845,47 +810,16 @@ function GoalEditModal({
           >
             Let go of this dream
           </button>
-        </div>
+        </C2SheetFooter>
       </motion.div>
 
-      <AnimatePresence>
-        {showDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-6"
-          >
-            <div className="absolute inset-0 bg-black/40" onClick={() => setShowDelete(false)} />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
-            >
-              <div className="text-4xl mb-3">🗑️</div>
-              <h3 className="font-bold text-gray-800 mb-1">Let go of this dream?</h3>
-              <p className="text-sm text-gray-400 mb-5">
-                This will also remove any linked calendar event.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDelete(false)}
-                  className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteConfirmSheet
+        open={showDelete}
+        title="Let go of this dream?"
+        message="This will also remove any linked calendar event."
+        onCancel={() => setShowDelete(false)}
+        onConfirm={onDelete}
+      />
     </>
   )
 }

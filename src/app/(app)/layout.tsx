@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { motion, MotionConfig } from 'framer-motion'
+import { Plus } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
+import { C2ToastRegion } from '@/components/ui/C2Toast'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -58,6 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="h-dvh overflow-hidden">
       <main ref={mainRef} className="h-full overflow-y-auto overscroll-none pb-24">
         {children}
@@ -75,22 +77,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
         transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         onClick={() => { if (overlayCount === 0) setQuickAddOpen(true) }}
+        aria-label="Add something"
         aria-hidden={overlayCount > 0}
         tabIndex={overlayCount > 0 ? -1 : undefined}
-        className="fixed bottom-20 right-5 z-30 w-[52px] h-[52px] rounded-full
+        className="fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
                    flex items-center justify-center text-white backdrop-blur-sm"
         style={{
           background:    primary,
-          boxShadow:     `0 4px 16px ${primary}38`,
+          boxShadow:     `0 2px 10px ${primary}28`,
           pointerEvents: overlayCount > 0 ? 'none' : 'auto',
         }}
       >
-        <Plus size={24} strokeWidth={2.5} />
+        <Plus size={20} strokeWidth={2} />
       </motion.button>
 
       <PartnerNoteNotification />
 
       <GlobalImageLightbox />
+
+      <C2ToastRegion />
 
       <FullCreateSheet
         open={quickAddOpen}
@@ -98,5 +103,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         primary={primary}
       />
     </div>
+    </MotionConfig>
   )
 }

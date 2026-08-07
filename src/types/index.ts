@@ -312,7 +312,10 @@ export interface FocusActivity {
   createdBy: UserName | 'both'
   createdAt: string
   updatedAt: string
+  /** @deprecated Use `reminders` array instead */
   reminder?: FocusReminder
+  /** Multi-select reminders (replaces single `reminder`). Empty array = no reminders. */
+  reminders?: FocusReminder[]
   priority?: FocusPriority
 }
 

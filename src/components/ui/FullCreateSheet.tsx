@@ -2,12 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Camera, Mail, type LucideIcon, CalendarCheck2, Sparkles, Gift, Heart, ShoppingCart } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
-import type { EventColor, EventTodo, WishlistItem, Goal, SharedTodo } from '@/types'
+import type { EventColor, EventTodo, WishlistItem, Goal } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
+import { Chip, ChipGroup, C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
@@ -20,7 +23,7 @@ const COLOR_OPTIONS = [
 ] as const
 
 type TypeConfig = {
-  emoji: string
+  icon: LucideIcon
   label: string
   placeholder: string
   defaultColor: EventColor
@@ -36,37 +39,37 @@ type TypeConfig = {
 
 const TYPE_CONFIG: Record<CreateType, TypeConfig> = {
   moment: {
-    emoji: '💛', label: 'Moment',
+    icon: Heart, label: 'Moment',
     placeholder: 'Name this moment...',
     defaultColor: 'yellow', saveLabel: 'Save Moment',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   plan: {
-    emoji: '💚', label: 'Plan',
+    icon: CalendarCheck2, label: 'Plan',
     placeholder: 'What do you want to plan?',
     defaultColor: 'green', saveLabel: 'Save Plan',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   dream: {
-    emoji: '💙', label: 'Dream',
+    icon: Sparkles, label: 'Dream',
     placeholder: 'What do you dream of?',
     defaultColor: 'blue', saveLabel: 'Save Dream',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   wish: {
-    emoji: '💜', label: 'Wish',
+    icon: Gift, label: 'Wish',
     placeholder: 'What do you wish for?',
     defaultColor: 'seval', saveLabel: 'Save Wish',
     showColor: false, showDate: true, showChecklist: true, showPhotos: true, noteMode: false,
   },
   note: {
-    emoji: '💌', label: 'Note',
+    icon: Mail, label: 'Note',
     placeholder: 'Write something from the heart...',
     defaultColor: 'seval', saveLabel: 'Send with love',
     showColor: false, showDate: false, showChecklist: false, showPhotos: false, noteMode: true, shopMode: false, chipHex: undefined,
   },
   shopping: {
-    emoji: '🛒', label: 'Shopping',
+    icon: ShoppingCart, label: 'Shopping',
     placeholder: '',
     defaultColor: 'green', saveLabel: '',
     showColor: false, showDate: false, showChecklist: false, showPhotos: false,
@@ -106,8 +109,10 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
   const [date,       setDate]       = useState('')
   const [time,       setTime]       = useState('')
   const [color,      setColor]      = useState<EventColor>('yellow')
-  const [checkItems, setCheckItems] = useState<EventTodo[]>([])
-  const [newItem,    setNewItem]    = useState('')
+  const [checkItems,       setCheckItems]       = useState<EventTodo[]>([])
+  const [newItem,          setNewItem]          = useState('')
+  const [editingCheckId,   setEditingCheckId]   = useState<string | null>(null)
+  const [editingCheckText, setEditingCheckText] = useState('')
   const [photos,     setPhotos]     = useState<string[]>([])      // blob or real URLs
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [bgPhotoIdx, setBgPhotoIdx] = useState<number | null>(null)
@@ -118,13 +123,6 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
 
   const photoInputRef = useRef<HTMLInputElement>(null)
   const cfg = TYPE_CONFIG[type]
-
-  // Lock body scroll while open
-  useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden'
-    else      document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
 
   // Pre-populate date when opened from a specific date context (e.g. calendar)
   useEffect(() => {
@@ -141,7 +139,8 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime('')
-    setCheckItems([]); setNewItem(''); setPhotos([]); setPendingFiles([])
+    setCheckItems([]); setNewItem(''); setEditingCheckId(null); setEditingCheckText('')
+    setPhotos([]); setPendingFiles([])
     setBgPhotoIdx(null); setSaving(false)
     setUploading(false); setUploadError(null); setSent(false)
   }
@@ -165,6 +164,17 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
   }
   function removeCheck(id: string) {
     setCheckItems(prev => prev.filter(i => i.id !== id))
+    if (editingCheckId === id) setEditingCheckId(null)
+  }
+  function startEditCheck(id: string, title: string) {
+    setEditingCheckId(id)
+    setEditingCheckText(title)
+  }
+  function commitEditCheck() {
+    if (!editingCheckId) return
+    const text = editingCheckText.trim()
+    if (text) setCheckItems(prev => prev.map(i => i.id === editingCheckId ? { ...i, title: text } : i))
+    setEditingCheckId(null)
   }
 
   /* ── Photos ───────────────────────────────────────────────────────────── */
@@ -204,6 +214,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
       if (type === 'note') {
         sendPartnerNote(title.trim())
         setSent(true)
+        setSaving(false)
         setTimeout(() => close(), 1800)
         return
       }
@@ -297,6 +308,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
     } catch (err) {
       console.error('[FullCreateSheet] save error:', err)
       setUploadError('Something went wrong. Please try again.')
+    } finally {
       setSaving(false)
     }
   }
@@ -305,65 +317,31 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
   const activeColor = COLOR_OPTIONS.find(c => c.value === color)
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={close}
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-          />
+    <C2Sheet open={open} onClose={close} aria-label="Add something">
+      <C2SheetHeader title="Add something" onClose={close} />
 
-          {/* Sheet */}
-          <motion.div
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
-                       max-w-lg mx-auto flex flex-col"
-            style={{ maxHeight: 'calc(100dvh - 48px)' }}
-          >
-            {/* Non-scrolling header */}
-            <div className="px-5 pt-4 pb-0 shrink-0">
-              <div className="drag-handle" />
+      {/* Type selector chips — full-bleed horizontal scroll between header and body */}
+      <div className="pb-3 shrink-0 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex gap-2 px-5 pb-1 min-w-max">
+          {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
+            const tc = TYPE_CONFIG[t]
+            const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
+            const chipHex = tc.chipHex ?? col?.hex ?? primary
+            return (
+              <Chip
+                key={t}
+                icon={tc.icon}
+                label={tc.label}
+                selected={type === t}
+                activeColor={chipHex}
+                onClick={() => switchType(t)}
+              />
+            )
+          })}
+        </div>
+      </div>
 
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-bold text-gray-800">Add something</h3>
-                <button
-                  onClick={close}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Type selector chips */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
-                {(Object.keys(TYPE_CONFIG) as CreateType[]).map(t => {
-                  const tc = TYPE_CONFIG[t]
-                  const col = COLOR_OPTIONS.find(c => c.value === tc.defaultColor)
-                  const chipHex = tc.chipHex ?? col?.hex ?? primary
-                  return (
-                    <motion.button
-                      key={t}
-                      whileTap={{ scale: 0.93 }}
-                      onClick={() => switchType(t)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold shrink-0 transition-all"
-                      style={type === t
-                        ? { background: chipHex, color: 'white' }
-                        : { background: '#f3f4f6', color: '#6b7280' }
-                      }
-                    >
-                      {tc.emoji} {tc.label}
-                    </motion.button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5">
+      <C2SheetBody>
               <AnimatePresence mode="wait">
                 {/* Sent state (note) */}
                 {sent ? (
@@ -376,9 +354,12 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                     <motion.div
                       animate={{ scale: [1, 1.3, 1] }}
                       transition={{ repeat: 2, duration: 0.4 }}
-                      className="text-5xl mb-3"
-                    >💌</motion.div>
-                    <p className="font-bold text-gray-800">Sent with love</p>
+                      className="w-16 h-16 rounded-full flex items-center justify-center mb-3"
+                      style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}
+                    >
+                      <Mail size={32} strokeWidth={1.5} />
+                    </motion.div>
+                    <p className="font-bold text-gray-800">Sent</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -408,9 +389,10 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           placeholder={cfg.placeholder}
                           rows={5}
                           autoFocus
+                          enterKeyHint="send"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
-                                     transition-colors bg-transparent resize-none leading-snug"
+                                     transition-colors bg-transparent resize-none leading-snug rounded-none focus-visible:shadow-none"
                         />
                       ) : (
                         <input
@@ -419,9 +401,10 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                           onChange={e => setTitle(e.target.value)}
                           placeholder={cfg.placeholder}
                           autoFocus
+                          enterKeyHint="next"
                           className="w-full text-xl font-semibold text-gray-800 placeholder:text-gray-300
                                      border-b-2 border-gray-100 focus:border-gray-200 pb-3 outline-none
-                                     transition-colors bg-transparent"
+                                     transition-colors bg-transparent rounded-none focus-visible:shadow-none"
                         />
                       )}
                     </div>
@@ -430,26 +413,25 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                       <>
                         {/* Date & Time */}
                         {cfg.showDate && (
-                          <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                          <div className="c2-sheet-section p-4 space-y-3">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                                 <Clock size={14} className="text-gray-400" />
                               </div>
-                              <input
-                                type="date"
+                              <DatePicker
                                 value={date}
-                                onChange={e => setDate(e.target.value)}
-                                className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                                onChange={setDate}
+                                className="flex-1"
+                                triggerClassName="bg-transparent px-0 py-0 rounded-none text-sm text-gray-700"
                               />
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 shrink-0" />
-                              <input
-                                type="time"
+                              <TimePicker
                                 value={time}
-                                onChange={e => setTime(e.target.value)}
-                                className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                                           outline-none shadow-card"
+                                onChange={setTime}
+                                className="flex-1"
+                                triggerClassName="bg-white rounded-xl px-3 py-1.5 shadow-card"
                               />
                               <span className="text-xs text-gray-400 shrink-0">start time</span>
                             </div>
@@ -457,7 +439,7 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                         )}
 
                         {/* Notes */}
-                        <div className="bg-gray-50 rounded-2xl p-4 flex gap-3">
+                        <div className="c2-sheet-section p-4 flex gap-3">
                           <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                             <FileText size={14} className="text-gray-400" />
                           </div>
@@ -479,8 +461,9 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                             </p>
                             <div className="space-y-2">
                               {checkItems.map(item => (
-                                <div key={item.id} className="flex items-center gap-3 group">
+                                <div key={item.id} className="flex items-center gap-3">
                                   <button
+                                    type="button"
                                     onClick={() => toggleCheck(item.id)}
                                     className={cn(
                                       'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
@@ -489,16 +472,34 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                                   >
                                     {item.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
                                   </button>
-                                  <span className={cn(
-                                    'flex-1 text-sm',
-                                    item.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
-                                  )}>
-                                    {item.title}
-                                  </span>
+                                  {editingCheckId === item.id ? (
+                                    <input
+                                      autoFocus
+                                      value={editingCheckText}
+                                      onChange={e => setEditingCheckText(e.target.value)}
+                                      onBlur={commitEditCheck}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter')  { e.preventDefault(); commitEditCheck() }
+                                        if (e.key === 'Escape') { setEditingCheckId(null) }
+                                      }}
+                                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={cn(
+                                        'flex-1 text-left text-sm',
+                                        item.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                                      )}
+                                      onPointerDown={() => startEditCheck(item.id, item.title)}
+                                    >
+                                      {item.title}
+                                    </button>
+                                  )}
                                   <button
+                                    type="button"
                                     onClick={() => removeCheck(item.id)}
-                                    className="opacity-0 group-hover:opacity-100 active:opacity-100
-                                               text-gray-300 active:text-red-400 transition-all"
+                                    className="text-gray-300 active:text-red-400 transition-all"
                                   >
                                     <X size={14} />
                                   </button>
@@ -597,34 +598,31 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+      </C2SheetBody>
 
-            {/* Pinned footer — only when there's a save action */}
-            {!sent && !cfg.shopMode && (
-              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSave}
-                  disabled={!canSubmit}
-                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold
-                             disabled:opacity-40 flex items-center justify-center gap-2"
-                  style={{
-                    background: cfg.noteMode
-                      ? primary
-                      : `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)`,
-                  }}
-                >
-                  {saving ? (
-                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
-                  ) : (
-                    <><Plus size={16} /> {cfg.saveLabel}</>
-                  )}
-                </motion.button>
-              </div>
+      {/* Pinned footer — only when there's a save action */}
+      {!sent && !cfg.shopMode && (
+        <C2SheetFooter>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleSave}
+            disabled={!canSubmit}
+            className="w-full py-4 rounded-2xl text-white text-sm font-semibold
+                       disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{
+              background: cfg.noteMode
+                ? primary
+                : `linear-gradient(135deg, ${activeColor?.hex}, ${activeColor?.hex}cc)`,
+            }}
+          >
+            {saving ? (
+              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
+            ) : (
+              <><Plus size={16} /> {cfg.saveLabel}</>
             )}
-          </motion.div>
-        </>
+          </motion.button>
+        </C2SheetFooter>
       )}
-    </AnimatePresence>
+    </C2Sheet>
   )
 }

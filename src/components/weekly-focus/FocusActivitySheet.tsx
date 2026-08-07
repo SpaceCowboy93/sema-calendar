@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type FocusActivity, type FocusChecklistItem, type FocusReminder, type FocusPriority, type UserName } from '@/types'
 import { cn, generateId } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { C2Sheet, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 interface Props {
   open: boolean
@@ -60,11 +62,13 @@ export function FocusActivitySheet({
   // ── Form state ──
   const [title,         setTitle]         = useState('')
   const [time,          setTime]          = useState('')
-  const [reminder,      setReminder]      = useState<FocusReminder>('none')
+  const [reminders,     setReminders]     = useState<FocusReminder[]>([])
   const [notes,         setNotes]         = useState('')
   const [priority,      setPriority]      = useState<FocusPriority | 'none'>('none')
   const [checklist,     setChecklist]     = useState<FocusChecklistItem[]>([])
   const [newItem,       setNewItem]       = useState('')
+  const [editingChecklistId,   setEditingChecklistId]   = useState<string | null>(null)
+  const [editingChecklistText, setEditingChecklistText] = useState('')
   const [photos,        setPhotos]        = useState<string[]>([])
   const [uploading,     setUploading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -85,7 +89,14 @@ export function FocusActivitySheet({
     if (activity) {
       setTitle(activity.title)
       setTime(activity.time ?? '')
-      setReminder(activity.reminder ?? 'none')
+      // Prefer new `reminders` array; fall back to legacy single `reminder`
+      setReminders(
+        activity.reminders
+          ? [...activity.reminders]
+          : activity.reminder && activity.reminder !== 'none'
+          ? [activity.reminder]
+          : []
+      )
       setPriority(activity.priority ?? 'none')
       setNotes(activity.notes ?? '')
       setChecklist(activity.checklist ? [...activity.checklist] : [])
@@ -93,7 +104,7 @@ export function FocusActivitySheet({
     } else {
       setTitle(suggestedTitle ?? '')
       setTime('')
-      setReminder('none')
+      setReminders([])
       setPriority('none')
       setNotes('')
       setChecklist([])
@@ -119,6 +130,21 @@ export function FocusActivitySheet({
 
   function removeChecklistItem(id: string) {
     setChecklist(prev => prev.filter(i => i.id !== id))
+  }
+
+  function startEditChecklistItem(id: string, text: string) {
+    setEditingChecklistId(id)
+    setEditingChecklistText(text)
+  }
+
+  function commitEditChecklistItem() {
+    if (!editingChecklistId) return
+    const text = editingChecklistText.trim()
+    if (text) {
+      setChecklist(prev => prev.map(i => i.id === editingChecklistId ? { ...i, text } : i))
+    }
+    setEditingChecklistId(null)
+    setEditingChecklistText('')
   }
 
   // ── Photo upload ──
@@ -148,55 +174,62 @@ export function FocusActivitySheet({
   async function handleSave() {
     const titleTrimmed = title.trim()
     if (!titleTrimmed) { titleRef.current?.focus(); return }
+    if (saving) return
 
     setSaving(true)
-    const checklistData = checklist.length > 0 ? checklist : undefined
-    const timeTrimmed   = time.trim() || undefined
-    const reminderVal   = timeTrimmed && reminder !== 'none' ? reminder : undefined
+    try {
+      const checklistData  = checklist.length > 0 ? checklist : undefined
+      const timeTrimmed    = time.trim() || undefined
+      // Only keep reminders that make sense when a time is set
+      const remindersVal   = timeTrimmed && reminders.length > 0 ? reminders : undefined
+      const priorityVal    = priority !== 'none' ? priority : undefined
 
-    const priorityVal = priority !== 'none' ? priority : undefined
+      if (isEdit && activity) {
+        updateFocusActivity(activity.id, {
+          title:     titleTrimmed,
+          time:      timeTrimmed,
+          reminders: remindersVal,
+          reminder:  undefined,
+          priority:  priorityVal,
+          notes:     notes.trim() || undefined,
+          checklist: checklistData,
+        })
+      } else {
+        const newId = addFocusActivity({
+          weekKey,
+          dayIndex,
+          title:     titleTrimmed,
+          time:      timeTrimmed,
+          reminders: remindersVal,
+          priority:  priorityVal,
+          notes:     notes.trim() || undefined,
+          checklist: checklistData,
+          owner,
+        })
 
-    if (isEdit && activity) {
-      updateFocusActivity(activity.id, {
-        title:     titleTrimmed,
-        time:      timeTrimmed,
-        reminder:  reminderVal,
-        priority:  priorityVal,
-        notes:     notes.trim() || undefined,
-        checklist: checklistData,
-      })
-    } else {
-      const newId = addFocusActivity({
-        weekKey,
-        dayIndex,
-        title:     titleTrimmed,
-        time:      timeTrimmed,
-        reminder:  reminderVal,
-        priority:  priorityVal,
-        notes:     notes.trim() || undefined,
-        checklist: checklistData,
-        owner,
-      })
-
-      if (photos.length > 0 && newId) {
-        for (const preview of photos) {
-          if (preview.startsWith('blob:')) {
-            try {
-              const res  = await fetch(preview)
-              const blob = await res.blob()
-              const file = new File([blob], 'photo.jpg', { type: blob.type })
-              await uploadFocusActivityPhoto(newId, file)
-              URL.revokeObjectURL(preview)
-            } catch {
-              // skip silently
+        if (photos.length > 0 && newId) {
+          for (const preview of photos) {
+            if (preview.startsWith('blob:')) {
+              try {
+                const res  = await fetch(preview)
+                const blob = await res.blob()
+                const file = new File([blob], 'photo.jpg', { type: blob.type })
+                await uploadFocusActivityPhoto(newId, file)
+                URL.revokeObjectURL(preview)
+              } catch {
+                // skip failed photo silently — activity is already saved
+              }
             }
           }
         }
       }
-    }
 
-    setSaving(false)
-    onClose()
+      onClose()
+    } catch {
+      // restore button state on unexpected error
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleDelete() {
@@ -211,61 +244,40 @@ export function FocusActivitySheet({
 
   return (
     <>
-      <AnimatePresence>
-        {open && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onClose}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
-            />
+      <C2Sheet open={open} onClose={onClose} aria-label={isEdit ? 'Edit Activity' : 'New Activity'}>
+        {/* Custom header with trash button */}
+        <div className="px-5 pt-4 shrink-0">
+          <div className="c2-handle" aria-hidden="true" />
+          <div className="flex items-center justify-between mb-5 mt-1">
+            <div>
+              <h2 className="text-base font-bold text-gray-800">
+                {isEdit ? 'Edit Activity' : 'New Activity'}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">{DAYS[dayIndex]}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isEdit && (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label="Delete activity"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-danger-soft"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
 
-            {/* Sheet */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-[0_-4px_24px_rgba(0,0,0,0.10)] max-w-lg mx-auto flex flex-col"
-              style={{ maxHeight: 'calc(100dvh - 48px)' }}
-            >
-              {/* Non-scrolling header */}
-              <div className="px-5 pt-4 shrink-0">
-                {/* Drag handle */}
-                <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5" />
-
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-800">
-                      {isEdit ? 'Edit Activity' : 'New Activity'}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{DAYS[dayIndex]}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isEdit && (
-                      <button
-                        onClick={() => setConfirmDelete(true)}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-400 active:bg-red-100"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                    <button
-                      onClick={onClose}
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scrollable form content */}
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        {/* Scrollable form content */}
+        <C2SheetBody className="pb-4">
 
                 {/* Title */}
                 <div className="mb-4">
@@ -277,7 +289,9 @@ export function FocusActivitySheet({
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="What are you planning?"
-                    className="w-full text-sm text-gray-800 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent"
+                    inputMode="text"
+                    enterKeyHint="done"
+                    className="w-full text-sm text-gray-800 placeholder:text-gray-300 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
                     onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
                   />
                 </div>
@@ -288,44 +302,54 @@ export function FocusActivitySheet({
                     Time{' '}
                     <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
-                  <input
-                    type="time"
+                  <TimePicker
                     value={time}
-                    onChange={e => {
-                      setTime(e.target.value)
-                      // Clear reminder if time is removed
-                      if (!e.target.value) setReminder('none')
+                    onChange={v => {
+                      setTime(v)
+                      // Clear reminders if time is removed
+                      if (!v) setReminders([])
                     }}
-                    className="text-sm text-gray-700 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent w-full"
+                    triggerClassName="bg-gray-50"
                   />
                 </div>
 
-                {/* Reminder */}
+                {/* Reminders (multi-select) */}
                 <div className="mb-4">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">
-                    Reminder{' '}
-                    <span className="font-normal normal-case text-gray-300">(optional)</span>
+                    Reminders{' '}
+                    <span className="font-normal normal-case text-gray-300">(optional, tap to toggle)</span>
                   </label>
 
                   {!hasTime ? (
                     <p className="text-xs text-gray-300">Set a time above to enable reminders</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {REMINDER_OPTIONS.map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setReminder(opt.value)}
-                          className={cn(
-                            'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
-                            reminder === opt.value
-                              ? 'text-white'
-                              : 'bg-gray-100 text-gray-500 active:bg-gray-200',
-                          )}
-                          style={reminder === opt.value ? { background: primary } : undefined}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                      {REMINDER_OPTIONS.filter(opt => opt.value !== 'none').map(opt => {
+                        const isActive = reminders.includes(opt.value)
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() =>
+                              setReminders(prev =>
+                                isActive
+                                  ? prev.filter(r => r !== opt.value)
+                                  : [...prev, opt.value]
+                              )
+                            }
+                            aria-pressed={isActive}
+                            className={cn(
+                              'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
+                              isActive
+                                ? 'text-white'
+                                : 'bg-gray-100 text-gray-500',
+                            )}
+                            style={isActive ? { background: primary } : undefined}
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -337,21 +361,26 @@ export function FocusActivitySheet({
                     <span className="font-normal normal-case text-gray-300">(optional)</span>
                   </label>
                   <div className="flex gap-1.5">
-                    {PRIORITY_OPTIONS.map(opt => (
+                    {PRIORITY_OPTIONS.map(opt => {
+                      const isActive = priority === opt.value
+                      return (
                       <button
                         key={opt.value}
+                        type="button"
                         onClick={() => setPriority(opt.value)}
+                        aria-pressed={isActive}
                         className={cn(
-                          'text-xs px-3 py-1.5 rounded-xl font-medium transition-all',
-                          priority === opt.value
+                          'text-xs px-3 py-1.5 rounded-xl font-medium transition-colors',
+                          isActive
                             ? 'text-white'
-                            : 'bg-gray-100 text-gray-500 active:bg-gray-200',
+                            : 'bg-gray-100 text-gray-500',
                         )}
-                        style={priority === opt.value ? { background: primary } : undefined}
+                        style={isActive ? { background: primary } : undefined}
                       >
                         {opt.label}
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -366,7 +395,8 @@ export function FocusActivitySheet({
                     onChange={e => setNotes(e.target.value)}
                     placeholder="Any notes..."
                     rows={2}
-                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 border-0 border-b border-gray-100 pb-2 outline-none bg-transparent resize-none leading-relaxed"
+                    enterKeyHint="enter"
+                    className="w-full text-sm text-gray-700 placeholder:text-gray-300 bg-gray-50 rounded-xl px-4 py-3 outline-none resize-none leading-relaxed"
                   />
                 </div>
 
@@ -395,9 +425,27 @@ export function FocusActivitySheet({
                               </svg>
                             )}
                           </button>
-                          <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                            {item.text}
-                          </span>
+                          {editingChecklistId === item.id ? (
+                            <input
+                              autoFocus
+                              value={editingChecklistText}
+                              onChange={e => setEditingChecklistText(e.target.value)}
+                              onBlur={commitEditChecklistItem}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') { e.preventDefault(); commitEditChecklistItem() }
+                                if (e.key === 'Escape') { setEditingChecklistId(null) }
+                              }}
+                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className={`flex-1 text-left text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                              onPointerDown={() => startEditChecklistItem(item.id, item.text)}
+                            >
+                              {item.text}
+                            </button>
+                          )}
                           <button
                             onClick={() => removeChecklistItem(item.id)}
                             className="text-gray-300 active:text-gray-500"
@@ -414,7 +462,9 @@ export function FocusActivitySheet({
                       value={newItem}
                       onChange={e => setNewItem(e.target.value)}
                       placeholder="Add item..."
-                      className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-transparent border-b border-gray-100 pb-1"
+                      inputMode="text"
+                      enterKeyHint="done"
+                      className="flex-1 text-sm text-gray-700 placeholder:text-gray-300 outline-none bg-gray-50 rounded-xl px-3 py-2"
                       onKeyDown={e => {
                         if (e.key === 'Enter') { e.preventDefault(); addChecklistItem() }
                       }}
@@ -451,24 +501,21 @@ export function FocusActivitySheet({
                     onChange={e => handlePhotoFiles(e.target.files)}
                   />
                 </div>
-              </div>
+        </C2SheetBody>
 
-              {/* Pinned save footer */}
-              <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSave}
-                  disabled={!canSave || saving}
-                  className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 transition-opacity"
-                  style={{ background: primary }}
-                >
-                  {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Activity'}
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        {/* Pinned save footer */}
+        <C2SheetFooter>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 transition-opacity"
+            style={{ background: primary }}
+          >
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Activity'}
+          </motion.button>
+        </C2SheetFooter>
+      </C2Sheet>
 
       <DeleteConfirmSheet
         open={confirmDelete}

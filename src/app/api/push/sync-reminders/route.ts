@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 // Maps the stable offset label to a human-readable message prefix.
 // Labels match the ReminderEntry.label values produced by usePushNotifications.ts.
@@ -53,7 +46,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unknown user' }, { status: 403 })
     }
 
-    const supabase  = adminClient()
+    const supabase  = getAdminClient()
+    if (!supabase) return supabaseUnavailable()
     const now       = new Date()
     const nowIso    = now.toISOString()
     const MIN_SYNC_INTERVAL_MS = 3000

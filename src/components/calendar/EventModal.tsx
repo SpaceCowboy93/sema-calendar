@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Plus, Check, Camera } from 'lucide-react'
+import { X, Clock, FileText, Plus, Check, Camera, Trash2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
+import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 export const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Wishes'  },
@@ -40,6 +43,8 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const [color, setColor]           = useState<CalendarEvent['color']>('seval')
   const [todos, setTodos]           = useState<EventTodo[]>([])
   const [newTodo, setNewTodo]       = useState('')
+  const [editingTodoId,   setEditingTodoId]   = useState<string | null>(null)
+  const [editingTodoText, setEditingTodoText] = useState('')
   const [showDelete, setShowDelete] = useState(false)
   const [photos, setPhotos]         = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -93,38 +98,41 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   async function handleSave() {
     if (!title.trim() || !currentUser || saving) return
     setSaving(true)
-    const data = {
-      title: title.trim(),
-      date: selectedDate,
-      startTime: startTime || undefined,
-      notes: notes.trim() || undefined,
-      color,
-      todos: todos.length ? todos : undefined,
-      photos: photos.length ? photos : undefined,
-      // For edit: photos[] are real URLs; for new: resolved after upload below
-      backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
-      createdBy: currentUser,
-    }
-    if (isEdit && event) {
-      updateEvent(event.id, data)
-    } else {
-      const nPending = pendingFiles.length
-      const newId = addEvent(data)
-      if (nPending > 0) {
-        for (const file of pendingFiles) {
-          await uploadEventPhoto(newId, file)
-        }
-        // Resolve real URL: blob previews occupy indices 0..nPending-1,
-        // real uploads are appended at nPending, nPending+1, ...
-        if (bgPhotoIdx !== null) {
-          const stored = useAppStore.getState().events.find(e => e.id === newId)
-          const bpUrl  = stored?.photos?.[nPending + bgPhotoIdx]
-          if (bpUrl) updateEvent(newId, { backgroundPhoto: bpUrl })
+    try {
+      const data = {
+        title: title.trim(),
+        date: selectedDate,
+        startTime: startTime || undefined,
+        notes: notes.trim() || undefined,
+        color,
+        todos: todos.length ? todos : undefined,
+        photos: photos.length ? photos : undefined,
+        // For edit: photos[] are real URLs; for new: resolved after upload below
+        backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
+        createdBy: currentUser,
+      }
+      if (isEdit && event) {
+        updateEvent(event.id, data)
+      } else {
+        const nPending = pendingFiles.length
+        const newId = addEvent(data)
+        if (nPending > 0) {
+          for (const file of pendingFiles) {
+            await uploadEventPhoto(newId, file)
+          }
+          // Resolve real URL: blob previews occupy indices 0..nPending-1,
+          // real uploads are appended at nPending, nPending+1, ...
+          if (bgPhotoIdx !== null) {
+            const stored = useAppStore.getState().events.find(e => e.id === newId)
+            const bpUrl  = stored?.photos?.[nPending + bgPhotoIdx]
+            if (bpUrl) updateEvent(newId, { backgroundPhoto: bpUrl })
+          }
         }
       }
+      onClose()
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    onClose()
   }
 
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -166,6 +174,21 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setTodos(prev => prev.filter(t => t.id !== id))
   }
 
+  function startEditTodo(id: string, title: string) {
+    setEditingTodoId(id)
+    setEditingTodoText(title)
+  }
+
+  function commitEditTodo() {
+    if (!editingTodoId) return
+    const text = editingTodoText.trim()
+    if (text) {
+      setTodos(prev => prev.map(t => t.id === editingTodoId ? { ...t, title: text } : t))
+    }
+    setEditingTodoId(null)
+    setEditingTodoText('')
+  }
+
   const activeColor = COLOR_OPTIONS.find(c => c.value === color)
 
   return (
@@ -178,7 +201,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            className="fixed inset-0 z-50 c2-backdrop"
           />
 
           {/* Sheet */}
@@ -187,7 +210,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
             style={{ maxHeight: 'calc(100dvh - 48px)' }}
           >
             {/* Non-scrolling header */}
@@ -201,7 +224,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                 </h2>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                  className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
                 >
                   <X size={16} />
                 </button>
@@ -225,33 +248,32 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
               </div>
 
               {/* Date & Time */}
-              <div className="bg-gray-50 rounded-2xl p-4 mb-4 space-y-3">
+              <div className="c2-sheet-section p-4 mb-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
                     <Clock size={14} className="text-gray-400" />
                   </div>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={selectedDate}
-                    onChange={e => setDate(e.target.value)}
-                    className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                    onChange={setDate}
+                    allowClear={false}
+                    triggerClassName="bg-transparent text-sm text-gray-700 rounded-none px-0 py-0"
                   />
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8" />
-                  <input
-                    type="time"
+                  <TimePicker
                     value={startTime}
-                    onChange={e => setStartTime(e.target.value)}
-                    className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-1.5
-                               outline-none shadow-card"
+                    onChange={setStartTime}
+                    className="flex-1"
+                    triggerClassName="bg-white rounded-xl px-3 py-1.5 shadow-card"
                   />
                   <span className="text-xs text-gray-400">start time (optional)</span>
                 </div>
               </div>
 
               {/* Notes */}
-              <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex gap-3">
+              <div className="c2-sheet-section p-4 mb-4 flex gap-3">
                 <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                   <FileText size={14} className="text-gray-400" />
                 </div>
@@ -282,12 +304,29 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                       >
                         {todo.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
                       </button>
-                      <span className={cn(
-                        'flex-1 text-sm',
-                        todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
-                      )}>
-                        {todo.title}
-                      </span>
+                      {editingTodoId === todo.id ? (
+                        <input
+                          autoFocus
+                          value={editingTodoText}
+                          onChange={e => setEditingTodoText(e.target.value)}
+                          onBlur={commitEditTodo}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); commitEditTodo() }
+                            if (e.key === 'Escape') { setEditingTodoId(null) }
+                          }}
+                          className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 rounded-none focus-visible:shadow-none"
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            'flex-1 text-sm',
+                            todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                          )}
+                          onClick={() => startEditTodo(todo.id, todo.title)}
+                        >
+                          {todo.title}
+                        </span>
+                      )}
                       <button
                         onClick={() => removeTodo(todo.id)}
                         className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
@@ -392,7 +431,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             </div>
 
             {/* Pinned action footer */}
-            <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+            <div className="shrink-0 px-5 pt-3 border-t border-[rgba(180,165,140,0.15)] pb-sheet-footer">
               <button
                 onClick={handleSave}
                 disabled={!title.trim() || saving}
@@ -414,43 +453,13 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             </div>
           </motion.div>
 
-          {/* Delete confirm */}
-          <AnimatePresence>
-            {showDelete && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-end justify-center p-4"
-              >
-                <div className="absolute inset-0 bg-black/40" onClick={() => setShowDelete(false)} />
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
-                >
-                  <div className="text-4xl mb-3">🗑️</div>
-                  <h3 className="font-bold text-gray-800 mb-1">Delete Event?</h3>
-                  <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowDelete(false)}
-                      className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <DeleteConfirmSheet
+            open={showDelete}
+            title="Delete Event?"
+            message="This can't be undone."
+            onCancel={() => setShowDelete(false)}
+            onConfirm={handleDelete}
+          />
         </>
       )}
     </AnimatePresence>

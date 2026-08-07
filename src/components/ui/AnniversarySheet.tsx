@@ -2,24 +2,39 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { Plus, X, Check, Camera, Trash2, Pencil } from 'lucide-react'
+import { differenceInCalendarDays, differenceInYears, differenceInMonths, addYears, addMonths, startOfDay, parseISO } from 'date-fns'
+import { Plus, X, Check, Camera, Trash2, Pencil, Mail, type LucideIcon, Utensils, Flower2, Gift, BookOpen, Flame, Wine, Heart, Gem, CakeSlice, PartyPopper, Waves, TreePine, Drama, Star, Sun, Plane } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { type Countdown, type ChecklistEntry } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { Progress } from '@/components/ui/Progress'
+import { C2SheetBody, C2SheetFooter } from '@/components/ui'
 
-export const ANNIVERSARY_SUGGESTIONS = [
-  { emoji: '🌹', text: 'Plan a dinner reservation' },
-  { emoji: '💐', text: 'Buy flowers' },
-  { emoji: '🎁', text: 'Prepare a small gift' },
-  { emoji: '💌', text: 'Write a love letter' },
-  { emoji: '📸', text: 'Choose a favourite photo together' },
-  { emoji: '🕯️', text: 'Set the mood with candles' },
-  { emoji: '🍾', text: 'Open something special to drink' },
-  { emoji: '📖', text: 'Write a memory from this day' },
+export const ANNIVERSARY_SUGGESTIONS: { icon: LucideIcon; text: string }[] = [
+  { icon: Utensils, text: 'Plan a dinner reservation'     },
+  { icon: Flower2,  text: 'Buy flowers'                   },
+  { icon: Gift,     text: 'Prepare a small gift'          },
+  { icon: Mail,     text: 'Write a love letter'           },
+  { icon: Camera,   text: 'Choose a favourite photo together' },
+  { icon: Flame,    text: 'Set the mood with candles'     },
+  { icon: Wine,     text: 'Open something special to drink' },
+  { icon: BookOpen, text: 'Write a memory from this day'  },
 ]
+
+// Maps milestone emoji strings (legacy) or key strings → LucideIcon
+const MILESTONE_ICON_MAP: Record<string, LucideIcon> = {
+  heart: Heart, gem: Gem, cake: CakeSlice, star: Star, party: PartyPopper,
+  plane: Plane, flower: Flower2, waves: Waves, sun: Sun, tree: TreePine, drama: Drama,
+  '💕': Heart, '💍': Gem, '🎂': CakeSlice, '🌟': Star, '🎉': PartyPopper,
+  '✈️': Plane, '🌸': Flower2, '🌊': Waves, '🏖️': Waves, '🎊': PartyPopper,
+  '🎄': TreePine, '🎭': Drama,
+}
+function getMilestoneIcon(key: string): LucideIcon {
+  return MILESTONE_ICON_MAP[key] ?? Heart
+}
 
 async function resizeImage(file: File): Promise<string> {
   return new Promise(resolve => {
@@ -135,19 +150,26 @@ export function AnniversarySheet({
   const doneCount  = entries.filter(e => e.isCompleted).length
   const totalCount = entries.length
 
-  const daysSince = differenceInCalendarDays(new Date(), parseISO(countdown.date))
-  const isFuture  = daysSince < 0
-  const absDays   = Math.abs(daysSince)
-  const ageLabel  = isFuture
+  // Use the same two-step noon anchor as us/page.tsx to avoid UTC date-shift
+  // bugs in UTC+ timezones, then use calendar-aware date-fns functions.
+  const todayStart     = startOfDay(new Date())
+  const milestoneStart = startOfDay(parseISO(countdown.date + 'T12:00:00'))
+  const daysSince      = differenceInCalendarDays(todayStart, milestoneStart)
+  const isFuture       = daysSince < 0
+  const absDays        = Math.abs(daysSince)
+  const ageLabel       = isFuture
     ? (absDays === 0 ? 'Today!' : `in ${absDays} day${absDays !== 1 ? 's' : ''}`)
     : (() => {
-        const years  = Math.floor(absDays / 365)
-        const months = Math.floor(absDays / 30)
+        const years  = differenceInYears(todayStart, milestoneStart)
+        const afterY = addYears(milestoneStart, years)
+        const months = differenceInMonths(todayStart, afterY)
+        const afterM = addMonths(afterY, months)
+        const days   = differenceInCalendarDays(todayStart, afterM)
         return years >= 1
-          ? `${years} year${years > 1 ? 's' : ''} ago`
+          ? `${years} year${years !== 1 ? 's' : ''} ago`
           : months >= 1
-          ? `${months} month${months > 1 ? 's' : ''} ago`
-          : `${absDays} day${absDays !== 1 ? 's' : ''} ago`
+          ? `${months} month${months !== 1 ? 's' : ''} ago`
+          : `${days} day${days !== 1 ? 's' : ''} ago`
       })()
 
   return (
@@ -155,12 +177,14 @@ export function AnniversarySheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={dirty ? handleSave : onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        aria-hidden="true"
+        className="fixed inset-0 z-50"
+        style={{ background: 'rgba(45,41,38,0.35)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
         {/* Non-scrolling header */}
@@ -170,10 +194,10 @@ export function AnniversarySheet({
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ background: `${primary}15` }}
               >
-                {countdown.emoji}
+                {(() => { const MIcon = getMilestoneIcon(countdown.emoji); return <MIcon size={22} strokeWidth={1.75} style={{ color: primary }} /> })()}
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{ageLabel}</p>
@@ -181,28 +205,29 @@ export function AnniversarySheet({
                   value={title}
                   onChange={e => { setTitle(e.target.value); mark() }}
                   className="text-base font-bold text-gray-800 bg-transparent outline-none w-full"
+                  aria-label="Milestone title"
                 />
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 shrink-0">
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0"
+            >
               <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Scrollable form content */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
-            <input
-              type="date" value={date}
-              onChange={e => { setDate(e.target.value); mark() }}
-              className="w-full text-sm text-gray-700 bg-transparent outline-none"
-            />
+        <C2SheetBody className="pb-4">
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Date</p>
+            <DatePicker value={date} onChange={v => { setDate(v); mark() }} accentColor={primary} />
           </div>
 
           <div className="rounded-2xl px-4 py-3 mb-3" style={{ background: `${primary}06` }}>
-            <p className="text-[10px] font-bold mb-1" style={{ color: primary }}>💌 A message to remember</p>
+            <p className="text-[10px] font-bold mb-1 flex items-center gap-1" style={{ color: primary }}><Mail size={11} strokeWidth={2} /> A message to remember</p>
             <textarea
               value={romantic}
               onChange={e => { setRomantic(e.target.value); mark() }}
@@ -212,7 +237,7 @@ export function AnniversarySheet({
             />
           </div>
 
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
+          <div className="c2-sheet-section px-4 py-3 mb-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>
             <textarea
               value={notes}
@@ -237,14 +262,7 @@ export function AnniversarySheet({
             </div>
 
             {totalCount > 0 && (
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: primary }}
-                  animate={{ width: `${(doneCount / totalCount) * 100}%` }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                />
-              </div>
+              <Progress value={(doneCount / totalCount) * 100} color={primary} className="mb-3" />
             )}
 
             <div className="space-y-1.5">
@@ -347,7 +365,7 @@ export function AnniversarySheet({
                     className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium', already ? 'opacity-40' : 'active:opacity-80')}
                     style={{ background: `${primary}10`, color: already ? primary : '#6b7280', border: `1px solid ${primary}20` }}
                   >
-                    {s.emoji} {s.text} {already && <Check size={10} />}
+                    <s.icon size={13} strokeWidth={1.75} /> {s.text} {already && <Check size={10} />}
                   </button>
                 )
               })}
@@ -376,14 +394,15 @@ export function AnniversarySheet({
               </div>
             )}
           </div>
-        </div>
+        </C2SheetBody>
 
         {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <C2SheetFooter>
           <div className="flex gap-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-red-50 text-red-400 shrink-0 active:opacity-80"
+              aria-label="Delete this milestone"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl c2-sheet-danger-soft shrink-0 active:opacity-80"
             >
               <Trash2 size={16} />
             </button>
@@ -396,7 +415,7 @@ export function AnniversarySheet({
               Save
             </motion.button>
           </div>
-        </div>
+        </C2SheetFooter>
       </motion.div>
 
       <DeleteConfirmSheet

@@ -2,13 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText } from 'lucide-react'
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText, Sparkles } from '@/design/iconSystem'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { format, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type SharedTodo } from '@/types'
 import { cn } from '@/lib/utils'
 import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 export default function TodosPage() {
   const currentUser = useAppStore(s => s.currentUser)!
@@ -187,12 +190,7 @@ export default function TodosPage() {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                 Date (marks on calendar)
               </p>
-              <input
-                type="date"
-                value={taskDate}
-                onChange={e => setTaskDate(e.target.value)}
-                className="w-full text-sm text-gray-700 bg-white/70 rounded-xl px-3 py-2 outline-none"
-              />
+              <DatePicker value={taskDate} onChange={setTaskDate} />
             </div>
 
             {/* Actions */}
@@ -218,15 +216,12 @@ export default function TodosPage() {
 
       {/* List */}
       {todos.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center pt-16 text-center"
-        >
-          <div className="text-5xl mb-4">✨</div>
-          <p className="font-semibold text-gray-600 mb-1">All clear!</p>
-          <p className="text-sm text-gray-400">Tap + to plan something together 🫶</p>
-        </motion.div>
+        <EmptyState
+          icon={Sparkles}
+          title="All clear!"
+          description="Tap + to plan something together 🫶"
+          className="pt-16"
+        />
       ) : (
         <>
           <AnimatePresence mode="popLayout">
@@ -527,34 +522,19 @@ function EditTodoModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
       >
-        {/* Non-scrolling header */}
-        <div className="px-5 pt-4 shrink-0">
-          <div className="drag-handle" />
+        <C2SheetHeader title="Edit Plan" onClose={onClose} />
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-bold text-gray-800">Edit Plan</h3>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable form content */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-4">
+        <C2SheetBody className="pb-4">
           {/* Title */}
           <input
             type="text"
@@ -624,23 +604,17 @@ function EditTodoModal({
 
           {/* Date */}
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Date</p>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-          />
-        </div>
+          <DatePicker value={date} onChange={setDate} />
+        </C2SheetBody>
 
-        {/* Pinned action footer */}
-        <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">
+        <C2SheetFooter>
           <button
             onClick={handleSave}
             disabled={!title.trim()}
             className="w-full py-4 rounded-2xl text-white text-sm font-semibold mb-3 disabled:opacity-40"
             style={{ background: primaryColor }}
           >
-            Save Changes ✨
+            Save Changes
           </button>
 
           <button
@@ -650,49 +624,17 @@ function EditTodoModal({
           >
             Remove Plan
           </button>
-        </div>
+        </C2SheetFooter>
       </motion.div>
 
-      {/* Delete confirm */}
-      <AnimatePresence>
-        {showDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-6"
-          >
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setShowDelete(false)}
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative bg-white rounded-3xl p-6 w-full max-w-xs text-center shadow-modal"
-            >
-              <div className="text-4xl mb-3">🗑️</div>
-              <h3 className="font-bold text-gray-800 mb-1">Remove this plan?</h3>
-              <p className="text-sm text-gray-400 mb-5">This can&apos;t be undone.</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDelete(false)}
-                  className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-600 font-medium text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onDelete}
-                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-medium text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteConfirmSheet
+        open={showDelete}
+        title="Remove this plan?"
+        message="This can't be undone."
+        onCancel={() => setShowDelete(false)}
+        onConfirm={onDelete}
+        confirmLabel="Remove"
+      />
     </>
   )
 }

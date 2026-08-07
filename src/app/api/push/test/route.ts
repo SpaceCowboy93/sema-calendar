@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 // Only configure when env vars are present — prevents build-time throw in CI
 if (process.env.VAPID_SUBJECT && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -8,13 +8,6 @@ if (process.env.VAPID_SUBJECT && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && pro
     process.env.VAPID_SUBJECT,
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY,
-  )
-}
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 }
 
@@ -31,7 +24,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing endpoint or userName' }, { status: 400 })
     }
 
-    const supabase = adminClient()
+    const supabase = getAdminClient()
+    if (!supabase) return supabaseUnavailable()
 
     // Device ownership check: endpoint must belong to the claimed userName
     const { data: sub, error: subErr } = await supabase

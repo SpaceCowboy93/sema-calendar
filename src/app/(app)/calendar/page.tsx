@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from '@/design/iconSystem'
 import { format, isSameMonth, isToday, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { EventModal, COLOR_OPTIONS } from '@/components/calendar/EventModal'
@@ -395,7 +395,7 @@ function CategoryHubModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
 
       {/* Sheet */}
@@ -404,7 +404,7 @@ function CategoryHubModal({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto max-h-[85vh] flex flex-col"
       >
         {/* Header */}
@@ -427,7 +427,8 @@ function CategoryHubModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />
             </button>

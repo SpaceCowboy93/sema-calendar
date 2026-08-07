@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, MotionConfig } from 'framer-motion'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, type UserName } from '@/types'
 
@@ -15,6 +15,7 @@ export default function LandingPage() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
       {/* Gradient background */}
       <div
@@ -27,15 +28,15 @@ export default function LandingPage() {
         }}
       />
 
-      {/* Decorative blobs */}
+      {/* Decorative blobs — pointer-events-none so they never intercept clicks */}
       <motion.div
-        className="absolute top-16 left-8 w-32 h-32 rounded-full opacity-20"
+        className="absolute top-16 left-8 w-32 h-32 rounded-full opacity-20 pointer-events-none"
         style={{ background: 'radial-gradient(circle, #a78bfa, transparent)' }}
         animate={{ scale: [1, 1.1, 1], x: [0, 6, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
-        className="absolute bottom-24 right-8 w-40 h-40 rounded-full opacity-20"
+        className="absolute bottom-24 right-8 w-40 h-40 rounded-full opacity-20 pointer-events-none"
         style={{ background: 'radial-gradient(circle, #2dd4bf, transparent)' }}
         animate={{ scale: [1, 1.08, 1], x: [0, -6, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
@@ -108,5 +109,6 @@ export default function LandingPage() {
         <p className="text-xs text-gray-300 font-medium">made with love, just for you two</p>
       </motion.div>
     </div>
+    </MotionConfig>
   )
 }
