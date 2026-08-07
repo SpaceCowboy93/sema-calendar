@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO, differenceInCalendarDays } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Search, X, Send, Sun } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Search, X, Send, Sun } from '@/design/iconSystem'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import {
@@ -22,10 +22,13 @@ import {
 } from '@/components/ui/CategoryHub'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { NotificationPromptCard } from '@/components/NotificationPromptCard'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
+import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
+import { useDailyGreeting } from '@/hooks/useDailyGreeting'
 import { DailyBriefingSheet } from '@/components/DailyBriefingSheet'
 import { briefingStorageKey, type BriefingItem } from '@/lib/briefing'
 import { getLivingMoment } from '@/lib/livingMoment'
+import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -60,6 +63,8 @@ export default function TogetherPage() {
     events, countdowns, shoppingLists, todos, partnerNotes, currentUser,
     today: getTodayString(),
   }), [events, countdowns, shoppingLists, todos, partnerNotes, currentUser])
+
+  const { greeting, dateLabel } = useDailyGreeting()
 
   // Calendar state
   const [viewDate,      setViewDate]      = useState(new Date())
@@ -268,8 +273,14 @@ export default function TogetherPage() {
 
       <C2PageBackground />
 
-      {/* ── Page header ── */}
-      <PageHeader contextSubtitle={living.homeSubtitle || undefined} />
+      <SeMaRoomHeader
+        mode="greeting"
+        greeting={greeting ?? undefined}
+        subtitle={living.homeSubtitle || undefined}
+        dateLabel={dateLabel}
+        imageSrc={C2_ROOM_HEADERS.home.src}
+        imageObjectPosition={C2_ROOM_HEADERS.home.imageObjectPosition}
+      />
 
       {/* ── Today's Briefing reopen pill ── */}
       {briefingChecked && !briefingOpen && (
@@ -283,7 +294,7 @@ export default function TogetherPage() {
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-500 bg-white shadow-card"
           >
             <Sun size={12} style={{ color: primary }} />
-            Today's Briefing
+            Today&apos;s Briefing
           </motion.button>
         </div>
       )}
@@ -399,11 +410,11 @@ export default function TogetherPage() {
 
         {/* ── Calendar events for selected date ── */}
         <div>
-          <h2 className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-3">
+          <C2SectionLabel as="h2" className="mb-3">
             {selectedDate === getTodayString()
               ? 'Today'
               : format(parseISO(selectedDate), 'EEEE, MMM d')}
-          </h2>
+          </C2SectionLabel>
 
           <AnimatePresence mode="popLayout">
             {selectedEvents.length === 0 ? (
@@ -549,7 +560,7 @@ export default function TogetherPage() {
         {/* ── Category Rooms ── */}
         {!isSearching && (
           <div className="pt-1 pb-2">
-            <p className="text-[11px] font-medium text-gray-400 tracking-widest uppercase mb-4">Rooms</p>
+            <C2SectionLabel className="mb-4">Rooms</C2SectionLabel>
             <div className="space-y-0.5">
               {CATEGORY_DEFS.map((cat, i) => {
                 const st = catStats[cat.id]
@@ -629,12 +640,12 @@ export default function TogetherPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { if (!noteSent) { setNoteOpen(false); setNoteText('') } }}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-50 c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
             >
               <div className="px-5 pt-4 pb-10">
                 <div className="drag-handle" />
@@ -643,19 +654,22 @@ export default function TogetherPage() {
                     <motion.div key="sent" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
                       className="flex flex-col items-center py-10 text-center">
                       <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: 2, duration: 0.4 }}
-                        className="text-5xl mb-4">💌</motion.div>
-                      <p className="font-bold text-gray-800 mb-1">Sent with love 💕</p>
+                        className="text-5xl mb-4" aria-hidden="true">💌</motion.div>
+                      <p className="font-bold text-gray-800 mb-1">Sent with love</p>
                       <p className="text-sm text-gray-400">{USERS[partnerUser].displayName} will see it when they open the app</p>
                     </motion.div>
                   ) : (
                     <motion.div key="compose" initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h3 className="text-base font-bold text-gray-800">Leave a note 💌</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].emoji} {USERS[partnerUser].displayName}</p>
+                          <h3 className="text-base font-bold text-gray-800">Leave a note</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">To {USERS[partnerUser].displayName}</p>
                         </div>
-                        <button onClick={() => { setNoteOpen(false); setNoteText('') }}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                        <button
+                          onClick={() => { setNoteOpen(false); setNoteText('') }}
+                          aria-label="Close"
+                          className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
+                        >
                           <X size={16} />
                         </button>
                       </div>
@@ -676,7 +690,7 @@ export default function TogetherPage() {
                         className="w-full py-4 rounded-2xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
                         style={{ background: primary }}
                       >
-                        <Send size={15} /> Send with love 💌
+                        <Send size={15} /> Send with love
                       </motion.button>
                     </motion.div>
                   )}
@@ -700,7 +714,7 @@ export default function TogetherPage() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => { markRead(unreadNote.id); setReadingNote(false) }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-8"
+            className="fixed inset-0 z-50 c2-backdrop flex items-center justify-center p-8"
           >
             <motion.div
               initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -720,7 +734,7 @@ export default function TogetherPage() {
                 className="w-full py-3 rounded-2xl text-white text-sm font-semibold"
                 style={{ background: primary }}
               >
-                💕 Close with love
+                Close with love
               </button>
             </motion.div>
           </motion.div>

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Camera, Image as ImageIcon, Trash2, ScanLine, Plus, Loader2 } from 'lucide-react'
+import { X, Camera, ImageIcon, Trash2, ScanLine, Plus, Loader2 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type ReceiptResult } from '@/types'
 import { cn } from '@/lib/utils'
@@ -79,14 +79,14 @@ export function ReceiptScannerSheet({ onClose, onResultReady }: Props) {
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[80] bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-[80] c2-backdrop"
       />
 
       {/* Sheet */}
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
-        className="fixed bottom-0 left-0 right-0 z-[80] bg-white rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[88vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-[80] c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[88vh] overflow-y-auto"
       >
         <div className="px-5 pt-4 pb-12">
           <div className="drag-handle mb-5" />
@@ -99,7 +99,7 @@ export function ReceiptScannerSheet({ onClose, onResultReady }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />
             </button>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellOff, BellRing, ChevronDown, RefreshCw, Check, X, Wifi } from 'lucide-react'
+import { Bell, BellOff, BellRing, ChevronDown, RefreshCw, Check, X, Wifi, Smartphone } from '@/design/iconSystem'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS, OTHER_USER } from '@/types'
@@ -122,7 +122,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
               className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
               style={{ background: `${primary}15` }}
             >
-              📱
+              <Smartphone size={22} strokeWidth={1.75} style={{ color: primary }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-800">Install app for notifications</p>

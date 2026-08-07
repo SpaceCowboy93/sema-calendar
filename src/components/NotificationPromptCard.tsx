@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellOff, ChevronDown, RefreshCw, Loader2 } from 'lucide-react'
+import { Bell, BellOff, ChevronDown, RefreshCw, Loader2, Smartphone } from '@/design/iconSystem'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
@@ -178,7 +178,7 @@ export function NotificationPromptCard({ primary }: { primary: string }) {
           className="w-full flex items-center gap-3 px-4 py-3 text-left"
           style={{ background: `${primary}08` }}
         >
-          <span className="text-lg shrink-0">📱</span>
+          <Smartphone size={18} strokeWidth={1.75} className="shrink-0 text-gray-500" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-gray-800">Add to Home Screen for notifications</p>
             <p className="text-[10px] text-gray-500 mt-0.5">Share → Add to Home Screen, then open SeMa</p>

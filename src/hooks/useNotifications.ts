@@ -101,9 +101,17 @@ function collectFocusTimedItems(): ScheduledItem[] {
   const { focusActivities } = useAppStore.getState()
   const items: ScheduledItem[] = []
   focusActivities.forEach(a => {
-    if (a.isCompleted || !a.time || !a.reminder || a.reminder === 'none') return
-    const fireAt = computeFocusFireAt(a.weekKey, a.dayIndex, a.time, a.reminder)
-    if (fireAt) items.push({ id: a.id, title: a.title, datetime: fireAt })
+    if (a.isCompleted || !a.time) return
+    // Support both new `reminders` array and legacy `reminder` single value
+    const activeReminders = a.reminders && a.reminders.length > 0
+      ? a.reminders
+      : a.reminder && a.reminder !== 'none'
+      ? [a.reminder]
+      : []
+    for (const r of activeReminders) {
+      const fireAt = computeFocusFireAt(a.weekKey, a.dayIndex, a.time, r)
+      if (fireAt) items.push({ id: `${a.id}-${r}`, title: a.title, datetime: fireAt })
+    }
   })
   return items
 }

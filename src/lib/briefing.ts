@@ -84,7 +84,7 @@ export function generateBriefingItems(
     items.push({
       id:       `briefing-todo-${overdueTodo.id}`,
       kind:     'todo_urgent',
-      emoji:    '⚠️',
+      emoji:    'warning',
       label:    overdueTodo.title,
       sub:      'Overdue plan — needs attention',
       sourceId: overdueTodo.id,
@@ -106,7 +106,7 @@ export function generateBriefingItems(
     items.push({
       id:       `briefing-ev-${ev.id}`,
       kind:     'event',
-      emoji:    ev.emoji ?? '📅',
+      emoji:    ev.emoji ?? 'calendar',
       label:    ev.title,
       sub:      ev.startTime ? formatTime(ev.startTime) : 'Today',
       sourceId: ev.id,
@@ -125,7 +125,7 @@ export function generateBriefingItems(
       items.push({
         id:       `briefing-act-${activity.id}`,
         kind:     'planner_activity',
-        emoji:    '📋',
+        emoji:    'checklist',
         label:    activity.title,
         sub:      activity.time ? formatTime(activity.time) : "Today's plan",
         sourceId: activity.id,
@@ -143,7 +143,7 @@ export function generateBriefingItems(
       items.push({
         id:       `briefing-note-${note.id}`,
         kind:     'partner_note',
-        emoji:    '💌',
+        emoji:    'note',
         label:    `Note from ${partnerName}`,
         sub:      preview,
         sourceId: note.id,
@@ -159,7 +159,7 @@ export function generateBriefingItems(
       items.push({
         id:       `briefing-mood-${partner}-${today}`,
         kind:     'partner_mood',
-        emoji:    cfg.emoji,
+        emoji:    mood.mood,
         label:    `${partnerName} is feeling ${cfg.label.toLowerCase()}`,
         sub:      mood.note,
         sourceId: `${partner}-${today}`,
@@ -216,7 +216,7 @@ export function generateBriefingItems(
       items.push({
         id:       `briefing-shop-${shopList.id}`,
         kind:     'shopping_list',
-        emoji:    '🛒',
+        emoji:    'shopping',
         label:    shopList.name,
         sub:      `${remaining} item${remaining !== 1 ? 's' : ''} remaining`,
         sourceId: shopList.id,

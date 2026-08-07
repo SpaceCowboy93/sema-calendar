@@ -4,7 +4,9 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, X, Camera, Check, Trash2, Pencil, ScanLine, ChevronDown, ChevronRight,
-} from 'lucide-react'
+  type LucideIcon, Globe, Coins, Dumbbell, Leaf, BookOpen, Palette, Trophy,
+  CalendarCheck2, Sparkles, Gift, ShoppingBag, Heart, PartyPopper,
+} from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { ShoppingListEditorSheet, effectivePhotos } from '@/components/ui/ShoppingListEditorSheet'
@@ -13,6 +15,8 @@ import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
 import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatTime } from '@/lib/utils'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { TimePicker } from '@/components/ui/TimePicker'
 import {
   USERS,
   type UserName, type WishlistCategory, type GoalCategory,
@@ -22,26 +26,26 @@ import {
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 
-export const GOAL_CATEGORIES: [GoalCategory, { emoji: string; label: string }][] = [
-  ['travel',     { emoji: '✈️', label: 'Travel'     }],
-  ['money',      { emoji: '💰', label: 'Money'      }],
-  ['fitness',    { emoji: '💪', label: 'Fitness'    }],
-  ['life',       { emoji: '🌱', label: 'Life'       }],
-  ['learning',   { emoji: '📚', label: 'Learning'   }],
-  ['hobbies',    { emoji: '🎨', label: 'Hobbies'    }],
-  ['challenges', { emoji: '🏆', label: 'Challenges' }],
+export const GOAL_CATEGORIES: [GoalCategory, { icon: LucideIcon; label: string }][] = [
+  ['travel',     { icon: Globe,        label: 'Travel'     }],
+  ['money',      { icon: Coins,        label: 'Money'      }],
+  ['fitness',    { icon: Dumbbell,     label: 'Fitness'    }],
+  ['life',       { icon: Leaf,         label: 'Life'       }],
+  ['learning',   { icon: BookOpen,     label: 'Learning'   }],
+  ['hobbies',    { icon: Palette,      label: 'Hobbies'    }],
+  ['challenges', { icon: Trophy,       label: 'Challenges' }],
 ]
 
 export type CategoryType = 'wishes' | 'shopping' | 'dreams' | 'moments' | 'plans'
 
 export const CATEGORY_DEFS: {
-  id: CategoryType; emoji: string; label: string; hex: string; color?: EventColor
+  id: CategoryType; icon: LucideIcon; label: string; hex: string; color?: EventColor
 }[] = [
-  { id: 'plans',    emoji: '💚', label: 'Plans',    hex: '#34d399', color: 'green'  },
-  { id: 'dreams',   emoji: '💙', label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
-  { id: 'wishes',   emoji: '💜', label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
-  { id: 'shopping', emoji: '🛍️', label: 'Shopping', hex: '#ef4444'                  },
-  { id: 'moments',  emoji: '💛', label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
+  { id: 'plans',    icon: CalendarCheck2, label: 'Plans',    hex: '#34d399', color: 'green'  },
+  { id: 'dreams',   icon: Sparkles,       label: 'Dreams',   hex: '#60a5fa', color: 'blue'   },
+  { id: 'wishes',   icon: Gift,           label: 'Wishes',   hex: '#a78bfa', color: 'seval'  },
+  { id: 'shopping', icon: ShoppingBag,    label: 'Shopping', hex: '#ef4444'                  },
+  { id: 'moments',  icon: Heart,          label: 'Moments',  hex: '#fbbf24', color: 'yellow' },
 ]
 
 /* ── Helpers ────────────────────────────────────────────────────────────────── */
@@ -223,12 +227,12 @@ export function CategoryHubSheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2rem] shadow-modal
+        className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
                    max-w-lg mx-auto flex flex-col"
         style={{ maxHeight: 'calc(100dvh - 48px)' }}
         role="dialog" aria-modal="true" aria-label={def.label}
@@ -238,7 +242,10 @@ export function CategoryHubSheet({
           <div className="drag-handle mb-3" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-3xl" aria-hidden="true">{def.emoji}</span>
+              <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: `${catHex}18`, color: catHex }}>
+                <def.icon size={18} strokeWidth={1.75} aria-hidden="true" />
+              </div>
               <div>
                 <h2 className="text-base font-bold text-gray-800">{def.label}</h2>
                 <p className="text-xs text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</p>
@@ -247,7 +254,7 @@ export function CategoryHubSheet({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x"
             >
               <X size={16} />
             </button>
@@ -271,7 +278,10 @@ export function CategoryHubSheet({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-2">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-5xl mb-3 opacity-30" aria-hidden="true">{def.emoji}</span>
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center mb-3 opacity-30"
+                style={{ background: `${catHex}18`, color: catHex }}>
+                <def.icon size={28} strokeWidth={1.5} aria-hidden="true" />
+              </div>
               <p className="text-sm text-gray-400">Nothing here yet</p>
             </div>
           ) : (
@@ -343,12 +353,12 @@ export function CategoryHubSheet({
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setEditingId(null)}
-              className="fixed inset-0 z-[60] bg-black/20"
+              className="fixed inset-0 z-[60] c2-backdrop"
             />
             <motion.div
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-              className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-[2rem] shadow-modal
+              className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal
                          max-w-lg mx-auto flex flex-col"
               style={{ maxHeight: 'calc(100dvh - 48px)' }}
               role="dialog" aria-modal="true" aria-label={`Edit ${addLabel}`}
@@ -358,7 +368,7 @@ export function CategoryHubSheet({
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-gray-800">Edit {addLabel}</h3>
                   <button onClick={() => setEditingId(null)} aria-label="Close"
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    className="w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x">
                     <X size={16} />
                   </button>
                 </div>
@@ -379,13 +389,13 @@ export function CategoryHubSheet({
                   <div className="flex gap-2">
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                       <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Date</p>
-                      <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
-                        className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+                      <DatePicker value={editDate} onChange={setEditDate}
+                        triggerClassName="bg-transparent px-0 py-0 rounded-none text-sm text-gray-700" />
                     </div>
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                       <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Time</p>
-                      <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
-                        className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+                      <TimePicker value={editTime} onChange={setEditTime}
+                        triggerClassName="bg-transparent px-0 py-0 rounded-none" />
                     </div>
                   </div>
                 </div>
@@ -497,7 +507,7 @@ export function ShoppingHubSheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-50 c2-backdrop"
       />
 
       {/* Sheet */}
@@ -914,7 +924,7 @@ export function ShoppingDetailSheet({
 
   function handleAddItem() {
     if (!itemName.trim()) return
-    onAddItem(itemName.trim(), parseInt(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
+    onAddItem(itemName.trim(), parseFloat(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
     setItemName(''); setItemQty('1'); setItemPrice('')
     requestAnimationFrame(() => itemNameRef.current?.focus())
   }
@@ -931,7 +941,7 @@ export function ShoppingDetailSheet({
     if (!editingItemId || !editName.trim()) return
     onUpdateItem(editingItemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty) || 1,
+      quantity: parseFloat(editQty) || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim() || undefined,
     })
@@ -964,7 +974,7 @@ export function ShoppingDetailSheet({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[60] bg-black/20"
+        className="fixed inset-0 z-[60] c2-backdrop"
       />
       <motion.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -1110,7 +1120,7 @@ export function ShoppingDetailSheet({
                 type="number"
                 value={itemQty}
                 onChange={e => setItemQty(e.target.value)}
-                min="1"
+                min="0" step="any" inputMode="decimal"
                 aria-label="Quantity"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
@@ -1122,6 +1132,7 @@ export function ShoppingDetailSheet({
                 onChange={e => setItemPrice(e.target.value)}
                 placeholder="€"
                 aria-label="Price"
+                min="0" step="any" inputMode="decimal"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
                 className="w-14 text-xs bg-gray-50 rounded-xl px-2 py-2 outline-none border border-gray-100"
@@ -1166,7 +1177,7 @@ export function ShoppingDetailSheet({
                         type="number"
                         value={editQty}
                         onChange={e => setEditQty(e.target.value)}
-                        min="1"
+                        min="0" step="any" inputMode="decimal"
                         aria-label="Edit quantity"
                         onFocus={e => e.target.select()}
                         className="w-12 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-1.5 outline-none shrink-0"
@@ -1177,6 +1188,7 @@ export function ShoppingDetailSheet({
                         onChange={e => setEditPrice(e.target.value)}
                         placeholder="€"
                         aria-label="Edit price"
+                        min="0" step="any" inputMode="decimal"
                         className="w-16 text-xs bg-gray-50 rounded-xl px-2 py-1.5 outline-none shrink-0"
                       />
                     </div>
@@ -1481,7 +1493,7 @@ export function ShoppingDetailSheet({
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setCompletionDialog(false); setLeaveNoteMode(false) }}
-              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6"
+              className="fixed inset-0 z-[70] c2-backdrop flex items-center justify-center p-6"
             />
             <motion.div
               initial={{ scale: 0.88, opacity: 0 }}
@@ -1500,10 +1512,11 @@ export function ShoppingDetailSheet({
                       <motion.div
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ repeat: 2, duration: 0.45 }}
-                        className="text-4xl mb-3"
+                        className="w-14 h-14 rounded-full flex items-center justify-center mb-3 mx-auto"
+                        style={{ background: 'rgba(158,201,179,0.18)', color: '#7BBBA5' }}
                         aria-hidden="true"
                       >
-                        🎉
+                        <PartyPopper size={28} strokeWidth={1.5} />
                       </motion.div>
                       <h3 className="text-base font-bold text-gray-800 mb-1">Shopping complete!</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">
@@ -1513,7 +1526,7 @@ export function ShoppingDetailSheet({
                     <div className="flex gap-2">
                       <button
                         onClick={() => setCompletionDialog(false)}
-                        className="flex-1 py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold active:opacity-80"
+                        className="flex-1 py-3.5 rounded-2xl c2-sheet-cancel text-sm font-semibold active:opacity-80"
                       >
                         Not now
                       </button>

@@ -20,6 +20,22 @@ export interface LivingMoment {
   /** Replaces the plain date below the Home greeting. Empty string = show date as normal. */
   homeSubtitle: string
   /**
+   * Planner page subtitle — shown below the Planner title.
+   * Reflects the week's character without using kitchen/shopping copy.
+   * Empty string = use the static default in the caller.
+   */
+  plannerSubtitle: string
+  /**
+   * Finances page subtitle — money, savings and future-planning copy only.
+   * Empty string = use the static default in the caller.
+   */
+  financeSubtitle: string
+  /**
+   * Us page subtitle — relationship, memories and emotional copy only.
+   * Empty string = use the static default in the caller.
+   */
+  usSubtitle: string
+  /**
    * Shopping sheet eyebrow text — small line above the fixed Playfair title.
    * Default: "Shopping together". Changes contextually when real app data matches a moment.
    * Passed as `shoppingTitle` prop to ShoppingHubSheet.
@@ -104,8 +120,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 1. Birthday today ──────────────────────────────────────────────────────
   if ([...todayEvents, ...todayCDs].some(e => hasKw(e.title, BIRTHDAY_KW))) {
     return {
-      homeSubtitle:    '🎉 Today is a very special day.',
-      shoppingTitle: 'A little celebration ahead',
+      homeSubtitle:     '🎉 Today is a very special day.',
+      plannerSubtitle:  'A special day to celebrate.',
+      financeSubtitle:  'Saving for what matters.',
+      usSubtitle:       'A day that belongs to your story.',
+      shoppingTitle:    'A little celebration ahead',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything needed for the special day.'
         : 'Ready for the celebration.',
@@ -115,7 +134,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 2. Anniversary today ───────────────────────────────────────────────────
   if ([...todayEvents, ...todayCDs].some(e => hasKw(e.title, ANNIV_KW))) {
     return {
-      homeSubtitle: '❤️ Happy anniversary.',
+      homeSubtitle:    '❤️ Happy anniversary.',
+      plannerSubtitle: 'A day worth remembering.',
+      financeSubtitle: 'Saving for what matters.',
+      usSubtitle:      'Another year of your story.',
       ...defaultShopping,
     }
   }
@@ -123,8 +145,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 3. Vacation / trip starts today ───────────────────────────────────────
   if (todayEvents.some(e => hasKw(e.title, TRAVEL_KW))) {
     return {
-      homeSubtitle:    '☀️ Time to make memories.',
-      shoppingTitle: 'Getting ready to go',
+      homeSubtitle:     '☀️ Time to make memories.',
+      plannerSubtitle:  'Adventure begins today.',
+      financeSubtitle:  'A good time to review your travel budget.',
+      usSubtitle:       'A little closer to your next adventure.',
+      shoppingTitle:    'Getting ready to go',
       shoppingSubtitle: pendingCount > 0
         ? `A few final things before the adventure.`
         : 'All packed.',
@@ -134,8 +159,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 4. Trip tomorrow ───────────────────────────────────────────────────────
   if ([...tomorrowEvents, ...tomorrowCDs].some(e => hasKw(e.title, TRAVEL_KW))) {
     return {
-      homeSubtitle:    '✈️ Adventure starts tomorrow.',
-      shoppingTitle: 'Getting ready to go',
+      homeSubtitle:     '✈️ Adventure starts tomorrow.',
+      plannerSubtitle:  'A few plans before your next adventure.',
+      financeSubtitle:  'A good time to review your travel budget.',
+      usSubtitle:       'A little closer to your next adventure.',
+      shoppingTitle:    'Getting ready to go',
       shoppingSubtitle: pendingCount > 0
         ? 'A few final things before the adventure.'
         : 'Almost packed.',
@@ -145,7 +173,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 5. Anniversary tomorrow ────────────────────────────────────────────────
   if ([...tomorrowEvents, ...tomorrowCDs].some(e => hasKw(e.title, ANNIV_KW))) {
     return {
-      homeSubtitle: '❤️ One more sleep until your anniversary.',
+      homeSubtitle:    '❤️ One more sleep until your anniversary.',
+      plannerSubtitle: 'Tomorrow is a day to remember.',
+      financeSubtitle: 'Saving for what matters.',
+      usSubtitle:      'Tomorrow belongs to your story.',
       ...defaultShopping,
     }
   }
@@ -153,8 +184,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 6. Birthday tomorrow ───────────────────────────────────────────────────
   if ([...tomorrowEvents, ...tomorrowCDs].some(e => hasKw(e.title, BIRTHDAY_KW))) {
     return {
-      homeSubtitle:    '🎂 A birthday is tomorrow.',
-      shoppingTitle: 'A little celebration ahead',
+      homeSubtitle:     '🎂 A birthday is tomorrow.',
+      plannerSubtitle:  'A celebration is coming up.',
+      financeSubtitle:  'Saving for what matters.',
+      usSubtitle:       'A memory worth keeping.',
+      shoppingTitle:    'A little celebration ahead',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything needed for the special day.'
         : 'Ready to celebrate.',
@@ -164,8 +198,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 7. Christmas week (Dec 22–26) ──────────────────────────────────────────
   if (month === 12 && day >= 22 && day <= 26) {
     return {
-      homeSubtitle:    '🎄 Christmas is almost here.',
-      shoppingTitle: 'Gathering for Christmas',
+      homeSubtitle:     '🎄 Christmas is almost here.',
+      plannerSubtitle:  'A festive week ahead.',
+      financeSubtitle:  'A good time to review year-end spending.',
+      usSubtitle:       'A memory worth keeping.',
+      shoppingTitle:    'Gathering for Christmas',
       shoppingSubtitle: pendingCount > 0
         ? 'Just a few festive things left.'
         : 'Ready for Christmas.',
@@ -175,7 +212,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 8. New Year's Eve / Day ────────────────────────────────────────────────
   if ((month === 12 && day === 31) || (month === 1 && day === 1)) {
     return {
-      homeSubtitle: month === 12 ? '🥂 Tonight we celebrate.' : '✨ Happy New Year.',
+      homeSubtitle:    month === 12 ? '🥂 Tonight we celebrate.' : '✨ Happy New Year.',
+      plannerSubtitle: month === 12 ? 'One last day of the year.' : 'A fresh start.',
+      financeSubtitle: month === 12 ? 'A good time to review the year.' : 'A clean slate for your goals.',
+      usSubtitle:      month === 12 ? 'Your story keeps growing.' : 'A new chapter begins.',
       ...defaultShopping,
     }
   }
@@ -185,8 +225,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   if (dinnerEvent) {
     const isToday = dinnerEvent.date === today
     return {
-      homeSubtitle:    isToday ? '🍽️ Dinner plans tonight.' : '🍽️ Dinner plans tomorrow.',
-      shoppingTitle: 'Around the table',
+      homeSubtitle:     isToday ? '🍽️ Dinner plans tonight.' : '🍽️ Dinner plans tomorrow.',
+      plannerSubtitle:  isToday ? 'Dinner plans in the schedule.' : 'Dinner plans tomorrow.',
+      financeSubtitle:  'Another step toward your plans.',
+      usSubtitle:       'Another day in your story.',
+      shoppingTitle:    'Around the table',
       shoppingSubtitle: pendingCount > 0
         ? 'Everything for dinner together.'
         : 'Ready for dinner.',
@@ -196,8 +239,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 10. Picnic event today or tomorrow ─────────────────────────────────────
   if ([...todayEvents, ...tomorrowEvents].some(e => hasKw(e.title, PICNIC_KW))) {
     return {
-      homeSubtitle:    '🌿 Picnic day ahead.',
-      shoppingTitle: 'A day outside',
+      homeSubtitle:     '🌿 Picnic day ahead.',
+      plannerSubtitle:  'A day outside together.',
+      financeSubtitle:  'Quiet progress toward your goals.',
+      usSubtitle:       'A memory worth keeping.',
+      shoppingTitle:    'A day outside',
       shoppingSubtitle: pendingCount > 0 ? 'A few things to pack.' : 'All set for the picnic.',
     }
   }
@@ -205,8 +251,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 11. BBQ event today or tomorrow ───────────────────────────────────────
   if ([...todayEvents, ...tomorrowEvents].some(e => hasKw(e.title, BBQ_KW))) {
     return {
-      homeSubtitle:    '🔥 BBQ weekend ahead.',
-      shoppingTitle: 'Around the grill',
+      homeSubtitle:     '🔥 BBQ weekend ahead.',
+      plannerSubtitle:  'A relaxed day planned.',
+      financeSubtitle:  'Quiet progress toward your goals.',
+      usSubtitle:       'Another day in your story.',
+      shoppingTitle:    'Around the grill',
       shoppingSubtitle: pendingCount > 0 ? 'A few things to grab.' : 'All set for the BBQ.',
     }
   }
@@ -214,8 +263,11 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 12. Movie night today or tomorrow ─────────────────────────────────────
   if ([...todayEvents, ...tomorrowEvents].some(e => hasKw(e.title, MOVIE_KW))) {
     return {
-      homeSubtitle:    '🎬 Movie night ahead.',
-      shoppingTitle: 'Tonight at home',
+      homeSubtitle:     '🎬 Movie night ahead.',
+      plannerSubtitle:  'A cosy evening in the schedule.',
+      financeSubtitle:  'Another step toward your plans.',
+      usSubtitle:       'Your story keeps growing.',
+      shoppingTitle:    'Tonight at home',
       shoppingSubtitle: pendingCount > 0 ? 'Snacks and little comforts.' : 'All set for movie night.',
     }
   }
@@ -224,7 +276,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   const todayTodos = todos.filter(t => !t.isCompleted && t.date === today)
   if (todayEvents.length + todayTodos.length >= 3) {
     return {
-      homeSubtitle: '📅 Busy day ahead.',
+      homeSubtitle:    '📅 Busy day ahead.',
+      plannerSubtitle: 'A full day, clearly arranged.',
+      financeSubtitle: 'Steady progress this month.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
@@ -232,7 +287,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 14. Unread partner note ────────────────────────────────────────────────
   if (partnerNotes.some(n => n.to === currentUser && !n.isRead)) {
     return {
-      homeSubtitle: '💌 Someone left you a little surprise.',
+      homeSubtitle:    '💌 Someone left you a little surprise.',
+      plannerSubtitle: 'A message is waiting for you.',
+      financeSubtitle: 'Another step toward your plans.',
+      usSubtitle:      'Your story keeps growing.',
       ...defaultShopping,
     }
   }
@@ -240,7 +298,10 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 15. Shopping lists pending ─────────────────────────────────────────────
   if (incompleteLists.length > 0) {
     return {
-      homeSubtitle: '🛒 Kitchen restock day.',
+      homeSubtitle:    '🛒 Kitchen restock day.',
+      plannerSubtitle: 'A few errands to fit into your week.',
+      financeSubtitle: 'Another step toward your plans.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
@@ -248,14 +309,20 @@ export function getLivingMoment(input: LivingMomentInput): LivingMoment {
   // ── 16. Quiet day — nothing scheduled ─────────────────────────────────────
   if (todayEvents.length === 0 && todayTodos.length === 0) {
     return {
-      homeSubtitle: '🌿 A calm day together.',
+      homeSubtitle:    '🌿 A calm day together.',
+      plannerSubtitle: 'A calm week ahead.',
+      financeSubtitle: 'A calm month, clearly understood.',
+      usSubtitle:      'Another day in your story.',
       ...defaultShopping,
     }
   }
 
   // ── Default ────────────────────────────────────────────────────────────────
   return {
-    homeSubtitle: '',
+    homeSubtitle:    '',
+    plannerSubtitle: '',
+    financeSubtitle: '',
+    usSubtitle:      '',
     ...defaultShopping,
   }
 }

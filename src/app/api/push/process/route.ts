@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!,
 )
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 // Authorization matrix — same rules as /api/push/send:
 //   production + secret set     → check Bearer token
@@ -79,7 +72,8 @@ export async function GET(req: NextRequest) {
   console.log('[process GET] VAPID_PRIVATE_KEY present:',        !!process.env.VAPID_PRIVATE_KEY)
   console.log('[process GET] SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-  const supabase = adminClient()
+  const supabase = getAdminClient()
+  if (!supabase) return supabaseUnavailable()
   const now      = new Date().toISOString()
 
   // 1. Fetch due, unsent reminders — exclude permanently failed rows

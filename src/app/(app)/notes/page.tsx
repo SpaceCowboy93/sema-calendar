@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Pin, Trash2, Send, Heart } from 'lucide-react'
+import { Pin, Trash2, Send, Heart, Mail } from '@/design/iconSystem'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { useAppStore } from '@/store/useAppStore'
 import { USERS } from '@/types'
@@ -104,17 +105,12 @@ export default function NotesPage() {
 
       {/* Notes list */}
       {sorted.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center pt-20 text-center"
-        >
-          <div className="text-5xl mb-4">💌</div>
-          <p className="font-semibold text-gray-600 mb-1">No notes yet</p>
-          <p className="text-sm text-gray-400">
-            Tap the heart button to write your first love note
-          </p>
-        </motion.div>
+        <EmptyState
+          icon={Mail}
+          title="No notes yet"
+          description="Tap the heart button to write your first love note"
+          className="pt-20"
+        />
       ) : (
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">

@@ -10,11 +10,13 @@ import {
   Wine, Beer, Fish, Citrus, Droplets, Carrot, Cherry,
   Grape, Salad,
   type LucideIcon,
-} from 'lucide-react'
+} from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { getLivingMoment } from '@/lib/livingMoment'
 import { getTodayString, cn } from '@/lib/utils'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
+import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
+import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
 import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
@@ -40,57 +42,6 @@ const C = {
   divider:    'rgba(30,25,18,0.07)',
 } as const
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Botanical corner cluster — leaves fan from the upper-right corner.
-   No single visible stem. Varied leaf sizes. Low contrast, organic.
-───────────────────────────────────────────────────────────────────────────── */
-function BotanicalCornerCluster() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 220 220"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ position: 'absolute', top: -8, right: -8, width: 200, height: 200, pointerEvents: 'none', opacity: 0.72 }}
-    >
-      <defs>
-        <filter id="bc-blur"><feGaussianBlur stdDeviation="0.7"/></filter>
-      </defs>
-      <g filter="url(#bc-blur)">
-        {/* Large leaf — sweeps down-left from corner */}
-        <path d="M210 10 C170 30 130 80 100 130" stroke="#8FA68D" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.35"/>
-        <g transform="translate(210,10) rotate(160)">
-          <path d="M0 0 C16 -10 16 -34 0 -52 C-16 -34 -16 -10 0 0Z" fill="#8FA68D" opacity="0.68"/>
-          <line x1="0" y1="-1" x2="0" y2="-50" stroke="#6B8A6B" strokeWidth="0.7" opacity="0.3"/>
-        </g>
-        {/* Medium leaf — angled toward left */}
-        <g transform="translate(185,22) rotate(142)">
-          <path d="M0 0 C13 -8 13 -26 0 -40 C-13 -26 -13 -8 0 0Z" fill="#7A9870" opacity="0.60"/>
-          <line x1="0" y1="-1" x2="0" y2="-39" stroke="#60806A" strokeWidth="0.7" opacity="0.28"/>
-        </g>
-        {/* Medium leaf — downward */}
-        <g transform="translate(198,52) rotate(168)">
-          <path d="M0 0 C11 -8 11 -24 0 -36 C-11 -24 -11 -8 0 0Z" fill="#93AE90" opacity="0.55"/>
-          <line x1="0" y1="-1" x2="0" y2="-35" stroke="#6B8A6B" strokeWidth="0.6" opacity="0.26"/>
-        </g>
-        {/* Small leaf — sprouting right */}
-        <g transform="translate(170,40) rotate(125)">
-          <path d="M0 0 C9 -6 9 -18 0 -28 C-9 -18 -9 -6 0 0Z" fill="#7C9C74" opacity="0.52"/>
-        </g>
-        {/* Small leaf — low and left */}
-        <g transform="translate(148,78) rotate(148)">
-          <path d="M0 0 C8 -5 8 -16 0 -24 C-8 -16 -8 -5 0 0Z" fill="#8FA68D" opacity="0.45"/>
-        </g>
-        {/* Tiny accent — very corner */}
-        <g transform="translate(215,35) rotate(155)">
-          <path d="M0 0 C6 -4 6 -12 0 -18 C-6 -12 -6 -4 0 0Z" fill="#7A9870" opacity="0.40"/>
-        </g>
-        {/* Stem trace — secondary branch */}
-        <path d="M195 18 C175 52 155 90 128 118" stroke="#8FA68D" strokeWidth="0.9" strokeLinecap="round" fill="none" opacity="0.22"/>
-      </g>
-    </svg>
-  )
-}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Small botanical leaf — used inline in estimated total card
@@ -271,6 +222,7 @@ export default function ShoppingPage() {
   const [addTargetListId, setAddTargetListId] = useState<string | null>(null)
   const [addName,         setAddName]         = useState('')
   const [addQty,          setAddQty]          = useState('1')
+  const [addPrice,        setAddPrice]        = useState('')
   const addInputRef = useRef<HTMLInputElement>(null)
 
   function openAdd(listId: string) {
@@ -282,9 +234,10 @@ export default function ShoppingPage() {
 
   function confirmAdd() {
     if (!addName.trim() || !addTargetListId) return
-    addItem(addTargetListId, addName.trim(), parseInt(addQty) || 1)
+    addItem(addTargetListId, addName.trim(), parseFloat(addQty) || 1, undefined, parseFloat(addPrice) || undefined)
     setAddName('')
     setAddQty('1')
+    setAddPrice('')
     requestAnimationFrame(() => addInputRef.current?.focus())
   }
 
@@ -292,6 +245,7 @@ export default function ShoppingPage() {
     setAddFocused(false)
     setAddName('')
     setAddQty('1')
+    setAddPrice('')
   }
 
   /* ── Inline item edit ───────────────────────────────────────────────────── */
@@ -313,7 +267,7 @@ export default function ShoppingPage() {
     if (!editingItem || !editName.trim()) return
     updateItem(editingItem.listId, editingItem.itemId, {
       name:     editName.trim(),
-      quantity: parseInt(editQty)     || 1,
+      quantity: parseFloat(editQty)    || 1,
       price:    parseFloat(editPrice) || undefined,
       notes:    editNotes.trim()      || undefined,
     })
@@ -353,41 +307,14 @@ export default function ShoppingPage() {
     <div className="min-h-screen pb-44">
       <C2PageBackground />
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          HEADER — editorial eyebrow · large title · botanical corner cluster
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div className="relative overflow-hidden" style={{ paddingTop: 88, paddingBottom: 32, paddingLeft: 22, paddingRight: 22 }}>
-
-        {/* Botanical corner cluster — upper-right, partially off-screen */}
-        <BotanicalCornerCluster />
-
-        {/* Text block — left column, clears the botanical */}
-        <div style={{ maxWidth: '62%', position: 'relative', zIndex: 1 }}>
-
-          {/* Eyebrow — small caps, muted */}
-          <p className="text-[11px] font-medium tracking-widest uppercase" style={{ color: '#9B9590', marginBottom: 10 }}>
-            {eyebrow}
-          </p>
-
-          {/* Title — two lines, very large, bold */}
-          <h1 style={{
-            fontFamily: 'var(--font-playfair)',
-            fontWeight: 700,
-            fontSize: '2.75rem',
-            lineHeight: 1.06,
-            color: C.textDark,
-            marginBottom: 16,
-            letterSpacing: '-0.015em',
-          }}>
-            This week&apos;s<br />kitchen
-          </h1>
-
-          {/* Subtitle */}
-          <p style={{ fontSize: 14, color: '#9B9590', lineHeight: 1.4 }}>
-            {subtitle}
-          </p>
-        </div>
-      </div>
+      <SeMaRoomHeader
+        eyebrow={eyebrow}
+        title={<>This week&apos;s<br />kitchen</>}
+        subtitle={subtitle}
+        imageSrc={C2_ROOM_HEADERS.shopping.src}
+        imageObjectPosition={C2_ROOM_HEADERS.shopping.imageObjectPosition}
+        imageGradientBoost={C2_ROOM_HEADERS.shopping.gradientBoost}
+      />
 
       {/* ══════════════════════════════════════════════════════════════════════
           ACTION ROW — scan / new list
@@ -608,14 +535,14 @@ export default function ShoppingPage() {
                                               placeholder="Item name"
                                             />
                                             <input
-                                              type="number" min="1"
+                                              type="number" min="0" step="any" inputMode="decimal"
                                               value={editQty}
                                               onChange={e => setEditQty(e.target.value)}
                                               className="w-12 text-sm text-center rounded-xl px-2 py-2.5 outline-none"
                                               style={{ background: 'rgba(30,25,18,0.04)', color: C.textDark }}
                                             />
                                             <input
-                                              type="number" min="0" step="0.01"
+                                              type="number" min="0" step="any" inputMode="decimal"
                                               value={editPrice}
                                               onChange={e => setEditPrice(e.target.value)}
                                               placeholder="€"
@@ -692,42 +619,61 @@ export default function ShoppingPage() {
 
                               {/* Add item row */}
                               {addFocused && addTargetListId === list.id ? (
-                                <div className="flex items-center gap-3 px-4 border-b"
-                                  style={{ height: 60, borderColor: 'rgba(30,25,18,0.05)' }}>
-                                  <div className="shrink-0 rounded-full border-[1.5px] border-dashed" style={{ width: 20, height: 20, borderColor: '#c8c0b4' }} />
-                                  <div className="w-7 h-7 shrink-0" />
-                                  <input
-                                    ref={addInputRef}
-                                    value={addName}
-                                    onChange={e => setAddName(e.target.value)}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') confirmAdd()
-                                      if (e.key === 'Escape') cancelAdd()
-                                    }}
-                                    onBlur={() => { if (!addName.trim()) cancelAdd() }}
-                                    placeholder="Item name…"
-                                    className="flex-1 outline-none bg-transparent"
-                                    style={{ fontSize: 14, color: C.textDark }}
-                                  />
-                                  <input
-                                    type="number" min="1"
-                                    value={addQty}
-                                    onChange={e => setAddQty(e.target.value)}
-                                    className="w-8 text-center bg-transparent outline-none tabular-nums"
-                                    style={{ fontSize: 13, color: C.textMid }}
-                                  />
-                                  <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={confirmAdd}
-                                    disabled={!addName.trim()}
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white disabled:opacity-30 shrink-0"
-                                    style={{ background: C.sage }}
-                                  >
-                                    <Plus size={12} strokeWidth={2.5} />
-                                  </motion.button>
-                                  <button onClick={cancelAdd} className="shrink-0 active:opacity-60">
-                                    <X size={14} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
-                                  </button>
+                                <div className="border-b" style={{ borderColor: 'rgba(30,25,18,0.05)' }}>
+                                  {/* Row 1: name + qty + actions */}
+                                  <div className="flex items-center gap-3 px-4" style={{ height: 56 }}>
+                                    <div className="shrink-0 rounded-full border-[1.5px] border-dashed" style={{ width: 20, height: 20, borderColor: '#c8c0b4' }} />
+                                    <div className="w-7 h-7 shrink-0" />
+                                    <input
+                                      ref={addInputRef}
+                                      value={addName}
+                                      onChange={e => setAddName(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter') confirmAdd()
+                                        if (e.key === 'Escape') cancelAdd()
+                                      }}
+                                      onBlur={() => { if (!addName.trim() && !addPrice) cancelAdd() }}
+                                      placeholder="Item name…"
+                                      className="flex-1 outline-none bg-transparent"
+                                      style={{ fontSize: 14, color: C.textDark }}
+                                    />
+                                    <input
+                                      type="number" min="0" step="any" inputMode="decimal"
+                                      value={addQty}
+                                      onChange={e => setAddQty(e.target.value)}
+                                      className="w-8 text-center bg-transparent outline-none tabular-nums"
+                                      style={{ fontSize: 13, color: C.textMid }}
+                                    />
+                                    <motion.button
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={confirmAdd}
+                                      disabled={!addName.trim()}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center text-white disabled:opacity-30 shrink-0"
+                                      style={{ background: C.sage }}
+                                    >
+                                      <Plus size={12} strokeWidth={2.5} />
+                                    </motion.button>
+                                    <button onClick={cancelAdd} className="shrink-0 active:opacity-60">
+                                      <X size={14} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
+                                    </button>
+                                  </div>
+                                  {/* Row 2: price + live line total */}
+                                  <div className="flex items-center gap-3 px-4 pb-2.5">
+                                    <div className="shrink-0" style={{ width: 47 }} />
+                                    <input
+                                      type="number" min="0" step="any" inputMode="decimal"
+                                      value={addPrice}
+                                      onChange={e => setAddPrice(e.target.value)}
+                                      placeholder="Unit price €"
+                                      className="flex-1 outline-none bg-transparent"
+                                      style={{ fontSize: 13, color: C.textMid }}
+                                    />
+                                    {parseFloat(addPrice) > 0 && parseFloat(addQty) > 0 && (
+                                      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: C.sage }}>
+                                        €{(parseFloat(addPrice) * (parseFloat(addQty) || 1)).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                                 <button

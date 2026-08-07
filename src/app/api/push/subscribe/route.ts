@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 // POST — save a new push subscription
 export async function POST(req: NextRequest) {
@@ -25,7 +18,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing subscription or userName' }, { status: 400 })
     }
 
-    const supabase = adminClient()
+    const supabase = getAdminClient()
+    if (!supabase) return supabaseUnavailable()
     const { data, error } = await supabase.from('push_subscriptions').upsert(
       {
         couple_id:  'sema',
@@ -59,7 +53,8 @@ export async function DELETE(req: NextRequest) {
 
     if (!endpoint) return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 })
 
-    const supabase = adminClient()
+    const supabase = getAdminClient()
+    if (!supabase) return supabaseUnavailable()
     const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
     if (error) {
       console.error('[push/subscribe DELETE] Supabase error:', error.message)
