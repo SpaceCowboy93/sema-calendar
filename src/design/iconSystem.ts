@@ -21,6 +21,7 @@ export type { LucideIcon } from 'lucide-react'
 export { Home        as IconNavHome     } from 'lucide-react' // Together / Home room
 export { CalendarDays as IconNavPlanner } from 'lucide-react' // Planner room
 export { Wallet      as IconNavFinances } from 'lucide-react' // Finances room
+export { ShoppingBag as IconNavShopping } from 'lucide-react' // Shopping room
 export { Handshake   as IconNavUs       } from 'lucide-react' // Us / relationship room
 
 // ─────────────────────────────────────────────────────────────────────────────

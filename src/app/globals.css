@@ -302,34 +302,40 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* ── Focus ring ─────────────────────────────────────────────────────────── */
-/* Applied via focus-visible so keyboard-only users see focus indicators.  */
+/* Applied via focus-visible so keyboard-only users see focus indicators.   *
+ * Soft SeMa sage treatment — no hard green boxes, no thick outlines.       *
+ * Outline in modern Chrome follows border-radius automatically.             */
+
+/* Non-form elements (buttons, links, etc.) — thin, low-opacity sage line */
 :focus-visible {
-  outline: 2px solid rgba(143, 166, 141, 0.80);
+  outline: 1.5px solid rgba(143, 166, 141, 0.38);
   outline-offset: 2px;
 }
 
-/* Remove focus ring on mouse click only */
+/* Remove focus ring on pointer click — keyboard-only indicator */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Base transition so the ring fades smoothly both on focus and on blur. */
+/* Smooth transition on both focus-in and focus-out for form controls */
 input, textarea, select {
-  transition: box-shadow 150ms ease;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 
-/* Replace browser green ring on form controls with a subtle SeMa sage shadow.
-   Specificity (0,1,1) beats :focus-visible (0,1,0) so this rule always wins.
-   The box-shadow follows each element's own border-radius automatically.
-   Keyboard users still see a clear focus indicator — just SeMa-branded. */
-input:focus-visible, textarea:focus-visible, select:focus-visible {
+/* Form controls: single soft ambient glow instead of a hard double-ring.
+   box-shadow follows each element's own border-radius automatically,
+   so rounded-2xl inputs get a rounded glow — no square rectangle ever.
+   Specificity (0,1,1) wins over :focus-visible (0,1,0). */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 1.5px rgba(143, 166, 141, 0.50), 0 0 0 4px rgba(143, 166, 141, 0.12);
+  box-shadow: 0 0 0 3px rgba(143, 166, 141, 0.18), 0 0 10px rgba(143, 166, 141, 0.10);
 }
 
-/* Ghost / transparent inline-edit inputs (border-bottom only, no background).
-   These sit inside a row and don't need a box-shadow ring — the focus is
-   communicated by the visible cursor and highlighted border instead. */
+/* Ghost / transparent inline-edit inputs (checklist, inline forms).
+   No box-shadow ring — focus is shown via subtle underline highlight.
+   Also suppressed via focus-visible:shadow-none Tailwind class on specific inputs. */
 input.input-ghost:focus-visible {
   box-shadow: none;
   border-bottom-color: rgba(143, 166, 141, 0.70);
