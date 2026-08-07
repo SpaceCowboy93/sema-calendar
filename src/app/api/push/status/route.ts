@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
+import { getAdminClient, supabaseUnavailable } from '../_admin'
 
 // GET /api/push/status?userName=mateo
 // Returns whether the user has a saved push subscription in the DB
@@ -18,7 +11,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing userName' }, { status: 400 })
   }
 
-  const supabase = adminClient()
+  const supabase = getAdminClient()
+  if (!supabase) return supabaseUnavailable()
   const { count, error } = await supabase
     .from('push_subscriptions')
     .select('id', { count: 'exact', head: true })

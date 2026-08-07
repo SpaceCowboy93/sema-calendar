@@ -109,8 +109,10 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
   const [date,       setDate]       = useState('')
   const [time,       setTime]       = useState('')
   const [color,      setColor]      = useState<EventColor>('yellow')
-  const [checkItems, setCheckItems] = useState<EventTodo[]>([])
-  const [newItem,    setNewItem]    = useState('')
+  const [checkItems,       setCheckItems]       = useState<EventTodo[]>([])
+  const [newItem,          setNewItem]          = useState('')
+  const [editingCheckId,   setEditingCheckId]   = useState<string | null>(null)
+  const [editingCheckText, setEditingCheckText] = useState('')
   const [photos,     setPhotos]     = useState<string[]>([])      // blob or real URLs
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [bgPhotoIdx, setBgPhotoIdx] = useState<number | null>(null)
@@ -137,7 +139,8 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
 
   function reset() {
     setTitle(''); setNotes(''); setDate(''); setTime('')
-    setCheckItems([]); setNewItem(''); setPhotos([]); setPendingFiles([])
+    setCheckItems([]); setNewItem(''); setEditingCheckId(null); setEditingCheckText('')
+    setPhotos([]); setPendingFiles([])
     setBgPhotoIdx(null); setSaving(false)
     setUploading(false); setUploadError(null); setSent(false)
   }
@@ -161,6 +164,17 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
   }
   function removeCheck(id: string) {
     setCheckItems(prev => prev.filter(i => i.id !== id))
+    if (editingCheckId === id) setEditingCheckId(null)
+  }
+  function startEditCheck(id: string, title: string) {
+    setEditingCheckId(id)
+    setEditingCheckText(title)
+  }
+  function commitEditCheck() {
+    if (!editingCheckId) return
+    const text = editingCheckText.trim()
+    if (text) setCheckItems(prev => prev.map(i => i.id === editingCheckId ? { ...i, title: text } : i))
+    setEditingCheckId(null)
   }
 
   /* ── Photos ───────────────────────────────────────────────────────────── */
@@ -447,8 +461,9 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                             </p>
                             <div className="space-y-2">
                               {checkItems.map(item => (
-                                <div key={item.id} className="flex items-center gap-3 group">
+                                <div key={item.id} className="flex items-center gap-3">
                                   <button
+                                    type="button"
                                     onClick={() => toggleCheck(item.id)}
                                     className={cn(
                                       'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
@@ -457,16 +472,34 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                                   >
                                     {item.isCompleted && <Check size={11} color="white" strokeWidth={3} />}
                                   </button>
-                                  <span className={cn(
-                                    'flex-1 text-sm',
-                                    item.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
-                                  )}>
-                                    {item.title}
-                                  </span>
+                                  {editingCheckId === item.id ? (
+                                    <input
+                                      autoFocus
+                                      value={editingCheckText}
+                                      onChange={e => setEditingCheckText(e.target.value)}
+                                      onBlur={commitEditCheck}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter')  { e.preventDefault(); commitEditCheck() }
+                                        if (e.key === 'Escape') { setEditingCheckId(null) }
+                                      }}
+                                      className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 focus-visible:shadow-none"
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={cn(
+                                        'flex-1 text-left text-sm',
+                                        item.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
+                                      )}
+                                      onPointerDown={() => startEditCheck(item.id, item.title)}
+                                    >
+                                      {item.title}
+                                    </button>
+                                  )}
                                   <button
+                                    type="button"
                                     onClick={() => removeCheck(item.id)}
-                                    className="opacity-0 group-hover:opacity-100 active:opacity-100
-                                               text-gray-300 active:text-red-400 transition-all"
+                                    className="text-gray-300 active:text-red-400 transition-all"
                                   >
                                     <X size={14} />
                                   </button>

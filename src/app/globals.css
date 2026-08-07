@@ -88,6 +88,14 @@ body {
 /* Sheet footer — clears the bottom nav (64px) + device safe area */
 .pb-sheet-footer { padding-bottom: max(5.5rem, calc(4rem + env(safe-area-inset-bottom))); }
 
+/* Sheet panel max-height — portrait default, reduced in landscape to avoid cramping */
+.c2-sheet-panel { max-height: calc(100dvh - 48px); }
+@media (orientation: landscape) and (max-height: 600px) {
+  .c2-sheet-panel { max-height: calc(100dvh - 16px); }
+  /* In landscape, the nav bar is typically alongside content; reduce footer clearance */
+  .pb-sheet-footer { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar       { width: 0px; height: 0px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -305,13 +313,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   outline: none;
 }
 
+/* Base transition so the ring fades smoothly both on focus and on blur. */
+input, textarea, select {
+  transition: box-shadow 150ms ease;
+}
+
 /* Replace browser green ring on form controls with a subtle SeMa sage shadow.
    Specificity (0,1,1) beats :focus-visible (0,1,0) so this rule always wins.
+   The box-shadow follows each element's own border-radius automatically.
    Keyboard users still see a clear focus indicator — just SeMa-branded. */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
   box-shadow: 0 0 0 1.5px rgba(143, 166, 141, 0.50), 0 0 0 4px rgba(143, 166, 141, 0.12);
-  transition: box-shadow 150ms ease;
+}
+
+/* Ghost / transparent inline-edit inputs (border-bottom only, no background).
+   These sit inside a row and don't need a box-shadow ring — the focus is
+   communicated by the visible cursor and highlighted border instead. */
+input.input-ghost:focus-visible {
+  box-shadow: none;
+  border-bottom-color: rgba(143, 166, 141, 0.70);
 }
 
 /* ── Reduced motion ─────────────────────────────────────────────────────── */

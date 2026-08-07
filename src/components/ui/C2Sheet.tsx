@@ -334,8 +334,8 @@ export function C2Sheet({
             exit={{ y: '100%' }}
             transition={SHEET_SPRING}
             className="fixed bottom-0 left-0 right-0 c2-sheet-bg rounded-t-[2rem] shadow-modal
-                       max-w-lg mx-auto flex flex-col"
-            style={{ maxHeight: 'calc(100dvh - 48px)', zIndex: zIndex + 1 }}
+                       max-w-lg mx-auto flex flex-col c2-sheet-panel"
+            style={{ zIndex: zIndex + 1 }}
           >
             {children}
           </motion.div>

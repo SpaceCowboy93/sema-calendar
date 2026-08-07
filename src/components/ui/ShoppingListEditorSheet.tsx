@@ -174,6 +174,12 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
     const validPhotos = photos.filter(p => p.length > 0)
     try {
       if (mode === 'create') {
+        // Include any item the user typed but didn't press + to confirm yet
+        const pendingItem: DraftItem | null = itemName.trim()
+          ? { id: generateId(), name: itemName.trim(), qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(), photo: itemPhoto }
+          : null
+        const allItems = pendingItem ? [...draftItems, pendingItem] : draftItems
+
         const id = createList({
           name: name.trim(),
           storeName: storeName.trim() || undefined,
@@ -183,7 +189,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           photos: validPhotos.length ? validPhotos : undefined,
           coverPhoto: validPhotos[0] || undefined,
         })
-        for (const it of draftItems) {
+        for (const it of allItems) {
           addStoreItem(id, it.name, parseFloat(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
         }
         onSave(id)
@@ -306,6 +312,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
               className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100 min-w-0"
             />
             <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)}
+              onFocus={e => e.target.select()}
               min="0" step="any" inputMode="decimal"
               className="w-10 text-xs text-center bg-white rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0" />
             <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
@@ -395,6 +402,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                         />
                         <input
                           type="number" value={editQty} onChange={e => setEditQty(e.target.value)}
+                          onFocus={e => e.target.select()}
                           min="0" step="any" inputMode="decimal"
                           className="w-12 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1.5 outline-none shrink-0"
                         />

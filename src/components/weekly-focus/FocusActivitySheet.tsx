@@ -435,15 +435,16 @@ export function FocusActivitySheet({
                                 if (e.key === 'Enter') { e.preventDefault(); commitEditChecklistItem() }
                                 if (e.key === 'Escape') { setEditingChecklistId(null) }
                               }}
-                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5"
+                              className="flex-1 text-sm text-gray-700 outline-none bg-transparent border-b border-gray-200 pb-0.5 focus-visible:shadow-none"
                             />
                           ) : (
-                            <span
-                              className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
-                              onClick={() => startEditChecklistItem(item.id, item.text)}
+                            <button
+                              type="button"
+                              className={`flex-1 text-left text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                              onPointerDown={() => startEditChecklistItem(item.id, item.text)}
                             >
                               {item.text}
-                            </span>
+                            </button>
                           )}
                           <button
                             onClick={() => removeChecklistItem(item.id)}

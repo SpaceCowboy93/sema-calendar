@@ -452,6 +452,10 @@ export function usePushNotifications() {
         // Anchor identity in the SW so pushsubscriptionchange works correctly
         await notifySWOfUser(currentUser)
         await syncBothUsers(currentUser)
+      } else if (res.status === 503) {
+        ERR('subscribe API 503 — push not configured in this environment')
+        setSwError('Notifications are not available in this environment.')
+        setServerSaved(false)
       } else {
         ERR('subscribe API returned error:', data)
         setSwError(data.error ?? 'Failed to save subscription.')
@@ -504,6 +508,10 @@ export function usePushNotifications() {
         setServerSaved(true)
         await notifySWOfUser(currentUser)
         await syncBothUsers(currentUser)
+      } else if (res.status === 503) {
+        ERR('reconnect API 503 — push not configured in this environment')
+        setSwError('Notifications are not available in this environment.')
+        setServerSaved(false)
       } else {
         setSwError(data.error ?? 'Failed to save subscription.')
         setServerSaved(false)
