@@ -923,7 +923,7 @@ export function ShoppingDetailSheet({
 
   function handleAddItem() {
     if (!itemName.trim()) return
-    onAddItem(itemName.trim(), parseInt(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
+    onAddItem(itemName.trim(), parseFloat(itemQty) || 1, undefined, parseFloat(itemPrice) || undefined)
     setItemName(''); setItemQty('1'); setItemPrice('')
     requestAnimationFrame(() => itemNameRef.current?.focus())
   }
@@ -1131,6 +1131,7 @@ export function ShoppingDetailSheet({
                 onChange={e => setItemPrice(e.target.value)}
                 placeholder="€"
                 aria-label="Price"
+                min="0" step="any" inputMode="decimal"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
                 className="w-14 text-xs bg-gray-50 rounded-xl px-2 py-2 outline-none border border-gray-100"
@@ -1186,6 +1187,7 @@ export function ShoppingDetailSheet({
                         onChange={e => setEditPrice(e.target.value)}
                         placeholder="€"
                         aria-label="Edit price"
+                        min="0" step="any" inputMode="decimal"
                         className="w-16 text-xs bg-gray-50 rounded-xl px-2 py-1.5 outline-none shrink-0"
                       />
                     </div>

@@ -222,6 +222,7 @@ export default function ShoppingPage() {
   const [addTargetListId, setAddTargetListId] = useState<string | null>(null)
   const [addName,         setAddName]         = useState('')
   const [addQty,          setAddQty]          = useState('1')
+  const [addPrice,        setAddPrice]        = useState('')
   const addInputRef = useRef<HTMLInputElement>(null)
 
   function openAdd(listId: string) {
@@ -233,9 +234,10 @@ export default function ShoppingPage() {
 
   function confirmAdd() {
     if (!addName.trim() || !addTargetListId) return
-    addItem(addTargetListId, addName.trim(), parseInt(addQty) || 1)
+    addItem(addTargetListId, addName.trim(), parseFloat(addQty) || 1, undefined, parseFloat(addPrice) || undefined)
     setAddName('')
     setAddQty('1')
+    setAddPrice('')
     requestAnimationFrame(() => addInputRef.current?.focus())
   }
 
@@ -243,6 +245,7 @@ export default function ShoppingPage() {
     setAddFocused(false)
     setAddName('')
     setAddQty('1')
+    setAddPrice('')
   }
 
   /* ── Inline item edit ───────────────────────────────────────────────────── */
@@ -532,14 +535,14 @@ export default function ShoppingPage() {
                                               placeholder="Item name"
                                             />
                                             <input
-                                              type="number" min="1"
+                                              type="number" min="0" step="any" inputMode="decimal"
                                               value={editQty}
                                               onChange={e => setEditQty(e.target.value)}
                                               className="w-12 text-sm text-center rounded-xl px-2 py-2.5 outline-none"
                                               style={{ background: 'rgba(30,25,18,0.04)', color: C.textDark }}
                                             />
                                             <input
-                                              type="number" min="0" step="0.01"
+                                              type="number" min="0" step="any" inputMode="decimal"
                                               value={editPrice}
                                               onChange={e => setEditPrice(e.target.value)}
                                               placeholder="€"
@@ -616,42 +619,61 @@ export default function ShoppingPage() {
 
                               {/* Add item row */}
                               {addFocused && addTargetListId === list.id ? (
-                                <div className="flex items-center gap-3 px-4 border-b"
-                                  style={{ height: 60, borderColor: 'rgba(30,25,18,0.05)' }}>
-                                  <div className="shrink-0 rounded-full border-[1.5px] border-dashed" style={{ width: 20, height: 20, borderColor: '#c8c0b4' }} />
-                                  <div className="w-7 h-7 shrink-0" />
-                                  <input
-                                    ref={addInputRef}
-                                    value={addName}
-                                    onChange={e => setAddName(e.target.value)}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') confirmAdd()
-                                      if (e.key === 'Escape') cancelAdd()
-                                    }}
-                                    onBlur={() => { if (!addName.trim()) cancelAdd() }}
-                                    placeholder="Item name…"
-                                    className="flex-1 outline-none bg-transparent"
-                                    style={{ fontSize: 14, color: C.textDark }}
-                                  />
-                                  <input
-                                    type="number" min="1"
-                                    value={addQty}
-                                    onChange={e => setAddQty(e.target.value)}
-                                    className="w-8 text-center bg-transparent outline-none tabular-nums"
-                                    style={{ fontSize: 13, color: C.textMid }}
-                                  />
-                                  <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={confirmAdd}
-                                    disabled={!addName.trim()}
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white disabled:opacity-30 shrink-0"
-                                    style={{ background: C.sage }}
-                                  >
-                                    <Plus size={12} strokeWidth={2.5} />
-                                  </motion.button>
-                                  <button onClick={cancelAdd} className="shrink-0 active:opacity-60">
-                                    <X size={14} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
-                                  </button>
+                                <div className="border-b" style={{ borderColor: 'rgba(30,25,18,0.05)' }}>
+                                  {/* Row 1: name + qty + actions */}
+                                  <div className="flex items-center gap-3 px-4" style={{ height: 56 }}>
+                                    <div className="shrink-0 rounded-full border-[1.5px] border-dashed" style={{ width: 20, height: 20, borderColor: '#c8c0b4' }} />
+                                    <div className="w-7 h-7 shrink-0" />
+                                    <input
+                                      ref={addInputRef}
+                                      value={addName}
+                                      onChange={e => setAddName(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter') confirmAdd()
+                                        if (e.key === 'Escape') cancelAdd()
+                                      }}
+                                      onBlur={() => { if (!addName.trim() && !addPrice) cancelAdd() }}
+                                      placeholder="Item name…"
+                                      className="flex-1 outline-none bg-transparent"
+                                      style={{ fontSize: 14, color: C.textDark }}
+                                    />
+                                    <input
+                                      type="number" min="0" step="any" inputMode="decimal"
+                                      value={addQty}
+                                      onChange={e => setAddQty(e.target.value)}
+                                      className="w-8 text-center bg-transparent outline-none tabular-nums"
+                                      style={{ fontSize: 13, color: C.textMid }}
+                                    />
+                                    <motion.button
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={confirmAdd}
+                                      disabled={!addName.trim()}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center text-white disabled:opacity-30 shrink-0"
+                                      style={{ background: C.sage }}
+                                    >
+                                      <Plus size={12} strokeWidth={2.5} />
+                                    </motion.button>
+                                    <button onClick={cancelAdd} className="shrink-0 active:opacity-60">
+                                      <X size={14} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
+                                    </button>
+                                  </div>
+                                  {/* Row 2: price + live line total */}
+                                  <div className="flex items-center gap-3 px-4 pb-2.5">
+                                    <div className="shrink-0" style={{ width: 47 }} />
+                                    <input
+                                      type="number" min="0" step="any" inputMode="decimal"
+                                      value={addPrice}
+                                      onChange={e => setAddPrice(e.target.value)}
+                                      placeholder="Unit price €"
+                                      className="flex-1 outline-none bg-transparent"
+                                      style={{ fontSize: 13, color: C.textMid }}
+                                    />
+                                    {parseFloat(addPrice) > 0 && parseFloat(addQty) > 0 && (
+                                      <span className="text-xs font-semibold tabular-nums shrink-0" style={{ color: C.sage }}>
+                                        €{(parseFloat(addPrice) * (parseFloat(addQty) || 1)).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                                 <button

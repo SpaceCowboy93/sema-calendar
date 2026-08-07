@@ -309,6 +309,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
               min="0" step="any" inputMode="decimal"
               className="w-10 text-xs text-center bg-white rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0" />
             <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+              min="0" step="any" inputMode="decimal"
               className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0" />
             <button
               onClick={handleAddItem} disabled={!itemName.trim()}
@@ -399,6 +400,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                         />
                         <input
                           type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="€"
+                          min="0" step="any" inputMode="decimal"
                           className="w-16 text-xs bg-gray-50 rounded-lg px-2 py-1.5 outline-none shrink-0"
                         />
                       </div>

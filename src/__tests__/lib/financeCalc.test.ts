@@ -61,6 +61,34 @@ describe('listCost', () => {
   it('handles fractional prices', () => {
     expect(listCost([{ quantity: 3, price: 1.5 }])).toBeCloseTo(4.5)
   })
+
+  // ── Shopping regression test ─────────────────────────────────────────────
+  // Milk qty 2 × €2.25 = €4.50
+  // Apples qty 1.25 × €4 = €5.00
+  // Bread qty 1 × €3.20 = €3.20
+  // Total = €12.70
+  it('regression: decimal quantities and prices compute correct line totals', () => {
+    const milk   = { quantity: 2,    price: 2.25 }
+    const apples = { quantity: 1.25, price: 4    }
+    const bread  = { quantity: 1,    price: 3.20 }
+
+    expect(milk.quantity   * milk.price).toBeCloseTo(4.50)
+    expect(apples.quantity * apples.price).toBeCloseTo(5.00)
+    expect(bread.quantity  * bread.price).toBeCloseTo(3.20)
+    expect(listCost([milk, apples, bread])).toBeCloseTo(12.70)
+  })
+
+  it('regression: 0.5 × €4 = €2', () => {
+    expect(listCost([{ quantity: 0.5, price: 4 }])).toBeCloseTo(2)
+  })
+
+  it('regression: 1.25 × €10 = €12.50', () => {
+    expect(listCost([{ quantity: 1.25, price: 10 }])).toBeCloseTo(12.50)
+  })
+
+  it('regression: 2 × €2.25 = €4.50', () => {
+    expect(listCost([{ quantity: 2, price: 2.25 }])).toBeCloseTo(4.50)
+  })
 })
 
 // ── totalSavingsBalance ───────────────────────────────────────────────────────

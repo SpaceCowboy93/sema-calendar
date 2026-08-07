@@ -305,10 +305,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   outline: none;
 }
 
-/* Suppress green focus ring on text inputs — outline:none on the element-type
-   selector (0,0,3) loses to :focus-visible (0,1,0). This rule (0,1,1) wins. */
+/* Replace browser green ring on form controls with a subtle SeMa sage shadow.
+   Specificity (0,1,1) beats :focus-visible (0,1,0) so this rule always wins.
+   Keyboard users still see a clear focus indicator — just SeMa-branded. */
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: none;
+  box-shadow: 0 0 0 2px rgba(143, 166, 141, 0.40);
 }
 
 /* ── Reduced motion ─────────────────────────────────────────────────────── */
