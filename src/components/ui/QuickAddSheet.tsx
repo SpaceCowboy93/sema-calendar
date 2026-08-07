@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/useAppStore'
 import type { EventColor } from '@/types'
 import { COLOR_HEX } from '@/lib/utils'
 import { Chip, C2Sheet, C2SheetHeader, C2SheetBody } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 type QuickType = 'plan' | 'dream' | 'wish' | 'moment' | 'note'
 
@@ -179,12 +180,7 @@ export function QuickAddSheet({ open, onClose, primary }: Props) {
               {/* Date + time */}
               {showDatetime && (
                 <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    className="flex-1 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-                  />
+                  <DatePicker value={date} onChange={setDate} className="flex-1" />
                   <input
                     type="time"
                     value={time}

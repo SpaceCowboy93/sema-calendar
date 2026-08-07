@@ -15,6 +15,7 @@ import { ReceiptScannerSheet } from '@/components/ui/ReceiptScannerSheet'
 import { ReceiptReviewSheet } from '@/components/ui/ReceiptReviewSheet'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { WISHLIST_CATEGORY_CONFIG, cn, formatTime } from '@/lib/utils'
+import { DatePicker } from '@/components/ui/DatePicker'
 import {
   USERS,
   type UserName, type WishlistCategory, type GoalCategory,
@@ -387,8 +388,8 @@ export function CategoryHubSheet({
                   <div className="flex gap-2">
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                       <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Date</p>
-                      <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
-                        className="w-full text-sm text-gray-700 bg-transparent outline-none" />
+                      <DatePicker value={editDate} onChange={setEditDate}
+                        triggerClassName="bg-transparent px-0 py-0 rounded-none text-sm text-gray-700" />
                     </div>
                     <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                       <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-1">Time</p>
@@ -1118,7 +1119,7 @@ export function ShoppingDetailSheet({
                 type="number"
                 value={itemQty}
                 onChange={e => setItemQty(e.target.value)}
-                min="1"
+                min="0" step="any" inputMode="decimal"
                 aria-label="Quantity"
                 onFocus={e => e.target.select()}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddItem() } }}
@@ -1174,7 +1175,7 @@ export function ShoppingDetailSheet({
                         type="number"
                         value={editQty}
                         onChange={e => setEditQty(e.target.value)}
-                        min="1"
+                        min="0" step="any" inputMode="decimal"
                         aria-label="Edit quantity"
                         onFocus={e => e.target.select()}
                         className="w-12 text-xs text-center bg-gray-50 rounded-xl px-1.5 py-1.5 outline-none shrink-0"

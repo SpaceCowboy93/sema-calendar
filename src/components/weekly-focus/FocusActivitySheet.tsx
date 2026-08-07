@@ -440,7 +440,7 @@ export function FocusActivitySheet({
                           ) : (
                             <span
                               className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
-                              onClick={() => !item.done && startEditChecklistItem(item.id, item.text)}
+                              onClick={() => startEditChecklistItem(item.id, item.text)}
                             >
                               {item.text}
                             </span>

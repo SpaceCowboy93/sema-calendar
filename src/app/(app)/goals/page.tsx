@@ -9,6 +9,7 @@ import { type Goal, type GoalCategory } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { EmptyState, Progress, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 /* ─── Category config ─────────────────────────────────────────────────────────── */
 const GOAL_CATEGORIES: Record<GoalCategory, {
@@ -615,12 +616,7 @@ function GoalForm({
           <CalendarDays size={10} />
           Target date — adds to calendar
         </p>
-        <input
-          type="date"
-          value={targetDate}
-          onChange={e => setTargetDate(e.target.value)}
-          className="w-full text-xs text-gray-600 bg-white/60 rounded-xl px-3 py-2 outline-none"
-        />
+        <DatePicker value={targetDate} onChange={setTargetDate} />
       </div>
 
       {/* Counter toggle */}
@@ -758,12 +754,7 @@ function GoalEditModal({
               Clearing the date will remove this goal from the calendar.
             </p>
           )}
-          <input
-            type="date"
-            value={targetDate}
-            onChange={e => setTargetDate(e.target.value)}
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 mb-4 outline-none"
-          />
+          <DatePicker value={targetDate} onChange={setTargetDate} className="mb-4" />
 
           {useCounter && (
             <>

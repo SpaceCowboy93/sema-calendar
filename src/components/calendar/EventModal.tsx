@@ -8,6 +8,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import { type CalendarEvent, type EventTodo } from '@/types'
 import { generateId, formatDate, cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 export const COLOR_OPTIONS = [
   { value: 'seval',  hex: '#a78bfa', label: 'Wishes'  },
@@ -251,11 +252,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                   <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center">
                     <Clock size={14} className="text-gray-400" />
                   </div>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={selectedDate}
-                    onChange={e => setDate(e.target.value)}
-                    className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                    onChange={setDate}
+                    allowClear={false}
+                    triggerClassName="bg-transparent text-sm text-gray-700 rounded-none px-0 py-0"
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -321,7 +322,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
                             'flex-1 text-sm',
                             todo.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'
                           )}
-                          onClick={() => !todo.isCompleted && startEditTodo(todo.id, todo.title)}
+                          onClick={() => startEditTodo(todo.id, todo.title)}
                         >
                           {todo.title}
                         </span>

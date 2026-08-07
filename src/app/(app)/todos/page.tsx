@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { COLOR_OPTIONS } from '@/components/calendar/EventModal'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 export default function TodosPage() {
   const currentUser = useAppStore(s => s.currentUser)!
@@ -189,12 +190,7 @@ export default function TodosPage() {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                 Date (marks on calendar)
               </p>
-              <input
-                type="date"
-                value={taskDate}
-                onChange={e => setTaskDate(e.target.value)}
-                className="w-full text-sm text-gray-700 bg-white/70 rounded-xl px-3 py-2 outline-none"
-              />
+              <DatePicker value={taskDate} onChange={setTaskDate} />
             </div>
 
             {/* Actions */}
@@ -608,12 +604,7 @@ function EditTodoModal({
 
           {/* Date */}
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Date</p>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
-          />
+          <DatePicker value={date} onChange={setDate} />
         </C2SheetBody>
 
         <C2SheetFooter>

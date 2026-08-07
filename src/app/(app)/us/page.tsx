@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
+import { DatePicker } from '@/components/ui/DatePicker'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
 import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
@@ -340,14 +341,9 @@ function MemorySheet({
           </div>
 
           {/* Date */}
-          <div className="bg-gray-50 rounded-2xl px-4 py-3 mb-3">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full text-sm text-gray-700 bg-transparent outline-none"
-            />
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Date</p>
+            <DatePicker value={date} onChange={setDate} accentColor={primary} />
           </div>
 
           {/* Category */}
@@ -623,9 +619,9 @@ export default function UsPage() {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
   }
 
-  // Computed
-  const pastCountdowns = countdowns
-    .filter(c => c.date <= todayStr)
+  // Computed — show all milestones (future + past), newest/soonest first
+  const sortedCountdowns = countdowns
+    .slice()
     .sort((a, b) => b.date.localeCompare(a.date))
 
   const sortedMemories = useMemo(
@@ -763,7 +759,7 @@ export default function UsPage() {
             </motion.button>
           </div>
 
-          {pastCountdowns.length === 0 ? (
+          {sortedCountdowns.length === 0 ? (
             <button
               onClick={() => setAddCdOpen(true)}
               className="w-full rounded-2xl py-8 text-center"
@@ -774,7 +770,7 @@ export default function UsPage() {
             </button>
           ) : (
             <div className="space-y-2">
-              {pastCountdowns.map(c => {
+              {sortedCountdowns.map(c => {
                 // Two-step anchor:
                 //   1. parseISO(date + 'T12:00:00') — noon local time prevents the
                 //      "midnight UTC → previous calendar day" shift in UTC+ timezones.
@@ -782,16 +778,25 @@ export default function UsPage() {
                 //      differenceInYears/Months doesn't count partial days as < 1 unit.
                 const milestoneDate = startOfDay(parseISO(c.date + 'T12:00:00'))
                 const todayStart    = startOfDay(today)
-                const years  = differenceInYears(todayStart, milestoneDate)
-                const afterY = addYears(milestoneDate, years)
-                const months = differenceInMonths(todayStart, afterY)
-                const afterM = addMonths(afterY, months)
-                const days   = differenceInCalendarDays(todayStart, afterM)
-                const label  = years >= 1
-                  ? `${years} year${years !== 1 ? 's' : ''} together`
-                  : months >= 1
-                  ? `${months} month${months !== 1 ? 's' : ''} together`
-                  : `${days} day${days !== 1 ? 's' : ''} together`
+                const isFuture = milestoneDate > todayStart
+                let label: string
+                if (isFuture) {
+                  const daysUntil = differenceInCalendarDays(milestoneDate, todayStart)
+                  label = `in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`
+                } else {
+                  const years  = differenceInYears(todayStart, milestoneDate)
+                  const afterY = addYears(milestoneDate, years)
+                  const months = differenceInMonths(todayStart, afterY)
+                  const afterM = addMonths(afterY, months)
+                  const days   = differenceInCalendarDays(todayStart, afterM)
+                  label = years >= 1
+                    ? `${years} year${years !== 1 ? 's' : ''} together`
+                    : months >= 1
+                    ? `${months} month${months !== 1 ? 's' : ''} together`
+                    : days === 0
+                    ? 'today'
+                    : `${days} day${days !== 1 ? 's' : ''} together`
+                }
 
                 return (
                   <motion.button
@@ -961,7 +966,7 @@ export default function UsPage() {
           <C2SectionLabel as="h2" className="mb-3">Relationship Stats</C2SectionLabel>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="c2-card p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>{pastCountdowns.length}</p>
+              <p className="text-2xl font-bold" style={{ color: primary }}>{sortedCountdowns.length}</p>
               <p className="text-[10px] mt-1" style={{ color: '#a8b0a0' }}>milestones</p>
             </div>
             <div className="c2-card p-4 text-center">
@@ -1246,14 +1251,9 @@ export default function UsPage() {
                       className="w-full text-sm text-gray-800 bg-transparent outline-none"
                     />
                   </div>
-                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
-                    <input
-                      type="date"
-                      value={newCdDate}
-                      onChange={e => setNewCdDate(e.target.value)}
-                      className="w-full text-sm text-gray-700 bg-transparent outline-none"
-                    />
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Date</p>
+                    <DatePicker value={newCdDate} onChange={setNewCdDate} accentColor={primary} allowClear={false} />
                   </div>
                 </div>
                 <motion.button

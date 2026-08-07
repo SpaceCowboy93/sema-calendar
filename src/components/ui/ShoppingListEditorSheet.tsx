@@ -9,6 +9,7 @@ import type { ShoppingList, ShoppingItem } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 const RED = '#ef4444'
 
@@ -130,7 +131,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         qty: itemQty || '1', price: itemPrice, notes: itemNotes.trim(), photo: itemPhoto,
       }])
     } else if (list) {
-      addStoreItem(list.id, itemName.trim(), parseInt(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
+      addStoreItem(list.id, itemName.trim(), parseFloat(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
     }
     setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes(''); setItemPhoto(undefined)
   }, [mode, list, itemName, itemQty, itemPrice, itemNotes, itemPhoto, addStoreItem])
@@ -182,7 +183,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
           coverPhoto: validPhotos[0] || undefined,
         })
         for (const it of draftItems) {
-          addStoreItem(id, it.name, parseInt(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
+          addStoreItem(id, it.name, parseFloat(it.qty) || 1, it.notes || undefined, parseFloat(it.price) || undefined, it.photo)
         }
         onSave(id)
       } else if (list) {
@@ -203,7 +204,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
   }
 
   /* ── Computed ─────────────────────────────────────────────────────────── */
-  const draftTotal  = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseInt(it.qty) || 1), 0)
+  const draftTotal  = draftItems.reduce((s, it) => s + (parseFloat(it.price) || 0) * (parseFloat(it.qty) || 1), 0)
   const editTotal   = mode === 'edit' && list ? listTotal(list) : 0
   const displayTotal = mode === 'create' ? draftTotal : editTotal
   const liveItems   = mode === 'edit' ? (list?.items ?? []) : []
@@ -253,8 +254,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
         className="w-full text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none"
       />
       <div className="flex gap-2">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
+        <DatePicker value={date} onChange={setDate} placeholder="Date (optional)" className="flex-1" />
         <input type="time" value={time} onChange={e => setTime(e.target.value)}
           className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 outline-none" />
       </div>
@@ -305,7 +305,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
               placeholder="Item name…"
               className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100 min-w-0"
             />
-            <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)} min="1"
+            <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)}
+              min="0" step="any" inputMode="decimal"
               className="w-10 text-xs text-center bg-white rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0" />
             <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
               className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0" />
@@ -337,7 +338,7 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                     <p className="text-[10px] text-gray-400">
                       ×{it.qty}
                       {it.price ? ` · €${parseFloat(it.price).toFixed(2)}` : ''}
-                      {parseFloat(it.price) > 0 && parseInt(it.qty) > 1 ? ` = €${(parseFloat(it.price) * parseInt(it.qty)).toFixed(2)}` : ''}
+                      {parseFloat(it.price) > 0 && parseFloat(it.qty) > 1 ? ` = €${(parseFloat(it.price) * parseFloat(it.qty)).toFixed(2)}` : ''}
                       {it.notes ? ` · ${it.notes}` : ''}
                     </p>
                   </div>
@@ -392,7 +393,8 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                           className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-1.5 outline-none min-w-0"
                         />
                         <input
-                          type="number" value={editQty} onChange={e => setEditQty(e.target.value)} min="1"
+                          type="number" value={editQty} onChange={e => setEditQty(e.target.value)}
+                          min="0" step="any" inputMode="decimal"
                           className="w-12 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1.5 outline-none shrink-0"
                         />
                         <input
@@ -404,9 +406,9 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                         type="text" value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Note (optional)"
                         className="w-full text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5 outline-none"
                       />
-                      {parseFloat(editPrice) > 0 && parseInt(editQty) > 1 && (
+                      {parseFloat(editPrice) > 0 && parseFloat(editQty) > 0 && (
                         <p className="text-[10px] text-gray-400 pl-1">
-                          Line total: €{(parseFloat(editPrice) * parseInt(editQty)).toFixed(2)}
+                          Line total: €{(parseFloat(editPrice) * parseFloat(editQty)).toFixed(2)}
                         </p>
                       )}
                       <div className="flex gap-1.5">

@@ -6,6 +6,7 @@ import { X, Trash2, AlertTriangle } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
 import { type ReceiptResult, type ReceiptItem } from '@/types'
 import { cn, generateId } from '@/lib/utils'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 const CONFIDENCE_WARN = 0.65
 
@@ -144,10 +145,8 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
             <div className="flex gap-2">
               <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
-                <input
-                  type="date" value={date} onChange={e => setDate(e.target.value)}
-                  className="w-full text-sm text-gray-700 bg-transparent outline-none"
-                />
+                <DatePicker value={date} onChange={setDate}
+                  triggerClassName="bg-transparent px-0 py-0 rounded-none text-sm text-gray-700" />
               </div>
               <div className="w-24 bg-gray-50 rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Currency</p>

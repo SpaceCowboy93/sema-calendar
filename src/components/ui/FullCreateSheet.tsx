@@ -9,6 +9,7 @@ import type { EventColor, EventTodo, WishlistItem, Goal } from '@/types'
 import { generateId, cn } from '@/lib/utils'
 import { ShoppingListEditorSheet } from '@/components/ui/ShoppingListEditorSheet'
 import { Chip, ChipGroup, C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 type CreateType = 'moment' | 'plan' | 'dream' | 'wish' | 'note' | 'shopping'
@@ -402,11 +403,11 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
                               <div className="w-8 h-8 rounded-xl bg-white shadow-card flex items-center justify-center shrink-0">
                                 <Clock size={14} className="text-gray-400" />
                               </div>
-                              <input
-                                type="date"
+                              <DatePicker
                                 value={date}
-                                onChange={e => setDate(e.target.value)}
-                                className="flex-1 text-sm text-gray-700 bg-transparent outline-none"
+                                onChange={setDate}
+                                className="flex-1"
+                                triggerClassName="bg-transparent px-0 py-0 rounded-none text-sm text-gray-700"
                               />
                             </div>
                             <div className="flex items-center gap-3">

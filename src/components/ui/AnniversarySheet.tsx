@@ -9,6 +9,7 @@ import { useLightboxStore } from '@/store/useLightboxStore'
 import { type Countdown, type ChecklistEntry } from '@/types'
 import { cn } from '@/lib/utils'
 import DeleteConfirmSheet from '@/components/ui/DeleteConfirmSheet'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Progress } from '@/components/ui/Progress'
 import { C2SheetBody, C2SheetFooter } from '@/components/ui'
 
@@ -220,13 +221,9 @@ export function AnniversarySheet({
 
         {/* Scrollable form content */}
         <C2SheetBody className="pb-4">
-          <div className="c2-sheet-section px-4 py-3 mb-3">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</p>
-            <input
-              type="date" value={date}
-              onChange={e => { setDate(e.target.value); mark() }}
-              className="w-full text-sm text-gray-700 bg-transparent outline-none"
-            />
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Date</p>
+            <DatePicker value={date} onChange={v => { setDate(v); mark() }} accentColor={primary} />
           </div>
 
           <div className="rounded-2xl px-4 py-3 mb-3" style={{ background: `${primary}06` }}>
