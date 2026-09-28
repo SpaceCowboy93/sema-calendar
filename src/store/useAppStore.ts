@@ -1,7 +1,11 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { coupleStorage, pendingKeys, persistPending, setCacheScope } from '@/lib/couple-cache'
+import { selectSharedState, type SharedState } from '@/lib/shared-state'
+import type { CoupleAccess } from '@/lib/couple-access'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import {
   type UserName, type CalendarEvent, type SharedTodo, type MoodEntry,
   type LoveNote, type WishlistItem, type Countdown, type Memory,
@@ -27,10 +31,10 @@ const DEFAULT_BUDGET_ITEMS: BudgetItem[] = [
   { id: 'b11', category: 'Other',           emoji: '❤️', planned: 100,  actual: 0 },
 ]
 import { generateId, getTodayString } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { getAuthContext, isCurrentAuth } from '@/lib/auth-session'
 import { toast } from '@/store/useToastStore'
 
-interface AppState {
+export interface AppState {
   // Session
   currentUser: UserName | null
   setCurrentUser: (user: UserName | null) => void
@@ -94,7 +98,7 @@ interface AppState {
 
   // Goals
   goals: Goal[]
-  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string) => string
+  addGoal: (categoryId: GoalCategory, title: string, notes?: string, targetDate?: string, progressTarget?: number, startTime?: string, checklist?: string[]) => string
   updateGoal: (id: string, updates: Partial<Goal>) => void
   deleteGoal: (id: string) => void
   incrementGoalProgress: (id: string) => void
@@ -295,7 +299,7 @@ function applyShoppingFinanceSync(
 }
 
 export const useAppStore = create<AppState>()(
-  persist(
+  persist<AppState, [], [], Partial<SharedState>>(
     (set, get) => ({
       // ── Session ─────────────────────────────────────────────────────────────
       currentUser: null,
@@ -379,8 +383,9 @@ export const useAppStore = create<AppState>()(
       uploadEventPhoto: async (eventId, file) => {
         if (!file) return
         // uploadPhoto already shows a toast on failure
+        const context = getAuthContext()
         const url = await get().uploadPhoto(`events/${eventId}`, file)
-        if (!url) return
+        if (!url || !context || !isCurrentAuth(context)) return
         set(s => ({
           events: s.events.map(e =>
             e.id === eventId
@@ -439,8 +444,9 @@ export const useAppStore = create<AppState>()(
       },
 
       uploadTodoPhoto: async (todoId, file) => {
+        const context = getAuthContext()
         const url = await get().uploadPhoto(`todos/${todoId}`, file)
-        if (!url) return
+        if (!url || !context || !isCurrentAuth(context)) return
         set(s => ({
           todos: s.todos.map(t =>
             t.id === todoId ? { ...t, photos: [...(t.photos ?? []), url] } : t
@@ -649,7 +655,7 @@ export const useAppStore = create<AppState>()(
       // ── Goals ─────────────────────────────────────────────────────────────────
       goals: [],
 
-      addGoal: (categoryId, title, notes, targetDate, progressTarget = 0, startTime) => {
+      addGoal: (categoryId, title, notes, targetDate, progressTarget = 0, startTime, checklist) => {
         const { currentUser } = get()
         if (!currentUser) return ''
         const now    = new Date().toISOString()
@@ -662,6 +668,7 @@ export const useAppStore = create<AppState>()(
           notes,
           targetDate,
           startTime: startTime || undefined,
+          checklist: checklist?.length ? checklist : undefined,
           progressCurrent: 0,
           progressTarget,
           isCompleted: false,
@@ -676,6 +683,11 @@ export const useAppStore = create<AppState>()(
             id: eventId,
             title,
             date: targetDate,
+            startTime: startTime || undefined,
+            notes: notes || undefined,
+            todos: checklist?.length
+              ? checklist.map(text => ({ id: generateId(), title: text, isCompleted: false }))
+              : undefined,
             color: currentUser === 'mateo' ? 'blue' : 'seval',
             createdBy: currentUser,
             createdAt: now,
@@ -711,12 +723,18 @@ export const useAppStore = create<AppState>()(
                 linkedEventId = undefined
               } else {
                 // Date changed → update the linked event
+                const checklistTodos = updates.checklist !== undefined
+                  ? (updates.checklist.length ? updates.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false })) : undefined)
+                  : undefined
                 events = events.map(e =>
                   e.id === goal.linkedEventId
                     ? {
                         ...e,
                         date: newDate,
                         ...(updates.title !== undefined ? { title: updates.title } : {}),
+                        ...(updates.startTime !== undefined ? { startTime: updates.startTime || undefined } : {}),
+                        ...(updates.notes !== undefined ? { notes: updates.notes || undefined } : {}),
+                        ...(updates.checklist !== undefined ? { todos: checklistTodos } : {}),
                         updatedAt: new Date().toISOString(),
                       }
                     : e
@@ -728,12 +746,18 @@ export const useAppStore = create<AppState>()(
               const orphaned = events.find(e => e.linkedGoalId === id)
               if (orphaned) {
                 linkedEventId = orphaned.id
+                const checklistTodos = updates.checklist !== undefined
+                  ? (updates.checklist.length ? updates.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false })) : undefined)
+                  : undefined
                 events = events.map(e =>
                   e.id === orphaned.id
                     ? {
                         ...e,
                         date: newDate,
                         ...(updates.title !== undefined ? { title: updates.title } : {}),
+                        ...(updates.startTime !== undefined ? { startTime: updates.startTime || undefined } : {}),
+                        ...(updates.notes !== undefined ? { notes: updates.notes || undefined } : {}),
+                        ...(updates.checklist !== undefined ? { todos: checklistTodos } : {}),
                         updatedAt: new Date().toISOString(),
                       }
                     : e
@@ -746,6 +770,13 @@ export const useAppStore = create<AppState>()(
                   id: eventId,
                   title: updates.title ?? goal.title,
                   date: newDate,
+                  startTime: updates.startTime ?? goal.startTime ?? undefined,
+                  notes: updates.notes !== undefined ? (updates.notes || undefined) : (goal.notes || undefined),
+                  todos: updates.checklist?.length
+                    ? updates.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false }))
+                    : goal.checklist?.length
+                      ? goal.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false }))
+                      : undefined,
                   color: (currentUser ?? goal.createdBy) === 'mateo' ? 'blue' : 'seval',
                   createdBy: currentUser ?? goal.createdBy,
                   createdAt: new Date().toISOString(),
@@ -755,13 +786,24 @@ export const useAppStore = create<AppState>()(
                 events = [...events, newEvent]
               }
             }
-          } else if (updates.title !== undefined && goal.linkedEventId) {
-            // Title-only change → keep event title in sync
-            events = events.map(e =>
-              e.id === goal.linkedEventId
-                ? { ...e, title: updates.title!, updatedAt: new Date().toISOString() }
-                : e
-            )
+          } else if (goal.linkedEventId) {
+            // Non-date changes — sync title, startTime, notes, and checklist→todos to linked event
+            const syncedFields: Partial<CalendarEvent> = {}
+            if (updates.title !== undefined) syncedFields.title = updates.title
+            if (updates.startTime !== undefined) syncedFields.startTime = updates.startTime || undefined
+            if (updates.notes !== undefined) syncedFields.notes = updates.notes || undefined
+            if (updates.checklist !== undefined) {
+              syncedFields.todos = updates.checklist.length
+                ? updates.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false }))
+                : undefined
+            }
+            if (Object.keys(syncedFields).length > 0) {
+              events = events.map(e =>
+                e.id === goal.linkedEventId
+                  ? { ...e, ...syncedFields, updatedAt: new Date().toISOString() }
+                  : e
+              )
+            }
           }
 
           return {
@@ -1141,8 +1183,9 @@ export const useAppStore = create<AppState>()(
         set(s => ({ focusActivities: s.focusActivities.filter(a => a.id !== id) })),
 
       uploadFocusActivityPhoto: async (id, file) => {
+        const context = getAuthContext()
         const url = await get().uploadPhoto(`focus/${id}`, file)
-        if (!url) return
+        if (!url || !context || !isCurrentAuth(context)) return
         set(s => ({
           focusActivities: s.focusActivities.map(a =>
             a.id === id
@@ -1183,6 +1226,8 @@ export const useAppStore = create<AppState>()(
 
       // ── Generic upload helper ─────────────────────────────────────────────────
       uploadPhoto: async (folder, file) => {
+        const context = getAuthContext()
+        if (!context) return null
         // Pre-validate on the client to give instant feedback without a network round-trip
         const MAX_BYTES   = 5 * 1024 * 1024
         const VALID_TYPES = new Set([
@@ -1204,7 +1249,7 @@ export const useAppStore = create<AppState>()(
         form.append('folder', folder)
 
         try {
-          const res = await fetch('/api/upload-photo', { method: 'POST', body: form })
+          const res = await authenticatedFetch('/api/upload-photo', { method: 'POST', body: form })
           if (!res.ok) {
             const body = await res.json().catch(() => ({ error: 'Upload failed' }))
             const msg  = (body as { error?: string }).error ?? 'Upload failed'
@@ -1213,7 +1258,7 @@ export const useAppStore = create<AppState>()(
             return null
           }
           const { url } = await res.json() as { url: string }
-          return url
+          return isCurrentAuth(context) ? url : null
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Network error during upload'
           console.error('[Photo] Upload network error:', msg)
@@ -1223,8 +1268,9 @@ export const useAppStore = create<AppState>()(
       },
 
       uploadGoalPhoto: async (goalId, file) => {
+        const context = getAuthContext()
         const url = await get().uploadPhoto(`goals/${goalId}`, file)
-        if (!url) return
+        if (!url || !context || !isCurrentAuth(context)) return
         set(s => ({
           goals: s.goals.map(g =>
             g.id === goalId ? { ...g, photos: [...(g.photos ?? []), url] } : g
@@ -1233,8 +1279,9 @@ export const useAppStore = create<AppState>()(
       },
 
       uploadWishlistPhoto: async (itemId, file) => {
+        const context = getAuthContext()
         const url = await get().uploadPhoto(`wishes/${itemId}`, file)
-        if (!url) return
+        if (!url || !context || !isCurrentAuth(context)) return
         set(s => ({
           wishlistItems: s.wishlistItems.map(w =>
             w.id === itemId ? { ...w, photos: [...(w.photos ?? []), url] } : w
@@ -1242,6 +1289,26 @@ export const useAppStore = create<AppState>()(
         }))
       },
     }),
-    { name: 'semacalendar-v1', partialize: (s) => { const { currentUser, overlayCount, openOverlay, closeOverlay, ...rest } = s; return rest } }
+    {
+      name: 'semacalendar-v2',
+      storage: createJSONStorage<Partial<SharedState>>(() => coupleStorage),
+      skipHydration: true,
+      partialize: selectSharedState,
+      merge: (saved, current) => ({ ...current, ...selectSharedState(saved) }),
+    }
   )
 )
+
+export function clearActiveCouple() {
+  setCacheScope(null)
+  useAppStore.setState(useAppStore.getInitialState(), true)
+}
+
+export async function loadCoupleCache(access: CoupleAccess) {
+  clearActiveCouple()
+  // Rehydration writes the merged defaults back to storage. Capture pending work
+  // first so a brand-new browser does not upload defaults over the shared row.
+  persistPending(access, pendingKeys(access))
+  setCacheScope(access)
+  await useAppStore.persist.rehydrate()
+}

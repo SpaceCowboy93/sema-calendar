@@ -30,10 +30,12 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const currentUser       = useAppStore(s => s.currentUser)
   const addEvent          = useAppStore(s => s.addEvent)
   const updateEvent       = useAppStore(s => s.updateEvent)
+  const updateGoal        = useAppStore(s => s.updateGoal)
   const deleteEvent       = useAppStore(s => s.deleteEvent)
   const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
   const openOverlay       = useAppStore(s => s.openOverlay)
   const closeOverlay      = useAppStore(s => s.closeOverlay)
+  const goals             = useAppStore(s => s.goals)
 
   const [title, setTitle]           = useState('')
   const [selectedDate, setDate]     = useState(date)
@@ -65,16 +67,33 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
 
   useEffect(() => {
     if (event) {
+      // For goal-linked events (Dreams created via FullCreateSheet), the linked
+      // CalendarEvent may not carry all fields — enrich from the Goal as fallback.
+      // This handles both new data (post-sync-fix) and old data created before the fix.
+      const linkedGoal = event.linkedGoalId
+        ? goals.find(g => g.id === event.linkedGoalId)
+        : null
+
       setTitle(event.title)
       setDate(event.date)
-      setStartTime(event.startTime ?? '')
+      setStartTime(linkedGoal?.startTime ?? event.startTime ?? '')
       setEndTime(event.endTime ?? '')
-      setNotes(event.notes ?? '')
+      setNotes(linkedGoal?.notes ?? event.notes ?? '')
       setColor(event.color)
-      setTodos(event.todos ?? [])
-      const p = event.photos ?? []
+      // Show goal checklist as todos when the linked event hasn't had todos set yet
+      if (event.todos?.length) {
+        setTodos(event.todos)
+      } else if (linkedGoal?.checklist?.length) {
+        setTodos(linkedGoal.checklist.map(text => ({ id: generateId(), title: text, isCompleted: false })))
+      } else {
+        setTodos([])
+      }
+      // Photos: prefer the event's own uploaded photos; fall back to goal photos
+      const p = event.photos?.length ? event.photos : (linkedGoal?.photos ?? [])
       setPhotos(p)
-      const bpIdx = event.backgroundPhoto ? p.indexOf(event.backgroundPhoto) : -1
+      const bpIdx = event.backgroundPhoto
+        ? p.indexOf(event.backgroundPhoto)
+        : (linkedGoal?.backgroundPhoto ? p.indexOf(linkedGoal.backgroundPhoto) : -1)
       setBgPhotoIdx(bpIdx >= 0 ? bpIdx : null)
     } else {
       setTitle('')
@@ -93,7 +112,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setSaving(false)
     setUploading(false)
     setUploadError(null)
-  }, [event, date, currentUser, isOpen, initialColor])
+  }, [event, date, currentUser, isOpen, initialColor, goals])
 
   async function handleSave() {
     if (!title.trim() || !currentUser || saving) return
@@ -103,6 +122,7 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
         title: title.trim(),
         date: selectedDate,
         startTime: startTime || undefined,
+        endTime: endTime || undefined,
         notes: notes.trim() || undefined,
         color,
         todos: todos.length ? todos : undefined,
@@ -113,6 +133,15 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       }
       if (isEdit && event) {
         updateEvent(event.id, data)
+        // For goal-linked events: keep the Goal's startTime and notes in sync so
+        // that opening from the Dreams section also reflects any changes made here.
+        if (event.linkedGoalId) {
+          updateGoal(event.linkedGoalId, {
+            startTime: startTime || undefined,
+            notes: notes.trim() || undefined,
+            checklist: todos.map(t => t.title),
+          })
+        }
       } else {
         const nPending = pendingFiles.length
         const newId = addEvent(data)

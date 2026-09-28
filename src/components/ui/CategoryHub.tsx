@@ -175,6 +175,9 @@ export function CategoryHubSheet({
   const [editNotes, setEditNotes]   = useState('')
   const [editDate,  setEditDate]    = useState('')
   const [editTime,  setEditTime]    = useState('')
+  const [editChecklist, setEditChecklist] = useState<string[]>([])
+  const [newCheckItem,  setNewCheckItem]  = useState('')
+  const [editPhotos,    setEditPhotos]    = useState<string[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   function openEdit(id: string) {
@@ -192,15 +195,30 @@ export function CategoryHubSheet({
     setEditNotes(src.notes ?? '')
     setEditDate(src.date ?? src.targetDate ?? '')
     setEditTime(src.startTime ?? '')
+    // For Dreams: also load checklist and photos from the Goal
+    if (type === 'dreams') {
+      const goal = goals.find(g => g.id === id)
+      setEditChecklist(goal?.checklist ?? [])
+      setEditPhotos(goal?.photos ?? [])
+    } else {
+      setEditChecklist([])
+      setEditPhotos([])
+    }
+    setNewCheckItem('')
     setEditingId(id)
   }
 
   function saveEdit() {
     if (!editingId || !editTitle.trim()) return
     const base = { title: editTitle.trim(), notes: editNotes.trim() || undefined, startTime: editTime || undefined }
-    if (type === 'dreams') updateGoal(editingId,     { ...base, targetDate: editDate || undefined })
-    if (type === 'wishes') updateWishlist(editingId, { ...base, date:       editDate || undefined })
-    if (type === 'plans')  updateTodoDo(editingId,   { ...base, date:       editDate || undefined })
+    if (type === 'dreams') updateGoal(editingId, {
+      ...base,
+      targetDate: editDate || undefined,
+      checklist:  editChecklist.length ? editChecklist : undefined,
+      photos:     editPhotos.length    ? editPhotos    : undefined,
+    })
+    if (type === 'wishes') updateWishlist(editingId, { ...base, date: editDate || undefined })
+    if (type === 'plans')  updateTodoDo(editingId,   { ...base, date: editDate || undefined })
     setEditingId(null)
   }
 
@@ -398,6 +416,75 @@ export function CategoryHubSheet({
                         triggerClassName="bg-transparent px-0 py-0 rounded-none" />
                     </div>
                   </div>
+
+                  {/* Checklist — Dreams only */}
+                  {type === 'dreams' && (
+                    <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-2">Checklist</p>
+                      <div className="space-y-2">
+                        {editChecklist.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
+                            <span className="flex-1 text-sm text-gray-700 leading-normal">{item}</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditChecklist(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-gray-300 active:text-red-400"
+                              aria-label={`Remove "${item}"`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="w-4 h-4 rounded-full border-2 border-dashed border-gray-200 shrink-0" />
+                          <input
+                            type="text"
+                            value={newCheckItem}
+                            onChange={e => setNewCheckItem(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                const t = newCheckItem.trim()
+                                if (t) { setEditChecklist(prev => [...prev, t]); setNewCheckItem('') }
+                              }
+                            }}
+                            placeholder="Add item..."
+                            className="flex-1 text-sm text-gray-600 placeholder:text-gray-300 bg-transparent outline-none leading-normal"
+                          />
+                          {newCheckItem.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const t = newCheckItem.trim()
+                                if (t) { setEditChecklist(prev => [...prev, t]); setNewCheckItem('') }
+                              }}
+                              className="text-gray-400 active:text-gray-600"
+                            >
+                              <Plus size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos — Dreams only (display existing; no upload here) */}
+                  {type === 'dreams' && editPhotos.length > 0 && (
+                    <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                      <p className="text-[11px] font-medium text-gray-400 uppercase tracking-widest mb-2">Photos</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {editPhotos.map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt={`Photo ${idx + 1}`}
+                            className="w-16 h-16 rounded-xl object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="shrink-0 px-5 pt-3 border-t border-gray-50 pb-sheet-footer">

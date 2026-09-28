@@ -1,27 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { withCoupleAuth } from '@/lib/supabase-server'
+import { AccessError } from '@/lib/couple-access'
 import { getAdminClient, supabaseUnavailable } from '../_admin'
+import { assertOwnUser, validateEndpoint } from '../_access'
 
-// GET /api/push/status?userName=mateo
-// Returns whether the user has a saved push subscription in the DB
-export async function GET(req: NextRequest) {
-  const url      = new URL(req.url)
-  const userName = url.searchParams.get('userName')?.toLowerCase()
-
-  if (!userName) {
-    return NextResponse.json({ error: 'Missing userName' }, { status: 400 })
-  }
-
-  const supabase = getAdminClient()
-  if (!supabase) return supabaseUnavailable()
-  const { count, error } = await supabase
-    .from('push_subscriptions')
-    .select('id', { count: 'exact', head: true })
-    .eq('couple_id', 'sema')
-    .eq('user_name', userName)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
+export const GET = withCoupleAuth(async (req, access) => {
+  assertOwnUser(req.nextUrl.searchParams.get('userName'), access)
+  const client = getAdminClient()
+  if (!client) return supabaseUnavailable()
+  let query = client.from('push_subscriptions').select('id', { count: 'exact', head: true })
+    .eq('couple_id', access.stateId).eq('user_name', access.userName)
+  const endpoint = req.nextUrl.searchParams.get('endpoint')
+  if (endpoint) query = query.eq('endpoint', validateEndpoint(endpoint))
+  const { count, error } = await query
+  if (error) throw new AccessError(503, 'Could not check subscription')
   return NextResponse.json({ ok: true, hasSubscription: (count ?? 0) > 0 })
-}
+})

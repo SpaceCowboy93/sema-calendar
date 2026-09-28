@@ -1,69 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { withCoupleAuth } from '@/lib/supabase-server'
+import { AccessError } from '@/lib/couple-access'
 import { getAdminClient, supabaseUnavailable } from '../_admin'
+import { assertOwnUser, validateEndpoint } from '../_access'
 
-// POST — save a new push subscription
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json()
-    const { subscription, userName: rawUserName } = body
-    const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
-
-    console.log('[push/subscribe POST] userName:', userName)
-    console.log('[push/subscribe POST] endpoint suffix:', subscription?.endpoint?.slice(-40) ?? 'MISSING')
-    console.log('[push/subscribe POST] p256dh present:', !!subscription?.keys?.p256dh)
-    console.log('[push/subscribe POST] auth present:',   !!subscription?.keys?.auth)
-
-    if (!subscription?.endpoint || !userName) {
-      console.error('[push/subscribe POST] Missing subscription or userName')
-      return NextResponse.json({ error: 'Missing subscription or userName' }, { status: 400 })
-    }
-
-    const supabase = getAdminClient()
-    if (!supabase) return supabaseUnavailable()
-    const { data, error } = await supabase.from('push_subscriptions').upsert(
-      {
-        couple_id:  'sema',
-        user_name:  userName,
-        endpoint:   subscription.endpoint,
-        p256dh:     subscription.keys?.p256dh ?? '',
-        auth:       subscription.keys?.auth   ?? '',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'endpoint' }
-    ).select('id')
-
-    if (error) {
-      console.error('[push/subscribe POST] Supabase upsert error:', error.message, error.details)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    console.log('[push/subscribe POST] Upsert OK — row id:', data?.[0]?.id ?? 'unknown')
-    return NextResponse.json({ ok: true })
-  } catch (err) {
-    console.error('[push/subscribe POST] Unexpected error:', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+export const POST = withCoupleAuth(async (req, access) => {
+  const { subscription, userName } = await req.json()
+  assertOwnUser(userName, access)
+  const endpoint = validateEndpoint(subscription?.endpoint)
+  const { p256dh, auth } = subscription?.keys ?? {}
+  if (typeof p256dh !== 'string' || !/^[A-Za-z0-9_-]{80,100}={0,2}$/.test(p256dh) ||
+      typeof auth !== 'string' || !/^[A-Za-z0-9_-]{20,30}={0,2}$/.test(auth)) throw new AccessError(400, 'Invalid subscription keys')
+  const client = getAdminClient()
+  if (!client) return supabaseUnavailable()
+  const existing = await client.from('push_subscriptions').select('id,couple_id,user_name').eq('endpoint', endpoint).maybeSingle()
+  if (existing.error) throw new AccessError(503, 'Could not verify subscription')
+  if (existing.data && (existing.data.couple_id !== access.stateId || existing.data.user_name !== access.userName)) {
+    throw new AccessError(403, 'This subscription belongs to another account. Reconnect after signing out.')
   }
-}
+  const row = { couple_id: access.stateId, user_name: access.userName, endpoint, p256dh, auth, updated_at: new Date().toISOString() }
+  const result = existing.data
+    ? await client.from('push_subscriptions').update(row).eq('id', existing.data.id).eq('couple_id', access.stateId).eq('user_name', access.userName)
+    : await client.from('push_subscriptions').insert(row)
+  if (result.error) throw new AccessError(503, 'Could not save subscription. Please reconnect.')
+  return NextResponse.json({ ok: true })
+})
 
-// DELETE — remove a push subscription
-export async function DELETE(req: NextRequest) {
-  try {
-    const { endpoint } = await req.json()
-    console.log('[push/subscribe DELETE] endpoint suffix:', endpoint?.slice(-40) ?? 'MISSING')
-
-    if (!endpoint) return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 })
-
-    const supabase = getAdminClient()
-    if (!supabase) return supabaseUnavailable()
-    const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
-    if (error) {
-      console.error('[push/subscribe DELETE] Supabase error:', error.message)
-    } else {
-      console.log('[push/subscribe DELETE] Row removed OK')
-    }
-    return NextResponse.json({ ok: true })
-  } catch (err) {
-    console.error('[push/subscribe DELETE] Unexpected error:', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
-  }
-}
+export const DELETE = withCoupleAuth(async (req, access) => {
+  const { endpoint: value, userName } = await req.json()
+  assertOwnUser(userName, access)
+  const endpoint = validateEndpoint(value)
+  const client = getAdminClient()
+  if (!client) return supabaseUnavailable()
+  const { error } = await client.from('push_subscriptions').delete()
+    .eq('endpoint', endpoint).eq('couple_id', access.stateId).eq('user_name', access.userName)
+  if (error) throw new AccessError(503, 'Could not remove subscription')
+  return NextResponse.json({ ok: true })
+})

@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import type { ShoppingList } from '@/types'
+import { selectSharedState, type SharedState } from '@/lib/shared-state'
+import { pendingKeys, persistPending, readSyncBase, persistSyncBase } from '@/lib/couple-cache'
+import { rebaseSharedState, sameValue } from '@/lib/sync-merge'
+import { isCurrentAuth, subscribeAuth, type AuthContext } from '@/lib/auth-session'
 
-const COUPLE_ID   = 'sema'
 const DEBOUNCE_MS = 800
 const POLL_MS     = 5_000
 
@@ -32,12 +35,6 @@ let _pullFn: (() => Promise<void>) | null = null
 export function triggerPull() { _pullFn?.() }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function getSyncable(state: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(state).filter(([k, v]) => k !== 'currentUser' && typeof v !== 'function')
-  )
-}
-
 // Robust timestamp comparison — handles "Z" vs "+00:00" format differences
 function sameTimestamp(a: string | null, b: string | null): boolean {
   if (!a || !b) return false
@@ -87,177 +84,179 @@ function mergeArrayById(remote: unknown[], local: unknown[], idKey = 'id'): unkn
 }
 
 // ── Main hook ────────────────────────────────────────────────────────────────
-export function useSupabaseSync() {
-  const isMerging = useRef(false)
-  const isReady   = useRef(false)   // becomes true after initial load finishes
-  const lastAt    = useRef<string | null>(null)
-  const debounce  = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function applyRemote(remoteState: Record<string, unknown>, updatedAt: string) {
-    lastAt.current    = updatedAt
-    isMerging.current = true
-
-    const local = useAppStore.getState() as unknown as Record<string, unknown>
-    const merged: Record<string, unknown> = { ...remoteState }
-
-    const ARRAY_KEYS = ['events', 'todos', 'moods', 'loveNotes', 'wishlistItems',
-                        'countdowns', 'memories', 'goals', 'partnerNotes',
-                        'budgetItems', 'savingsGoals', 'savingsTransactions']
-    for (const key of ARRAY_KEYS) {
-      const r = Array.isArray(remoteState[key]) ? (remoteState[key] as unknown[]) : []
-      const l = Array.isArray(local[key])       ? (local[key]       as unknown[]) : []
-      merged[key] = mergeArrayById(r, l)
-    }
-
-    // financeMonths uses 'key' (YYYY-MM) as identifier instead of 'id'
-    const rFM = Array.isArray(remoteState.financeMonths) ? (remoteState.financeMonths as unknown[]) : []
-    const lFM = Array.isArray(local.financeMonths)       ? (local.financeMonths       as unknown[]) : []
-    merged.financeMonths = mergeArrayById(rFM, lFM, 'key')
-
-    const remoteShop = Array.isArray(remoteState.shoppingLists) ? (remoteState.shoppingLists as ShoppingList[]) : []
-    const localShop  = Array.isArray(local.shoppingLists)       ? (local.shoppingLists       as ShoppingList[]) : []
-    merged.shoppingLists = mergeShoppingLists(remoteShop, localShop)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    useAppStore.setState(merged as any)
-    isMerging.current = false
-    setStatus('ok')
-  }
-
-  // ── 1. Initial load ────────────────────────────────────────────────────────
+export function useSupabaseSync(context: AuthContext | null) {
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    console.log('🔵 [Sync] Starting. Supabase URL:', url ?? 'MISSING — check Vercel env vars!')
-    if (!url || url === 'https://placeholder.supabase.co') {
-      console.error('🔴 [Sync] SUPABASE_URL is missing or placeholder. Sync will not work.')
-      setStatus('error')
-      isReady.current = true
-      return
-    }
-
-    setStatus('syncing')
-    supabase
-      .from('couple_state')
-      .select('state, updated_at')
-      .eq('id', COUPLE_ID)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('🔴 [Sync] Load error:', error.code, error.message)
-          setStatus('error')
-        } else if (data?.state && Object.keys(data.state).length > 0) {
-          console.log('🟢 [Sync] Loaded. updated_at:', data.updated_at)
-          applyRemote(data.state, data.updated_at)
-        } else {
-          console.log('🟡 [Sync] DB empty — ready to write')
-          setStatus('ok')
-        }
-        isReady.current = true
-      })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── 2. Save on state change (debounced, only after initial load) ───────────
-  useEffect(() => {
-    const unsub = useAppStore.subscribe((rawState) => {
-      if (isMerging.current || !isReady.current) return
-
-      if (debounce.current) clearTimeout(debounce.current)
-      debounce.current = setTimeout(async () => {
-        const syncable = getSyncable(rawState as unknown as Record<string, unknown>)
-        console.log('🟣 [Sync] Saving...')
-        setStatus('syncing')
-
-        const { data, error } = await supabase
-          .from('couple_state')
-          .upsert({ id: COUPLE_ID, state: syncable, updated_at: new Date().toISOString() })
-          .select('updated_at')
-          .single()
-
-        if (error) {
-          console.error('🔴 [Sync] Save error:', error.code, error.message)
-          setStatus('error')
-        } else {
-          console.log('🟢 [Sync] Saved. updated_at:', data?.updated_at)
-          lastAt.current = data?.updated_at ?? null
-          setStatus('ok')
-        }
-      }, DEBOUNCE_MS)
+    if (!context) { setStatus('idle'); return }
+    let active = true
+    let ready = false
+    let applying = false
+    const pending = pendingKeys(context)
+    let base = readSyncBase(context)
+    const defaults = selectSharedState(useAppStore.getInitialState())
+    let dirty = pending.size > 0
+    let saving = false
+    let reading = false
+    let revision = 0
+    let lastAt: string | null = null
+    let lastRemote: unknown
+    let debounce: ReturnType<typeof setTimeout> | undefined
+    const abort = new AbortController()
+    const current = () => active && isCurrentAuth(context) && !abort.signal.aborted
+    const cancelAuth = subscribeAuth(() => {
+      if (!isCurrentAuth(context)) { abort.abort(); clearTimeout(debounce) }
     })
 
-    return () => {
-      unsub()
-      if (debounce.current) clearTimeout(debounce.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── 3. Poll every 5s ──────────────────────────────────────────────────────
-  async function pull() {
-    const { data, error } = await supabase
-      .from('couple_state')
-      .select('state, updated_at')
-      .eq('id', COUPLE_ID)
-      .maybeSingle()
-
-    if (error) { console.error('🔴 [Sync] Poll error:', error.message); return }
-    if (!data?.state) return
-
-    if (sameTimestamp(data.updated_at, lastAt.current)) {
-      console.log('🔄 [Sync] Poll: no change')
-      return
+    function rememberBase(remote: Partial<SharedState>) {
+      const next = { ...remote }
+      for (const key of pending) {
+        delete next[key]
+        if (Object.prototype.hasOwnProperty.call(base, key)) Object.assign(next, { [key]: base[key] })
+      }
+      base = next
+      persistSyncBase(context!, base)
     }
 
-    console.log('🟢 [Sync] Poll: change detected, applying...')
-    applyRemote(data.state, data.updated_at)
-  }
+    function applyRemote(remoteValue: unknown, updatedAt: string) {
+      const remote = { ...defaults, ...selectSharedState(remoteValue) }
+      const local = selectSharedState(useAppStore.getState())
+      const { state: merged, conflicts } = rebaseSharedState(base, local, remote, pending)
+      // Clean fields are authoritative, not a union with stale cache entries.
+      // Retain genuinely conflicting local work rather than resurrecting it remotely.
+      for (const key of pending) {
+        if (conflicts.includes(key)) Object.assign(merged, { [key]: local[key] })
+        else {
+          Object.assign(base, { [key]: remote[key] })
+          if (sameValue(merged[key], remote[key])) pending.delete(key)
+        }
+      }
+      dirty = pending.size > 0
+      applying = true
+      useAppStore.setState(merged)
+      applying = false
+      lastAt = updatedAt
+      lastRemote = remoteValue
+      rememberBase(remote)
+      persistPending(context!, pending)
+      return conflicts.length > 0
+    }
 
-  useEffect(() => {
-    _pullFn = pull
-    return () => { if (_pullFn === pull) _pullFn = null }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    const timer = setInterval(pull, POLL_MS)
-    return () => clearInterval(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── 4. Pull on foreground ─────────────────────────────────────────────────
-  useEffect(() => {
-    function onVisible() {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ [Sync] Foregrounded — pulling')
-        pull()
+    async function save() {
+      if (!current() || !ready || reading || saving || !dirty) return
+      saving = true
+      const startingRevision = revision
+      setStatus('syncing')
+      try {
+        // Read/rebase AND condition the write: a read followed by an unconditional
+        // update still loses a partner's changes in the gap between requests.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: remoteRow, error: readError } = await supabase.from('couple_state')
+            .select('state, updated_at').eq('id', context!.stateId).eq('couple_id', context!.coupleId)
+            .abortSignal(abort.signal).maybeSingle()
+          if (!current()) return
+          if (readError || !remoteRow) { setStatus('error'); return }
+          const local = selectSharedState(useAppStore.getState())
+          const remote = { ...defaults, ...selectSharedState(remoteRow.state) }
+          const merged = rebaseSharedState(base, local, remote, pending)
+          if (merged.conflicts.length) { setStatus('error'); return }
+          const sentKeys = new Set(pending)
+          // Preserve unknown/legacy JSON fields, and always advance the version,
+          // even for two saves in one millisecond or a slow local clock.
+          const state = { ...remoteRow.state, ...merged.state }
+          const updatedAt = new Date(Math.max(Date.now(), Date.parse(remoteRow.updated_at) + 1)).toISOString()
+          const { data, error } = await supabase.from('couple_state')
+            .update({ state, updated_at: updatedAt })
+            .eq('id', context!.stateId).eq('couple_id', context!.coupleId)
+            .eq('updated_at', remoteRow.updated_at)
+            .select('updated_at').abortSignal(abort.signal).maybeSingle()
+          if (!current()) return
+          if (error) { setStatus('error'); return }
+          if (!data) continue // Another writer won; reread and rebase, bounded above.
+          const latest = selectSharedState(useAppStore.getState())
+          for (const key of sentKeys) {
+            if (sameValue(latest[key], local[key])) pending.delete(key)
+            else Object.assign(base, { [key]: local[key] })
+          }
+          const applied = { ...merged.state }
+          pending.forEach(key => Object.assign(applied, { [key]: latest[key] }))
+          applying = true
+          useAppStore.setState(applied)
+          applying = false
+          rememberBase(merged.state)
+          persistPending(context!, pending)
+          lastAt = data.updated_at
+          lastRemote = state
+          dirty = pending.size > 0
+          setStatus(dirty ? 'syncing' : 'ok')
+          return
+        }
+        setStatus('error')
+      } catch { if (current()) setStatus('error') }
+      finally {
+        saving = false
+        // Keep failed work in the scoped cache; retry on the next change/foreground/poll.
+        if (current() && dirty && revision !== startingRevision) schedule()
       }
     }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── 5. Realtime subscription ──────────────────────────────────────────────
-  useEffect(() => {
-    const channel = supabase
-      .channel('couple_state_rt')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: `id=eq.${COUPLE_ID}` },
-        (payload) => {
-          const remote = payload.new as { state: Record<string, unknown>; updated_at: string }
-          if (!remote?.state) return
-          if (sameTimestamp(remote.updated_at, lastAt.current)) {
-            console.log('📡 [Sync] Realtime: own echo, skipping')
-            return
-          }
-          console.log('📡 [Sync] Realtime: applying partner update')
-          applyRemote(remote.state, remote.updated_at)
+    function schedule() {
+      clearTimeout(debounce)
+      debounce = setTimeout(() => { void save() }, DEBOUNCE_MS)
+    }
+    async function pull() {
+      if (!current() || reading || saving) return
+      if (ready && dirty) { await save(); return }
+      reading = true
+      try {
+        const { data, error } = await supabase.from('couple_state')
+          .select('state, updated_at').eq('id', context!.stateId).eq('couple_id', context!.coupleId)
+          .abortSignal(abort.signal).maybeSingle()
+        if (!current()) return
+        if (error || !data) { setStatus('error'); return }
+        // applyRemote preserves pending fields, including edits made during this
+        // read, while still loading the other fields before any full-state save.
+        const conflicted = (data.updated_at !== lastAt || !sameValue(data.state, lastRemote))
+          ? applyRemote(data.state, data.updated_at) : false
+        ready = true
+        if (dirty) schedule()
+        setStatus(conflicted ? 'error' : dirty ? 'syncing' : 'ok')
+      } catch { if (current()) setStatus('error') }
+      finally { reading = false }
+    }
+    const unsubscribe = useAppStore.subscribe((state, previous) => {
+      if (applying || !current()) return
+      const next = selectSharedState(state)
+      const old = selectSharedState(previous)
+      if (Object.keys(next).every(key => next[key as keyof typeof next] === old[key as keyof typeof old])) return
+      dirty = true
+      for (const key of Object.keys(next) as (keyof typeof next)[]) {
+        if (next[key] !== old[key]) {
+          if (!pending.has(key)) Object.assign(base, { [key]: old[key] })
+          pending.add(key)
         }
-      )
-      .subscribe(s => console.log('📡 [Sync] Realtime status:', s))
-
-    return () => { supabase.removeChannel(channel) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+      }
+      persistSyncBase(context!, base)
+      persistPending(context!, pending)
+      revision++
+      if (ready) schedule()
+    })
+    setStatus('syncing')
+    void pull()
+    _pullFn = pull
+    const timer = setInterval(() => { void pull() }, POLL_MS)
+    const onVisible = () => { if (document.visibilityState === 'visible') void pull() }
+    document.addEventListener('visibilitychange', onVisible)
+    const channel = supabase.channel('couple-state-' + context.coupleId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: 'id=eq.' + context.stateId }, () => { void pull() })
+      .subscribe()
+    return () => {
+      active = false
+      abort.abort()
+      cancelAuth()
+      clearTimeout(debounce)
+      clearInterval(timer)
+      unsubscribe()
+      if (_pullFn === pull) _pullFn = null
+      document.removeEventListener('visibilitychange', onVisible)
+      void supabase.removeChannel(channel)
+    }
+  }, [context])
 }

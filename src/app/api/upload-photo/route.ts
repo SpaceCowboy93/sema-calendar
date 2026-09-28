@@ -1,5 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextRequest, NextResponse } from 'next/server'
+import { withCoupleAuth } from '@/lib/supabase-server'
+import { AccessError } from '@/lib/couple-access'
+import { getAdminClient } from '../push/_admin'
+import { NextResponse } from 'next/server'
+
+// Membership is verified before using the privileged Storage client.
 
 const BUCKET = 'event-photos'
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -9,23 +13,14 @@ const VALID_TYPES = new Set([
 
 // Server-side admin client — uses service role key, bypasses RLS entirely.
 // NEVER expose the service role key to the browser.
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {
-    throw new Error('Supabase env vars not configured (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)')
-  }
-  return createClient(url, key)
-}
-
-export async function POST(req: NextRequest) {
+export const POST = withCoupleAuth(async (req, access) => {
   try {
     const form   = await req.formData()
     const file   = form.get('file') as File | null
     const folder = (form.get('folder') ?? form.get('eventId')) as string | null
 
     // ── Validate inputs ──────────────────────────────────────────────────────
-    if (!file || !folder) {
+    if (!(file instanceof File) || typeof folder !== 'string' || !/^(events|todos|focus|goals|wishes|finance-categories|anniversaries)\/[A-Za-z0-9_-]{1,128}$/.test(folder)) {
       return NextResponse.json({ error: 'Missing file or folder' }, { status: 400 })
     }
 
@@ -49,9 +44,10 @@ export async function POST(req: NextRequest) {
     const bytes    = await file.arrayBuffer()
     const buffer   = Buffer.from(bytes)
     const safeName = file.name.replace(/[^\w.\-]/g, '_').replace(/\s+/g, '_')
-    const path     = `${folder}/${Date.now()}-${safeName}`
+    const path     = `${access.coupleId}/${folder}/${crypto.randomUUID()}-${safeName}`
 
     const supabase = getAdminClient()
+    if (!supabase) throw new AccessError(503, 'Storage is not configured.')
     const { data, error } = await supabase.storage
       .from(BUCKET)
       .upload(path, buffer, {
@@ -83,6 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: urlData.publicUrl })
 
   } catch (err) {
+    if (err instanceof AccessError) throw err
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[upload-photo] Unexpected error:', msg)
     // Never expose raw error messages to the client
@@ -91,4 +88,4 @@ export async function POST(req: NextRequest) {
       : 'Unexpected upload error. Please try again.'
     return NextResponse.json({ error: clientMsg }, { status: 500 })
   }
-}
+})

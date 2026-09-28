@@ -1,5 +1,7 @@
 'use client'
 
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -81,7 +83,7 @@ async function scheduleMonthEndPush(monthKey: string) {
   try {
     const last = lastDayOf(monthKey)
     last.setHours(22, 0, 0, 0)
-    await fetch('/api/push/finance-month-end', {
+    await authenticatedFetch('/api/push/finance-month-end', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ monthKey, fireAt: last.toISOString() }),

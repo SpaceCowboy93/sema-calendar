@@ -116,6 +116,11 @@ function collectFocusTimedItems(): ScheduledItem[] {
   return items
 }
 
+// setTimeout silently overflows for delays above 2^31−1 ms (~24.8 days) and fires
+// immediately instead of waiting. Cap here; the visibility-change handler reschedules
+// items that are still in the future when the page next becomes visible.
+const MAX_TIMER_DELAY = 2 ** 31 - 2
+
 function fireNotification(body: string) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   try {
@@ -125,7 +130,7 @@ function fireNotification(body: string) {
   }
 }
 
-export function useNotifications() {
+export function useNotifications(enabled = true) {
   const timerIds = useRef<ReturnType<typeof setTimeout>[]>([])
 
   function clearAll() {
@@ -149,6 +154,7 @@ export function useNotifications() {
       const fireMs = item.datetime.getTime()
       if (fireMs <= now) return
       const delay = fireMs - now
+      if (delay > MAX_TIMER_DELAY) return
       console.log(`[SeMa] SCHEDULE focus reminder "${item.title}" in ${Math.round(delay / 60000)}min`)
       const id = setTimeout(() => {
         console.log(`[SeMa] FIRE focus reminder "${item.title}"`)
@@ -192,6 +198,7 @@ export function useNotifications() {
           )
           return
         }
+        if (delay > MAX_TIMER_DELAY) return
 
         console.log(
           `[SeMa] SCHEDULE "${r.label}" for "${item.title}":`,
@@ -209,8 +216,10 @@ export function useNotifications() {
   }
 
   useEffect(() => {
+    if (!enabled) { clearAll(); return }
+    let active = true
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().then(() => scheduleAll())
+      Notification.requestPermission().then(() => { if (active) scheduleAll() })
     } else {
       scheduleAll()
     }
@@ -225,10 +234,11 @@ export function useNotifications() {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      active = false
       clearAll()
       unsub()
       document.removeEventListener('visibilitychange', onVisibility)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [enabled])
 }

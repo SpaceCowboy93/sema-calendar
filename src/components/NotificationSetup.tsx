@@ -1,5 +1,7 @@
 'use client'
 
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, BellOff, BellRing, ChevronDown, RefreshCw, Check, X, Wifi, Smartphone } from '@/design/iconSystem'
@@ -69,7 +71,7 @@ export function NotificationSetup({ primary }: { primary: string }) {
     setTestState('sending')
     setTestDetail('')
     try {
-      const res  = await fetch('/api/push/test', {
+      const res  = await authenticatedFetch('/api/push/test', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ endpoint, userName: currentUser }),

@@ -23,14 +23,7 @@ type AuthResult =
 function isAuthorized(req: NextRequest): AuthResult {
   const secret = process.env.CRON_SECRET
 
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[process] CRON_SECRET not configured in production — all requests rejected')
-      return { ok: false, statusCode: 503, message: 'Service unavailable — server misconfiguration' }
-    }
-    console.warn('[process] CRON_SECRET not set — allowing request (development only)')
-    return { ok: true }
-  }
+  if (!secret) return { ok: false, statusCode: 503, message: 'Service unavailable' }
 
   const auth = req.headers.get('authorization') ?? ''
   if (auth !== `Bearer ${secret}`) {
@@ -83,6 +76,8 @@ export async function GET(req: NextRequest) {
   const { data: reminders, error: remErr } = await supabase
     .from('push_reminders')
     .select('id, user_name, title, message, fire_at, item_type, retry_count, delivered_endpoints')
+    .eq('couple_id', 'sema')
+    .in('user_name', ['seval', 'mateo'])
     .lte('fire_at', now)
     .is('sent_at', null)
     .is('failed_permanently_at', null)
@@ -91,7 +86,7 @@ export async function GET(req: NextRequest) {
 
   if (remErr) {
     console.error('[process GET] Supabase reminders query error:', remErr.message)
-    return NextResponse.json({ error: remErr.message }, { status: 500 })
+    return NextResponse.json({ error: 'Push service unavailable' }, { status: 500 })
   }
 
   console.log('[process GET] Due unsent reminders found:', reminders?.length ?? 0)
@@ -114,11 +109,12 @@ export async function GET(req: NextRequest) {
   const { data: subs, error: subErr } = await supabase
     .from('push_subscriptions')
     .select('user_name, endpoint, p256dh, auth')
+    .eq('couple_id', 'sema')
     .in('user_name', userNames)
 
   if (subErr) {
     console.error('[process GET] Supabase subscriptions query error:', subErr.message)
-    return NextResponse.json({ error: subErr.message }, { status: 500 })
+    return NextResponse.json({ error: 'Push service unavailable' }, { status: 500 })
   }
 
   console.log('[process GET] Total subscriptions fetched:', subs?.length ?? 0)
@@ -235,14 +231,14 @@ export async function GET(req: NextRequest) {
     const { error: updErr } = await supabase
       .from('push_reminders')
       .update({ sent_at: now })
-      .in('id', sentIds)
+      .eq('couple_id', 'sema').in('id', sentIds)
     if (updErr) console.error('[process GET] Mark-sent error:', updErr.message)
   }
 
   // 5. Remove stale subscriptions
   if (staleEndpoints.length) {
     console.log('[process GET] Removing stale subscriptions:', staleEndpoints.length)
-    await supabase.from('push_subscriptions').delete().in('endpoint', staleEndpoints)
+    await supabase.from('push_subscriptions').delete().eq('couple_id', 'sema').in('endpoint', staleEndpoints)
   }
 
   // 6. Update partial failures — increment retry_count, persist delivered_endpoints
@@ -260,7 +256,7 @@ export async function GET(req: NextRequest) {
     const { error: retryErr } = await supabase
       .from('push_reminders')
       .update(updates)
-      .eq('id', id)
+      .eq('couple_id', 'sema').eq('id', id)
     if (retryErr) console.error(`[process GET] Retry-update error for ${id}:`, retryErr.message)
   }
 

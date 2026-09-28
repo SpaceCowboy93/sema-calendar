@@ -1,5 +1,7 @@
 'use client'
 
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
+
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, ImageIcon, Trash2, ScanLine, Plus, Loader2 } from '@/design/iconSystem'
@@ -58,7 +60,7 @@ export function ReceiptScannerSheet({ onClose, onResultReady }: Props) {
     setScanning(true)
     setError(null)
     try {
-      const res = await fetch('/api/receipts/scan', {
+      const res = await authenticatedFetch('/api/receipts/scan', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ photos }),
