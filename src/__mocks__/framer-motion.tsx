@@ -31,9 +31,17 @@ function createMotionComponent(tag: string) {
   })
 }
 
+// Cache keyed by tag name so the same component reference is returned on every
+// render.  Without caching, each access creates a new component type and React
+// unmounts/remounts the subtree, causing async DOM tasks to fire outside
+// userEvent's act() scope and generating spurious act() warnings in tests.
+const _motionCache = new Map<string, ReturnType<typeof createMotionComponent>>()
 export const motion = new Proxy({} as Record<string, ReturnType<typeof createMotionComponent>>, {
   get(_target, prop: string) {
-    return createMotionComponent(prop)
+    if (!_motionCache.has(prop)) {
+      _motionCache.set(prop, createMotionComponent(prop))
+    }
+    return _motionCache.get(prop)!
   },
 })
 

@@ -1,7 +1,8 @@
 -- =============================================================================
--- 0005: Bind and secure the EXISTING SeMa household (prepared, NOT applied)
+-- 0005: Bind and secure the EXISTING SeMa household
 -- =============================================================================
--- Verified read-only against neyhoodxeumpbxekskej on 2026-09-22.
+-- Applied to neyhoodxeumpbxekskej on 2026-09-24 15:29:04 UTC.
+-- Confirmed in remote migration history on 2026-09-28.
 -- This is a follow-up to ALREADY APPLIED migrations:
 --   20260917202204 auth_foundation
 --   20260917202240 auth_foundation_restrict_membership_function
