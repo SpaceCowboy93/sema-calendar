@@ -124,7 +124,7 @@ const MAX_TIMER_DELAY = 2 ** 31 - 2
 function fireNotification(body: string) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   try {
-    new Notification('SeMa 💕', { body, icon: '/favicon.ico', badge: '/favicon.ico' })
+    new Notification('SeMa 💕', { body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' })
   } catch {
     // Notifications not supported in this context
   }
