@@ -17,6 +17,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { rebaseSharedState } from '@/lib/sync-merge'
 import type { SharedState } from '@/lib/shared-state'
+import type { CoupleAccess } from '@/lib/couple-access'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ describe('Multi-key pending flush', () => {
 
   it('all pending categories are persisted and restored together', async () => {
     const { pendingKeys, persistPending } = await import('@/lib/couple-cache')
-    const access = { userId: 'u1', coupleId: 'c1', stateId: 's1', userName: 'mateo' }
+    const access: CoupleAccess = { userId: 'u1', coupleId: 'c1', stateId: 's1', userName: 'mateo' }
     const pending = new Set<keyof SharedState>(['events', 'todos', 'goals', 'wishlistItems'])
     persistPending(access, pending)
     const restored = pendingKeys(access)
@@ -88,7 +89,7 @@ describe('Multi-key pending flush', () => {
 
   it('clearing pending after successful sync leaves empty set', async () => {
     const { pendingKeys, persistPending } = await import('@/lib/couple-cache')
-    const access = { userId: 'u1', coupleId: 'c1', stateId: 's1', userName: 'mateo' }
+    const access: CoupleAccess = { userId: 'u1', coupleId: 'c1', stateId: 's1', userName: 'mateo' }
     persistPending(access, new Set<keyof SharedState>(['events', 'todos']))
     persistPending(access, new Set<keyof SharedState>()) // clear after sync
     const restored = pendingKeys(access)
