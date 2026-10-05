@@ -6,6 +6,7 @@ import { motion, MotionConfig } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { getVerifiedAccess } from '@/lib/auth'
 import { AccessError } from '@/lib/couple-access'
+import { classifyAuthError } from '@/lib/classify-auth-error'
 
 export default function LandingPage() {
   const router = useRouter()
@@ -32,12 +33,12 @@ export default function LandingPage() {
     setSubmitting(true)
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (signInError) throw new Error('We could not sign you in. Please check your email and password.')
+      if (signInError) throw signInError
       await getVerifiedAccess()
       setPassword('')
       router.replace('/together')
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Unable to sign in. Please try again.')
+      setError(classifyAuthError(failure))
     } finally {
       setSubmitting(false)
     }
