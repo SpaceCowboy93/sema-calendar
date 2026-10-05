@@ -241,7 +241,7 @@ export function useSupabaseSync(context: AuthContext | null) {
     setStatus('syncing')
     void pull()
     _pullFn = pull
-    const timer = setInterval(() => { void pull() }, POLL_MS)
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull() }, POLL_MS)
     const onVisible = () => { if (document.visibilityState === 'visible') void pull() }
     document.addEventListener('visibilitychange', onVisible)
     const channel = supabase.channel('couple-state-' + context.coupleId)
