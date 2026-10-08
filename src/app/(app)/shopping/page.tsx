@@ -468,6 +468,13 @@ export default function ShoppingPage() {
                           >
                             <Pencil size={13} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
                           </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setDeleteListId(list.id) }}
+                            aria-label={`Delete ${list.name}`}
+                            className="p-1.5 active:opacity-60 transition-opacity"
+                          >
+                            <Trash2 size={13} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
+                          </button>
                           {isExpanded
                             ? <ChevronUp   size={16} strokeWidth={1.8} style={{ color: C.textLight }} />
                             : <ChevronRight size={16} strokeWidth={1.8} style={{ color: C.textLight }} />
@@ -926,7 +933,7 @@ export default function ShoppingPage() {
 
       <DeleteConfirmSheet
         open={!!deleteListId}
-        title="Delete this list?"
+        title={`Delete "${lists.find(l => l.id === deleteListId)?.name ?? 'this list'}"?`}
         message="This shopping list and all its items will be permanently removed."
         onCancel={() => setDeleteListId(null)}
         onConfirm={() => { deleteList(deleteListId!); setDeleteListId(null) }}
