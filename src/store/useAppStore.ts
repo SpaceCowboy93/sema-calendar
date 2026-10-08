@@ -7,6 +7,11 @@ import { selectSharedState, type SharedState } from '@/lib/shared-state'
 import type { CoupleAccess } from '@/lib/couple-access'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  mergePreferences,
+} from '@/lib/notification-preferences'
+import type { ActivityEntry } from '@/lib/activity-event'
+import {
   type UserName, type CalendarEvent, type SharedTodo, type MoodEntry,
   type LoveNote, type WishlistItem, type Countdown, type Memory,
   type MoodType, type WishlistCategory, type EventColor,
@@ -163,6 +168,18 @@ export interface AppState {
   uploadPhoto: (folder: string, file: File) => Promise<string | null>
   uploadGoalPhoto: (goalId: string, file: File) => Promise<void>
   uploadWishlistPhoto: (itemId: string, file: File) => Promise<void>
+
+  // Activity Centre — user-scoped; NOT in SHARED_KEYS; not couple-synced
+  // Persisted via src/lib/user-cache.ts (loaded by useActivityCachePersistence)
+  activityEntries: import('@/lib/activity-event').ActivityEntry[]
+  addActivityEntry: (entry: import('@/lib/activity-event').ActivityEntry) => void
+  markActivityRead: (id: string) => void
+  markAllActivitiesRead: () => void
+  clearReadActivities: () => void
+
+  // Notification preferences — user-scoped; NOT in SHARED_KEYS
+  notificationPrefs: import('@/lib/notification-preferences').NotificationPreferences
+  updateNotificationPrefs: (updates: Partial<import('@/lib/notification-preferences').NotificationPreferences>) => void
 }
 
 /* ── Shopping → Finance sync helper ──────────────────────────────────────────
@@ -1288,6 +1305,28 @@ export const useAppStore = create<AppState>()(
           ),
         }))
       },
+
+      // ── Activity Centre — user-scoped; NOT in SHARED_KEYS; not couple-synced ──
+      // Loaded from user-scoped localStorage by useActivityCachePersistence hook.
+      activityEntries: [],
+      addActivityEntry: (entry: ActivityEntry) => set(s => ({
+        activityEntries: [entry, ...s.activityEntries].slice(0, 50),
+      })),
+      markActivityRead: (id: string) => set(s => ({
+        activityEntries: s.activityEntries.map(e => e.id === id ? { ...e, isRead: true } : e),
+      })),
+      markAllActivitiesRead: () => set(s => ({
+        activityEntries: s.activityEntries.map(e => ({ ...e, isRead: true })),
+      })),
+      clearReadActivities: () => set(s => ({
+        activityEntries: s.activityEntries.filter(e => !e.isRead),
+      })),
+
+      // ── Notification preferences — user-scoped; NOT in SHARED_KEYS ──
+      notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
+      updateNotificationPrefs: (updates) => set(s => ({
+        notificationPrefs: mergePreferences(s.notificationPrefs, updates),
+      })),
     }),
     {
       name: 'semacalendar-v2',
