@@ -41,6 +41,8 @@ import { PartnerNoteNotification } from '@/components/PartnerNoteNotification'
 import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
 import { C2ToastRegion } from '@/components/ui/C2Toast'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
+import { ActivityCentreBell } from '@/components/ActivityCentre'
+import { useActivityCachePersistence } from '@/hooks/useActivityCachePersistence'
 
 // ── Preview navigation — mirrors BottomNav with /dev-preview/* hrefs ──────────
 
@@ -110,6 +112,8 @@ export function DevPreviewShell({ children }: { children: React.ReactNode }) {
   const isSeval = currentUser === 'seval'
   const primary = isSeval ? '#8b5cf6' : '#14b8a6'
 
+  useActivityCachePersistence()
+
   useEffect(() => {
     // Seed store: saved edits take priority over fixtures; user identity always
     // comes from the dedicated user key (not shared-state).
@@ -178,6 +182,8 @@ export function DevPreviewShell({ children }: { children: React.ReactNode }) {
         >
           <Plus size={20} strokeWidth={2} />
         </motion.button>
+
+        <ActivityCentreBell />
 
         <PartnerNoteNotification />
         <GlobalImageLightbox />

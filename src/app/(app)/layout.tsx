@@ -14,6 +14,8 @@ import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
 import { C2ToastRegion } from '@/components/ui/C2Toast'
 import { useAuthSession } from '@/hooks/useAuthSession'
+import { ActivityCentreBell } from '@/components/ActivityCentre'
+import { useActivityCachePersistence } from '@/hooks/useActivityCachePersistence'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -31,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useSupabaseSync(context)
   useNotifications(context !== null)
   usePushNotifications()
+  useActivityCachePersistence()
 
   const handleScroll = useCallback(() => {
     setScrolling(true)
@@ -100,6 +103,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <Plus size={20} strokeWidth={2} />
       </motion.button>
+
+      <ActivityCentreBell />
 
       <PartnerNoteNotification />
 

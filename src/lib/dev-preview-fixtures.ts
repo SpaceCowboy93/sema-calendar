@@ -25,6 +25,7 @@ import type {
   UserName,
 } from '@/types'
 import type { SharedState } from '@/lib/shared-state'
+import type { ActivityEntry } from '@/lib/activity-event'
 
 // ── Guard ─────────────────────────────────────────────────────────────────────
 
@@ -575,9 +576,83 @@ const financeMonths: FinanceMonth[] = [
   },
 ]
 
+// ── Activity entries — recipient-side feed shown to the logged-in user ────────
+// These represent actions taken by the *other* user (e.g. seval) as seen by mateo.
+
+function buildActivityEntries(viewerUser: UserName): ActivityEntry[] {
+  const actor      = viewerUser === 'mateo' ? 'seval' : 'mateo'
+  const actorEmoji = actor === 'seval' ? '💜' : '💚'
+
+  return [
+    {
+      id:          `dp-act-1`,
+      entityType:  'loveNote',
+      actionType:  'sent',
+      actorName:   actor,
+      actorEmoji,
+      safeBody:    `${actor === 'seval' ? 'Seval' : 'Mateo'} sent you a love note`,
+      deepLink:    '/together',
+      importance:  'immediate',
+      createdAt:   new Date(Date.now() - 5 * 60_000).toISOString(),  // 5 min ago
+      isRead:      false,
+    },
+    {
+      id:          `dp-act-2`,
+      entityType:  'shopping',
+      actionType:  'added',
+      actorName:   actor,
+      actorEmoji,
+      safeBody:    `${actor === 'seval' ? 'Seval' : 'Mateo'} added to shopping`,
+      deepLink:    '/shopping',
+      importance:  'grouped',
+      createdAt:   new Date(Date.now() - 22 * 60_000).toISOString(), // 22 min ago
+      isRead:      false,
+      groupCount:  3,
+    },
+    {
+      id:          `dp-act-3`,
+      entityType:  'goal',
+      actionType:  'created',
+      actorName:   actor,
+      actorEmoji,
+      safeBody:    `${actor === 'seval' ? 'Seval' : 'Mateo'} added "Trip to Lisbon"`,
+      deepLink:    '/goals',
+      importance:  'immediate',
+      createdAt:   new Date(Date.now() - 2 * 60 * 60_000).toISOString(), // 2h ago
+      isRead:      true,
+    },
+    {
+      id:          `dp-act-4`,
+      entityType:  'todo',
+      actionType:  'completed',
+      actorName:   actor,
+      actorEmoji,
+      safeBody:    `${actor === 'seval' ? 'Seval' : 'Mateo'} completed "Book the corner table"`,
+      deepLink:    '/planner',
+      importance:  'immediate',
+      createdAt:   new Date(Date.now() - 5 * 60 * 60_000).toISOString(), // 5h ago
+      isRead:      true,
+    },
+    {
+      id:          `dp-act-5`,
+      entityType:  'mood',
+      actionType:  'shared',
+      actorName:   actor,
+      actorEmoji,
+      safeBody:    `${actor === 'seval' ? 'Seval' : 'Mateo'} shared their mood`,
+      deepLink:    '/us',
+      importance:  'immediate',
+      createdAt:   new Date(Date.now() - 24 * 60 * 60_000).toISOString(), // yesterday
+      isRead:      true,
+    },
+  ]
+}
+
 // ── Main fixture builder ───────────────────────────────────────────────────────
 
-export function getDevPreviewFixtures(user: UserName): Partial<SharedState> & { currentUser: UserName } {
+export function getDevPreviewFixtures(
+  user: UserName,
+): Partial<SharedState> & { currentUser: UserName; activityEntries: ActivityEntry[] } {
   return {
     currentUser: user,
     events,
@@ -598,5 +673,6 @@ export function getDevPreviewFixtures(user: UserName): Partial<SharedState> & { 
     monthlyIncome: 3500,
     focusCarryOver: false,
     boomBoomCount: 42,
+    activityEntries: buildActivityEntries(user),
   }
 }
