@@ -38,29 +38,30 @@ that restriction is lifted via the Supabase dashboard.
 
 ## Findings by Severity
 
-### MEDIUM — Inconsistent error classification on mount-time redirect
+### ~~MEDIUM~~ FIXED — Inconsistent error classification on mount-time redirect
 
-**File:** [src/app/page.tsx](../src/app/page.tsx) lines 22–24
-**Status:** Known inconsistency; low practical risk
+**File:** [src/app/page.tsx](../src/app/page.tsx) line 24
+**Status:** Fixed — commit `fix(auth): classify mount-time access errors safely`
+**Tests:** [src/__tests__/pages/landing-mount-errors.test.tsx](../src/__tests__/pages/landing-mount-errors.test.tsx) (8 cases)
 
-The `useEffect` that auto-redirects already-authenticated users catches
-failures from `getVerifiedAccess()` and surfaces `failure.message` directly:
+The `useEffect` previously surfaced `failure.message` directly while the
+sign-in submit handler correctly used `classifyAuthError`. The single-line fix:
 
 ```ts
+// Before
 setError(failure instanceof Error ? failure.message : 'Unable to verify account access.')
+
+// After
+setError(classifyAuthError(failure))
 ```
 
-The `handleSubmit` path (the user-visible sign-in flow) correctly delegates to
-`classifyAuthError`. The mount-time path does not.
+The existing 401 guard is preserved: a 401 AccessError ("not signed in") is still
+silently suppressed. All other failures now go through `classifyAuthError`, which
+maps HTTP 402/5xx to a service-unavailable message, TypeErrors to a network
+message, and AccessErrors to their safe app-written messages. Unknown errors
+receive a generic fallback. Raw internal messages are never rendered.
 
-In practice the risk is low because `getVerifiedAccess` raises `AccessError`
-for most failure modes, and `AccessError` messages are written by the app
-(they are already safe). A raw Supabase network error on initial page load
-would only be surfaced if `getVerifiedAccess` itself throws a non-AccessError
-(e.g., a `TypeError` from a completely offline browser).
-
-**Recommendation:** Replace `failure.message` with `classifyAuthError(failure)`
-in the mount-handler catch block to make the two paths consistent.
+Regression tests cover all eight paths in `landing-mount-errors.test.tsx`.
 
 ---
 

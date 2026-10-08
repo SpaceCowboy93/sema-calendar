@@ -21,7 +21,7 @@ export default function LandingPage() {
       if (active) router.replace('/together')
     }).catch(failure => {
       if (active && !(failure instanceof AccessError && failure.status === 401)) {
-        setError(failure instanceof Error ? failure.message : 'Unable to verify account access.')
+        setError(classifyAuthError(failure))
       }
     })
     return () => { active = false }
