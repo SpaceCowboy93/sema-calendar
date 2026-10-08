@@ -105,48 +105,118 @@ per-poll egress by 80–90%, but would require a significant schema migration.
 
 ---
 
-## Egress Breakdown — Before Fix (5 s polling, no visibility guard)
+## Egress Formula
 
-| Source | Rate | 8.6-day estimate | Note |
-|--------|------|-----------------|------|
-| Background-tab polling (root cause) | 4 sessions × 12/min × 30 KB | ~14–18 GB | **ESTIMATE** |
-| Active-tab polling (visible sessions) | ~1.5 sessions × 12/min × 30 KB | ~5–7 GB | **ESTIMATE** |
-| Realtime double-reads | ~10/day × 30 KB | ~2.6 MB | **ESTIMATE** |
-| Page-load validation (4 requests) | ~30 page-loads/day × 120 KB | ~31 MB | **ESTIMATE** |
-| Push sync | ~30 navigations/day × 60 KB | ~15 MB | **ESTIMATE** |
+All polling estimates use this formula explicitly:
 
-All figures above are estimates derived from code inspection. No Supabase
-usage logs were examined (project restricted). **No measured values are
-available until Supabase is unpaused.**
+```
+daily egress = response_size × polls_per_minute × 1,440 min/day × visible_clients
+```
+
+**Assumptions for polling-only tables below:**
+
+- `response_size` = **30 KB** — this is an estimate based on code inspection of
+  the 18-key JSONB data model. The actual transferred size is unknown until it
+  can be measured after Supabase is restored (see "Required Measurements" below).
+- `polls_per_minute` = interval frequency (never hidden tabs — visibility guard
+  prevents all polling while `document.visibilityState === 'hidden'`).
+- `visible_clients` = number of concurrently open, foregrounded tabs.
+- These figures cover **fallback polling only**. Realtime traffic, Auth requests,
+  push-sync and event-triggered pulls are additional — see secondary sources below.
+- **No measured values exist.** All figures are theoretical estimates.
 
 ---
 
-## Egress Breakdown — After Fix (60 s polling + visibility guard + online catch-up)
+## Egress Breakdown — Polling Component at Three Intervals (ESTIMATES)
 
-Assumptions: 30 KB per `couple_state` read, 2 active users (Mateo + Seval),
-mix of phone and laptop (average ~2 concurrent visible sessions).
+| Interval | polls/min | 1 visible tab/day | 2 visible tabs/day | 4 visible tabs/day |
+|---|---|---|---|---|
+| **5 s** (original, no visibility guard) | 12 | 518.4 MB | 1,036.8 MB (1.01 GB) | 2,073.6 MB (2.02 GB) |
+| **60 s** (Phase 2, superseded) | 1 | 43.2 MB | 86.4 MB | 172.8 MB |
+| **300 s** (current) | 0.2 | 8.64 MB | 17.28 MB | 34.56 MB |
 
-| Session scenario | Visible polls/day | Est. visible-tab egress/day | Hidden-tab egress/day |
-|---|---|---|---|
-| 1 device, 1 tab | 24 polls | 0.7 MB | 0 (guarded) |
-| 2 users, 1 tab each | 48 polls | 1.4 MB | 0 (guarded) |
-| 2 users, 2 tabs each | 96 polls | 2.9 MB | 0 (guarded) |
-| Realtime events (partner write) | ~20/day × 1 pull | ~0.6 MB/day per user | — |
-| Page-load + auth (4 requests) | ~30 loads/day × 120 KB | ~3.6 MB | — |
-| **Total (2 users, 1 tab each)** | — | **~6 MB/day** | **0** |
-| **Total (2 users, 2 tabs each)** | — | **~7 MB/day** | **0** |
+Derivation for **5 s, 1 tab**: 30 KB × 12 × 1,440 = 518,400 KB = 518.4 MB/day
 
-**Monthly projection (2 users, realistic 1–2 tabs):**
+Derivation for **300 s, 1 tab**: 30 KB × 0.2 × 1,440 = 8,640 KB = 8.64 MB/day
+
+**Hidden tabs** (any interval, with visibility guard): **0 MB** — interval skipped.
+
+**30-day monthly projection (polling only):**
+
+| Interval | 1 tab | 2 tabs | 4 tabs | Exceeds 5 GB free tier? |
+|---|---|---|---|---|
+| 5 s | 15.55 GB | 31.10 GB | 62.21 GB | **YES** (even 1 tab) |
+| 60 s | 1.30 GB | 2.59 GB | **5.18 GB** | At 4 tabs: barely yes |
+| 300 s | 0.26 GB | 0.52 GB | 1.04 GB | **No** |
+
+The 60-second interval was safe for 1–3 always-visible tabs but would breach the
+free tier with 4 continuously open tabs. The 300-second interval stays well under
+5 GB even with 4 tabs continuously open (1.04 GB vs 5 GB limit).
+
+---
+
+## Egress Breakdown — Secondary Sources (ESTIMATES, unverified)
+
+These are additional egress sources beyond fallback polling. All figures are
+estimates from code inspection; none have been measured.
+
+| Source | Estimated rate | Estimated daily (2 users) | Note |
+|--------|---------------|--------------------------|------|
+| Realtime subscription | ~1 KB/event × ~20 events/day/user | ~40 KB | Channel overhead; minimal |
+| Realtime-triggered pulls | ~20/day/user × 30 KB | ~1.2 MB | Each Realtime event fires `pull()` |
+| Page-load auth (4 serial requests) | ~30 loads/day × ~120 KB | ~3.6 MB | ESTIMATE — not measured |
+| Push-sync auto-trigger | ~30 navigations/day × ~60 KB | ~1.8 MB | ESTIMATE — not measured |
+| Online reconnect pulls | infrequent × 30 KB | < 1 MB | Covered by visibility guard catch-up |
+
+**Why secondary sources were not the root cause:** each secondary source
+contributes at most a few MB/day, an order of magnitude below the original
+5-second polling rate (518 MB/day/tab).
+
+**Total estimated daily egress at 300 s (2 users, 1 visible tab each):**
 
 ```
-~6–7 MB/day × 30 days = ~180–210 MB/month
+Polling:    30 KB × 0.2 polls/min × 1,440 min × 2 tabs = 17.28 MB  (ESTIMATE)
+Secondary:  ~6.6 MB                                                   (ESTIMATE)
+──────────────────────────────────────────────────────────────────────────────
+Total:      ~24 MB/day                                                (ESTIMATE)
+Monthly:    ~720 MB/month                                             (ESTIMATE)
 ```
 
-This is well within the 5 GB free-tier limit (< 5%).
+This is a theoretical upper bound. Actual usage will be lower (devices sleep,
+tabs are closed, users don't navigate 30 times/day). **Do not treat this as a
+known quantity until it has been measured.**
 
-**Recommended alert threshold**: 150 MB/day (3× baseline).
-Exceeding this signals abnormal activity — multiple open tabs, QA script
-running, or a code regression.
+---
+
+## Required Post-Restoration Measurements
+
+These measurements must be taken after Supabase is unpaused and the fix is
+deployed. Until then, all monthly totals are unknown.
+
+**Measurement 1 — Actual `couple_state` response size**
+
+Method: Open the app, open browser DevTools → Network → filter by `couple_state`
+→ observe Response Headers `content-length` (or check the "Size" column).
+Record the compressed and uncompressed sizes. Update `response_size` in the
+formula above.
+
+**Measurement 2 — Observed requests per minute per visible tab**
+
+Method: Keep the app open in one foregrounded tab for 10 minutes with DevTools
+Network tab open. Count GET requests to `couple_state`. Expected: 2 requests
+(one per 5 min). If more, file a regression bug.
+
+**Measurement 3 — Supabase dashboard egress after one week**
+
+Method: Supabase Dashboard → Usage → Egress. Record the daily value each day
+for the first week. Multiply the 7-day average by 30 to project the monthly
+total. Compare to estimates above and update this document.
+
+**Measurement 4 — Additional traffic sources**
+
+Method: Filter DevTools Network by domain during a typical session (open app,
+navigate a few times, leave open for 5 min). Record total bytes for `/auth`,
+`/rest/v1/couple_state`, `/api/push`, and Realtime WebSocket frames separately.
 
 ---
 
@@ -166,25 +236,30 @@ const timer = setInterval(() => { if (document.visibilityState !== 'hidden') voi
 
 ---
 
-## Fix Applied — Phase 2 (this commit, 2026-10-08)
+## Fix Applied — Phase 2 (commits c1477e6 + follow-on, 2026-10-08)
 
 **File**: `src/hooks/useSupabaseSync.ts`
 
-Three changes in a single commit:
+Three structural changes (c1477e6) plus a one-line interval correction:
 
-### Change 1 — Raise `POLL_MS` from 5 s to 60 s
+### Change 1 — Raise `POLL_MS` from 5 s to 300 s (5 minutes)
 
 ```ts
 // Before:
 const POLL_MS = 5_000
 
 // After:
-const POLL_MS = 60_000
+const POLL_MS = 300_000
 ```
 
-Realtime delivers partner changes in < 1 s. The poll is purely a fallback for
-Realtime dropout. 60 s is conservative and safe. This reduces visible-tab
-poll traffic by 12× (from 12 reads/min to 1 read/min).
+Realtime delivers partner changes in < 1 s. The interval is a fallback for
+Realtime dropout only. 300 s reduces visible-tab poll traffic by 60× (from
+12 reads/min to 0.2 reads/min). This keeps monthly egress well below the
+5 GB free tier even with 4 concurrently open tabs (1.04 GB/month estimated).
+
+Note: an intermediate value of 60 s was briefly used but corrected to 300 s
+after recalculating that 4 continuously visible tabs at 60 s would reach
+~5.18 GB/month — just above the free-tier limit.
 
 ### Change 2 — Reset poll timer on every event-driven pull
 
@@ -227,7 +302,7 @@ cleanup so no listener leaks on unmount, logout, or account switch.
 |---|------|
 | 1 | Hidden tabs do not poll |
 | 2 | Visible tabs do not poll more than twice in one `visibilitychange` cycle |
-| 3 | Visible tab polls at 60 s interval, not faster |
+| 3 | Visible tab polls at 300 s interval, not faster |
 | 4 | Return-to-visible fires exactly one catch-up and resets timer |
 | 5 | Online reconnect fires exactly one catch-up pull |
 | 6 | Rapid events don't create overlapping in-flight pulls |
@@ -240,7 +315,7 @@ cleanup so no listener leaks on unmount, logout, or account switch.
 
 ## Remaining Recommendations (Future Work)
 
-### R1 — ~~Increase POLL_MS~~ ✓ DONE (60 s, 2026-10-08)
+### R1 — ~~Increase POLL_MS~~ ✓ DONE (300 s / 5 min, 2026-10-08)
 
 ### R2 — ~~Reset interval on Realtime pull~~ ✓ DONE (2026-10-08)
 
@@ -269,24 +344,31 @@ Run these checks in the Supabase dashboard each day for the first week.
       dashboard egress — should be < 5 MB for a 10-minute session.
 
 **Days 1–3:**
+- [ ] Perform measurements 1–4 from the "Required Post-Restoration Measurements"
+      section above. Update `response_size` in the formula once measured.
 - [ ] Check **Supabase Dashboard → Usage → Egress** each morning.
-- [ ] Baseline: ≤ 10 MB/day is expected (2 users, casual use).
-- [ ] Alert threshold: **> 50 MB/day** — investigate immediately.
-- [ ] If > 50 MB: check browser DevTools Network tab for repeated `/couple_state`
-      requests. Count requests per minute. Expected: ≤ 1/min per visible tab.
+- [ ] Estimated baseline: ≤ 25 MB/day (2 users, casual use). This is an estimate;
+      the real number is unknown until measured.
+- [ ] Alert threshold: **> 100 MB/day** — investigate immediately (could indicate
+      a code regression, QA script, or unusually large `couple_state` payload).
+- [ ] If > 100 MB: open DevTools Network, count `/couple_state` GET requests per
+      minute. Expected: ≤ 1 request per 5 min per visible tab (0.2/min).
 
 **Days 4–7:**
-- [ ] If stable (≤ 10 MB/day), no action needed.
-- [ ] If 10–50 MB/day consistently: check for open QA scripts or browser automation.
-      Consider R3 (push-sync throttle).
-- [ ] If > 150 MB/day on any single day: suspect a code regression. Roll back
+- [ ] If stable (daily egress tracks with measurements), no action needed.
+- [ ] If daily egress is unexpectedly high: check open QA scripts, multiple-tab
+      usage. Consider R3 (push-sync throttle) if push traffic is the driver.
+- [ ] If > 500 MB/day on any single day: suspect a code regression. Roll back
       the last deploy and file a bug.
 
 **End of first week:**
-- [ ] Record the actual daily egress for the week in this document.
+- [ ] Record the **actual** daily egress for each of the 7 days in this document,
+      replacing estimates with measurements.
 - [ ] Confirm the monthly trajectory (7-day average × 30) is well under 5 GB.
-- [ ] If trajectory > 3 GB/month, implement R4 (partial-column reads) before
+- [ ] If monthly trajectory > 3 GB, implement R4 (partial-column reads) before
       the next billing cycle.
+- [ ] Update the "Required Post-Restoration Measurements" section to mark each
+      measurement complete and record its value.
 
 ---
 

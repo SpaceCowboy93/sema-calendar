@@ -24,7 +24,7 @@ import { clearActiveCouple, loadCoupleCache, useAppStore } from '@/store/useAppS
 import { establishAuth, getAuthGeneration, invalidateAuth } from '@/lib/auth-session'
 
 // ── constants must match the hook ────────────────────────────────────────────
-const POLL_MS = 60_000
+const POLL_MS = 300_000
 
 // ── module-level mock hoisted so the factory closure can reference it ─────────
 const mocks = vi.hoisted(() => ({ read: vi.fn(), on: vi.fn() }))

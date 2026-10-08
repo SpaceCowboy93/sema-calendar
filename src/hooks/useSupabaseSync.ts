@@ -10,7 +10,7 @@ import { rebaseSharedState, sameValue } from '@/lib/sync-merge'
 import { isCurrentAuth, subscribeAuth, type AuthContext } from '@/lib/auth-session'
 
 const DEBOUNCE_MS = 800
-const POLL_MS     = 60_000
+const POLL_MS     = 300_000
 
 // ── Sync status (module-level pub/sub) ──────────────────────────────────────
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error'
