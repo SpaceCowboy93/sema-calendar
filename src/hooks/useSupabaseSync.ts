@@ -10,7 +10,7 @@ import { rebaseSharedState, sameValue } from '@/lib/sync-merge'
 import { isCurrentAuth, subscribeAuth, type AuthContext } from '@/lib/auth-session'
 
 const DEBOUNCE_MS = 800
-const POLL_MS     = 5_000
+const POLL_MS     = 60_000
 
 // ── Sync status (module-level pub/sub) ──────────────────────────────────────
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error'
@@ -241,11 +241,17 @@ export function useSupabaseSync(context: AuthContext | null) {
     setStatus('syncing')
     void pull()
     _pullFn = pull
-    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull() }, POLL_MS)
-    const onVisible = () => { if (document.visibilityState === 'visible') void pull() }
+    const pollIfVisible = () => { if (document.visibilityState !== 'hidden') void pull() }
+    let timer = setInterval(pollIfVisible, POLL_MS)
+    // Reset the interval so a full POLL_MS gap follows each event-driven pull,
+    // preventing an immediate double-read from interval + Realtime/visibility/online.
+    const resetPollTimer = () => { clearInterval(timer); timer = setInterval(pollIfVisible, POLL_MS) }
+    const onVisible = () => { if (document.visibilityState === 'visible') { void pull(); resetPollTimer() } }
+    const onOnline  = () => { void pull(); resetPollTimer() }
     document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
     const channel = supabase.channel('couple-state-' + context.coupleId)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: 'id=eq.' + context.stateId }, () => { void pull() })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'couple_state', filter: 'id=eq.' + context.stateId }, () => { void pull(); resetPollTimer() })
       .subscribe()
     return () => {
       active = false
@@ -256,6 +262,7 @@ export function useSupabaseSync(context: AuthContext | null) {
       unsubscribe()
       if (_pullFn === pull) _pullFn = null
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
       void supabase.removeChannel(channel)
     }
   }, [context])
