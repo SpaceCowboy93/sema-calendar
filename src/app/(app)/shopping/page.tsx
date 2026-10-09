@@ -463,9 +463,17 @@ export default function ShoppingPage() {
                         <div className="flex items-center gap-2 shrink-0 ml-3">
                           <button
                             onClick={e => { e.stopPropagation(); setEditListId(list.id); setEditorMode('edit') }}
+                            aria-label={`Edit ${list.name}`}
                             className="p-1.5 active:opacity-60 transition-opacity"
                           >
                             <Pencil size={13} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setDeleteListId(list.id) }}
+                            aria-label={`Delete ${list.name}`}
+                            className="p-1.5 active:opacity-60 transition-opacity"
+                          >
+                            <Trash2 size={13} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
                           </button>
                           {isExpanded
                             ? <ChevronUp   size={16} strokeWidth={1.8} style={{ color: C.textLight }} />
@@ -587,6 +595,7 @@ export default function ShoppingPage() {
                                           <motion.button
                                             whileTap={{ scale: 0.82 }}
                                             onClick={() => toggleItem(list.id, item.id)}
+                                            aria-label={`Mark ${item.name} as done`}
                                             className="shrink-0 rounded-full border-[1.5px] flex items-center justify-center"
                                             style={{ width: 20, height: 20, borderColor: '#C8D8C4' }}
                                           />
@@ -606,6 +615,7 @@ export default function ShoppingPage() {
                                           </span>
                                           <button
                                             onClick={() => startEdit(list.id, item)}
+                                            aria-label={`Edit ${item.name}`}
                                             className="shrink-0 -mr-1 p-1 active:opacity-60"
                                           >
                                             <AlignJustify size={14} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
@@ -749,6 +759,7 @@ export default function ShoppingPage() {
                                             <motion.button
                                               whileTap={{ scale: 0.85 }}
                                               onClick={() => toggleItem(list.id, item.id)}
+                                              aria-label={`Mark ${item.name} as not done`}
                                               className="shrink-0 rounded-full flex items-center justify-center"
                                               style={{ width: 20, height: 20, background: '#C8D8C4' }}
                                             >
@@ -849,7 +860,7 @@ export default function ShoppingPage() {
                             <p className="line-through truncate" style={{ fontSize: 13, color: C.textMid }}>{list.name}</p>
                             <p style={{ fontSize: 10, color: C.textLight, marginTop: 1 }}>{checked}/{list.items.length} items</p>
                           </div>
-                          <button onClick={() => setDeleteListId(list.id)} className="p-1 active:opacity-60">
+                          <button onClick={() => setDeleteListId(list.id)} aria-label={`Delete ${list.name}`} className="p-1 active:opacity-60">
                             <Trash2 size={13} strokeWidth={1.5} style={{ color: '#c8c0b4' }} />
                           </button>
                         </div>
@@ -922,7 +933,7 @@ export default function ShoppingPage() {
 
       <DeleteConfirmSheet
         open={!!deleteListId}
-        title="Delete this list?"
+        title={`Delete "${lists.find(l => l.id === deleteListId)?.name ?? 'this list'}"?`}
         message="This shopping list and all its items will be permanently removed."
         onCancel={() => setDeleteListId(null)}
         onConfirm={() => { deleteList(deleteListId!); setDeleteListId(null) }}

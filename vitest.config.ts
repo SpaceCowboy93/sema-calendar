@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
+  // Next resolves this marker at build time; Vitest needs the server-side stub.
+  resolve: { alias: { 'server-only': 'next/dist/compiled/server-only/empty.js' } },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plugins: [react(), tsconfigPaths()] as any,
   test: {

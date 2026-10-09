@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 import {
   format, differenceInDays, parseISO,
   getISOWeek, getISOWeekYear, startOfISOWeek, addWeeks,
@@ -6,7 +7,7 @@ import {
 import type { UserName, MoodType, WishlistCategory } from '@/types'
 
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
+  return twMerge(clsx(inputs))
 }
 
 export function formatDate(date: string | Date, fmt = 'MMM d, yyyy'): string {

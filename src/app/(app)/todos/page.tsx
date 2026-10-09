@@ -111,6 +111,7 @@ export default function TodosPage() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={openForm}
+            aria-label="Add plan"
             className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-soft"
             style={{ background: primaryColor }}
           >
@@ -329,6 +330,7 @@ function TodoItem({
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <button
             onClick={onToggle}
+            aria-label={isDone ? `Mark "${todo.title}" as not done` : `Mark "${todo.title}" as done`}
             className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0
                        transition-all active:scale-90"
             style={{
@@ -367,6 +369,7 @@ function TodoItem({
             {hasItems && (
               <button
                 onClick={() => setExpanded(e => !e)}
+                aria-label={expanded ? 'Collapse steps' : 'Expand steps'}
                 className="text-gray-300 active:text-gray-500 transition-colors p-1"
               >
                 {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -374,6 +377,7 @@ function TodoItem({
             )}
             <button
               onClick={onEdit}
+              aria-label={`Edit "${todo.title}"`}
               className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-gray-600
                          transition-all p-1"
             >
@@ -381,6 +385,7 @@ function TodoItem({
             </button>
             <button
               onClick={onDelete}
+              aria-label={`Delete "${todo.title}"`}
               className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
                          transition-all p-1"
             >

@@ -25,16 +25,7 @@ type AuthResult =
 function isAuthorized(req: NextRequest): AuthResult {
   const secret = process.env.PUSH_SEND_SECRET
 
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      // Fail closed: missing secret in production is a misconfiguration, not a missing token.
-      // Return 503 (not 401) so the caller cannot distinguish this from a server error.
-      console.error('[send] PUSH_SEND_SECRET not configured in production — all requests rejected')
-      return { ok: false, statusCode: 503, message: 'Service unavailable — server misconfiguration' }
-    }
-    console.warn('[send] PUSH_SEND_SECRET not set — allowing request (development only)')
-    return { ok: true }
-  }
+  if (!secret) return { ok: false, statusCode: 503, message: 'Service unavailable' }
 
   const auth = req.headers.get('authorization') ?? ''
   if (auth !== `Bearer ${secret}`) {
@@ -58,7 +49,7 @@ export async function POST(req: NextRequest) {
   try {
     const { userName: rawUserName, title, body, url = '/together', tag = 'sema-test' } = await req.json()
     const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
-    if (!userName || !title) {
+    if (!['seval', 'mateo'].includes(userName) || typeof title !== 'string' || title.length > 500 || (body !== undefined && (typeof body !== 'string' || body.length > 2000)) || typeof url !== 'string' || !url.startsWith('/') || url.startsWith('//') || url.includes('\\')) {
       return NextResponse.json({ error: 'Missing userName or title' }, { status: 400 })
     }
 
@@ -70,7 +61,7 @@ export async function POST(req: NextRequest) {
       .eq('couple_id', 'sema')
       .eq('user_name', userName)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ error: 'Push service unavailable' }, { status: 500 })
     if (!subs || subs.length === 0) {
       return NextResponse.json({ ok: false, message: 'No subscriptions for this user' })
     }
@@ -95,11 +86,11 @@ export async function POST(req: NextRequest) {
     )
 
     if (stale.length) {
-      await supabase.from('push_subscriptions').delete().in('endpoint', stale)
+      await supabase.from('push_subscriptions').delete().eq('couple_id', 'sema').in('endpoint', stale)
     }
 
     return NextResponse.json({ ok: true, sent, stale: stale.length })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: 'Push request failed' }, { status: 500 })
   }
 }

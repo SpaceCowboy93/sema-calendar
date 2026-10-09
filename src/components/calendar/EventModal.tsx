@@ -30,11 +30,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const currentUser       = useAppStore(s => s.currentUser)
   const addEvent          = useAppStore(s => s.addEvent)
   const updateEvent       = useAppStore(s => s.updateEvent)
+  const updateGoal        = useAppStore(s => s.updateGoal)
   const deleteEvent       = useAppStore(s => s.deleteEvent)
   const uploadEventPhoto  = useAppStore(s => s.uploadEventPhoto)
   const openOverlay       = useAppStore(s => s.openOverlay)
   const closeOverlay      = useAppStore(s => s.closeOverlay)
-
   const [title, setTitle]           = useState('')
   const [selectedDate, setDate]     = useState(date)
   const [startTime, setStartTime]   = useState('')
@@ -57,6 +57,11 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   const photoInputRef = useRef<HTMLInputElement>(null)
   const isEdit = !!event
 
+  // Tracks the current modal "session" so that background Zustand updates
+  // (Supabase sync, goals array reference changes) never re-hydrate an active
+  // draft.  Reset to null on close so the next open always reads fresh data.
+  const initSessionRef = useRef<string | null>(null)
+
   useEffect(() => {
     if (!isOpen) return
     openOverlay()
@@ -64,17 +69,49 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
   }, [isOpen, openOverlay, closeOverlay])
 
   useEffect(() => {
+    if (!isOpen) {
+      // Reset guard so reopening the same event loads the latest saved data.
+      initSessionRef.current = null
+      return
+    }
+
+    // Build a key that changes only when the modal genuinely opens for a new
+    // session or a different event is loaded — not when background store
+    // updates (e.g. Supabase sync replacing the goals array) arrive.
+    const sessionKey = `${event?.id ?? 'new'}:${date}:${currentUser ?? ''}`
+    if (initSessionRef.current === sessionKey) return
+    initSessionRef.current = sessionKey
+
+    // Read the goals snapshot at initialization time rather than subscribing
+    // the effect to the live goals array, which gets a new object reference on
+    // every Supabase pull (~5 s cadence) and would wipe in-progress form state.
+    const linkedGoal = event?.linkedGoalId
+      ? useAppStore.getState().goals.find(g => g.id === event.linkedGoalId)
+      : null
+
     if (event) {
+      // For goal-linked events (Dreams created via FullCreateSheet), the linked
+      // CalendarEvent may not carry all fields — enrich from the Goal as fallback.
       setTitle(event.title)
       setDate(event.date)
-      setStartTime(event.startTime ?? '')
+      setStartTime(linkedGoal?.startTime ?? event.startTime ?? '')
       setEndTime(event.endTime ?? '')
-      setNotes(event.notes ?? '')
+      setNotes(linkedGoal?.notes ?? event.notes ?? '')
       setColor(event.color)
-      setTodos(event.todos ?? [])
-      const p = event.photos ?? []
+      // Show goal checklist as todos when the linked event hasn't had todos set yet
+      if (event.todos?.length) {
+        setTodos(event.todos)
+      } else if (linkedGoal?.checklist?.length) {
+        setTodos(linkedGoal.checklist.map((text: string) => ({ id: generateId(), title: text, isCompleted: false })))
+      } else {
+        setTodos([])
+      }
+      // Photos: prefer the event's own uploaded photos; fall back to goal photos
+      const p = event.photos?.length ? event.photos : (linkedGoal?.photos ?? [])
       setPhotos(p)
-      const bpIdx = event.backgroundPhoto ? p.indexOf(event.backgroundPhoto) : -1
+      const bpIdx = event.backgroundPhoto
+        ? p.indexOf(event.backgroundPhoto)
+        : (linkedGoal?.backgroundPhoto ? p.indexOf(linkedGoal.backgroundPhoto) : -1)
       setBgPhotoIdx(bpIdx >= 0 ? bpIdx : null)
     } else {
       setTitle('')
@@ -93,19 +130,30 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
     setSaving(false)
     setUploading(false)
     setUploadError(null)
+  // `goals` intentionally absent: we read via getState() snapshot to prevent
+  // Supabase sync from re-initialising the form while the user is editing.
   }, [event, date, currentUser, isOpen, initialColor])
 
   async function handleSave() {
     if (!title.trim() || !currentUser || saving) return
     setSaving(true)
     try {
+      // Auto-commit any checklist text the user typed without pressing Enter or +.
+      // This handles the mobile "tap Save" path where the keyboard dismisses before
+      // the user can commit the item explicitly.
+      const pendingTrim = newTodo.trim()
+      const finalTodos = pendingTrim
+        ? [...todos, { id: generateId(), title: pendingTrim, isCompleted: false }]
+        : todos
+
       const data = {
         title: title.trim(),
         date: selectedDate,
         startTime: startTime || undefined,
+        endTime: endTime || undefined,
         notes: notes.trim() || undefined,
         color,
-        todos: todos.length ? todos : undefined,
+        todos: finalTodos.length ? finalTodos : undefined,
         photos: photos.length ? photos : undefined,
         // For edit: photos[] are real URLs; for new: resolved after upload below
         backgroundPhoto: (isEdit && bgPhotoIdx !== null) ? photos[bgPhotoIdx] : undefined,
@@ -113,6 +161,15 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
       }
       if (isEdit && event) {
         updateEvent(event.id, data)
+        // For goal-linked events: keep the Goal's startTime and notes in sync so
+        // that opening from the Dreams section also reflects any changes made here.
+        if (event.linkedGoalId) {
+          updateGoal(event.linkedGoalId, {
+            startTime: startTime || undefined,
+            notes: notes.trim() || undefined,
+            checklist: finalTodos.map(t => t.title),
+          })
+        }
       } else {
         const nPending = pendingFiles.length
         const newId = addEvent(data)

@@ -106,6 +106,7 @@ export default function CalendarPage() {
           <div className="flex gap-2">
             <button
               onClick={prevMonth}
+              aria-label="Previous month"
               className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center
                          active:scale-90 transition-transform"
             >
@@ -113,6 +114,7 @@ export default function CalendarPage() {
             </button>
             <button
               onClick={nextMonth}
+              aria-label="Next month"
               className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center
                          active:scale-90 transition-transform"
             >

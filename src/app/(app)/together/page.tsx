@@ -312,12 +312,14 @@ export default function TogetherPage() {
           </div>
           <button
             onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            aria-label="Previous month"
             className="w-8 h-8 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
           >
             <ChevronLeft size={16} className="text-gray-500" />
           </button>
           <button
             onClick={() => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            aria-label="Next month"
             className="w-8 h-8 rounded-full bg-white shadow-card flex items-center justify-center active:scale-90 transition-transform"
           >
             <ChevronRight size={16} className="text-gray-500" />
@@ -407,6 +409,19 @@ export default function TogetherPage() {
             </motion.button>
           )}
         </AnimatePresence>
+
+        {/* ── Leave a note compose trigger ── */}
+        <button
+          onClick={() => setNoteOpen(true)}
+          aria-label={`Leave a note for ${USERS[partnerUser].displayName}`}
+          className="w-full rounded-2xl px-4 py-3 flex items-center gap-2 transition-opacity active:opacity-60"
+          style={{ background: `${primary}08`, border: `1.5px dashed ${primary}30` }}
+        >
+          <span className="text-base" aria-hidden="true">💌</span>
+          <span className="text-xs font-medium" style={{ color: primary }}>
+            Leave a note for {USERS[partnerUser].displayName}
+          </span>
+        </button>
 
         {/* ── Calendar events for selected date ── */}
         <div>

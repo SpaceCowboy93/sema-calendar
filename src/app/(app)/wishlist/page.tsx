@@ -58,6 +58,7 @@ export default function WishlistPage() {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
+          aria-label={showForm ? 'Close wish form' : 'Add wish'}
           className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-soft
                      active:scale-90 transition-transform"
           style={{ background: primaryColor }}
@@ -261,6 +262,7 @@ function WishlistCard({
     >
       <button
         onClick={e => { e.stopPropagation(); onToggle() }}
+        aria-label={isDone ? `Mark "${item.title}" as not done` : `Mark "${item.title}" as done`}
         className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5
                    transition-all active:scale-90"
         style={{
@@ -287,6 +289,7 @@ function WishlistCard({
 
       <button
         onClick={e => { e.stopPropagation(); onDelete() }}
+        aria-label={`Delete "${item.title}"`}
         className="opacity-0 group-hover:opacity-100 text-gray-300 active:text-red-400
                    transition-all shrink-0 mt-0.5"
       >

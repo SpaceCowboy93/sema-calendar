@@ -1,3 +1,5 @@
+import { withCoupleAuth } from '@/lib/supabase-server'
+import { AccessError } from '@/lib/couple-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { type ReceiptResult, type ReceiptItem } from '@/types'
 import { generateId } from '@/lib/utils'
@@ -28,17 +30,19 @@ function mockScan(_photos: string[]): ReceiptResult {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withCoupleAuth(async (req) => {
   try {
     const body   = await req.json()
-    const photos = (body.photos ?? []) as string[]
+    const photos: unknown = body.photos
+    if (!Array.isArray(photos) || photos.length > 10 || !photos.every(photo => typeof photo === 'string' && photo.length <= 7_000_000)) throw new AccessError(400, 'Invalid receipt photos')
 
     // Simulate a small processing delay
     await new Promise(r => setTimeout(r, 800))
 
     const result = mockScan(photos)
     return NextResponse.json(result)
-  } catch {
+  } catch (error) {
+    if (error instanceof AccessError) throw error
     return NextResponse.json({ error: 'Failed to process receipt' }, { status: 500 })
   }
-}
+})

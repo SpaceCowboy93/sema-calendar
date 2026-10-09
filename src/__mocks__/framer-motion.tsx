@@ -31,9 +31,17 @@ function createMotionComponent(tag: string) {
   })
 }
 
+// Cache keyed by tag name so the same component reference is returned on every
+// render.  Without caching, each access creates a new component type and React
+// unmounts/remounts the subtree, causing async DOM tasks to fire outside
+// userEvent's act() scope and generating spurious act() warnings in tests.
+const _motionCache = new Map<string, ReturnType<typeof createMotionComponent>>()
 export const motion = new Proxy({} as Record<string, ReturnType<typeof createMotionComponent>>, {
   get(_target, prop: string) {
-    return createMotionComponent(prop)
+    if (!_motionCache.has(prop)) {
+      _motionCache.set(prop, createMotionComponent(prop))
+    }
+    return _motionCache.get(prop)!
   },
 })
 
@@ -48,10 +56,30 @@ export const useAnimation = vi.fn(() => ({
   mount:  vi.fn(),
 }))
 
-export const useInView   = vi.fn(() => [null, false])
-export const useScroll   = vi.fn(() => ({ scrollX: { get: vi.fn() }, scrollY: { get: vi.fn() } }))
+export const useInView    = vi.fn(() => [null, false])
+export const useScroll    = vi.fn(() => ({ scrollX: { get: vi.fn() }, scrollY: { get: vi.fn() } }))
 export const useTransform = vi.fn(() => ({ get: vi.fn() }))
-export const useSpring   = vi.fn((v: unknown) => v)
+export const useSpring    = vi.fn((v: unknown) => v)
 
-const framerMotion = { motion, AnimatePresence, useAnimation, useInView, useScroll, useTransform, useSpring }
+// MotionValue — needed by WeeklyFocusSection and other drag-gesture components.
+// Returns a minimal stub so calling code does not crash.
+export const useMotionValue = vi.fn((initialValue: unknown) => ({
+  get:         vi.fn(() => initialValue),
+  set:         vi.fn(),
+  getVelocity: vi.fn(() => 0),
+  subscribe:   vi.fn(() => vi.fn()),
+  destroy:     vi.fn(),
+}))
+
+// animate() — the imperative animation helper used as `animate as animateX` in some files.
+export const animate = vi.fn(() => ({ stop: vi.fn(), then: vi.fn() }))
+
+// useReducedMotion — returns false by default; override per-test to simulate reduced-motion.
+export const useReducedMotion = vi.fn(() => false)
+
+const framerMotion = {
+  motion, AnimatePresence,
+  useAnimation, useInView, useScroll, useTransform, useSpring,
+  useMotionValue, animate, useReducedMotion,
+}
 export default framerMotion

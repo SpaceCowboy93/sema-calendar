@@ -13,6 +13,9 @@ import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { FullCreateSheet } from '@/components/ui/FullCreateSheet'
 import { GlobalImageLightbox } from '@/components/ui/GlobalImageLightbox'
 import { C2ToastRegion } from '@/components/ui/C2Toast'
+import { useAuthSession } from '@/hooks/useAuthSession'
+import { ActivityCentreBell } from '@/components/ActivityCentre'
+import { useActivityCachePersistence } from '@/hooks/useActivityCachePersistence'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router      = useRouter()
@@ -21,14 +24,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isSeval      = currentUser === 'seval'
   const primary      = isSeval ? '#8b5cf6' : '#14b8a6'
 
-  useSupabaseSync()
-  useNotifications()
-  usePushNotifications() // registers SW on every page load
-
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [scrolling, setScrolling]       = useState(false)
+  const { context, error: authError, signedOut } = useAuthSession()
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mainRef        = useRef<HTMLElement | null>(null)
+
+  useSupabaseSync(context)
+  useNotifications(context !== null)
+  usePushNotifications()
+  useActivityCachePersistence()
 
   const handleScroll = useCallback(() => {
     setScrolling(true)
@@ -47,10 +52,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [handleScroll])
 
   useEffect(() => {
-    if (currentUser === null) router.replace('/')
-  }, [currentUser, router])
+    if (signedOut) router.replace('/')
+  }, [signedOut, router])
 
-  if (currentUser === null) {
+  if (authError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6">
+      <p role="alert">{authError}</p>
+      <button onClick={() => window.location.reload()}>Try again</button>
+      <button onClick={() => router.replace('/')}>Back to sign in</button>
+    </div>
+  )
+
+  if (!context || currentUser === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
@@ -90,6 +103,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <Plus size={20} strokeWidth={2} />
       </motion.button>
+
+      <ActivityCentreBell />
 
       <PartnerNoteNotification />
 

@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { requireRecipient, validateEndpoint } from '../_access'
+import { withCoupleAuth } from '@/lib/supabase-server'
+import { AccessError } from '@/lib/couple-access'
+import { NextResponse } from 'next/server'
 import { getAdminClient, supabaseUnavailable } from '../_admin'
+
+// A verified member may sync reminders only for recipients in their couple.
 
 // Maps the stable offset label to a human-readable message prefix.
 // Labels match the ReminderEntry.label values produced by usePushNotifications.ts.
@@ -29,25 +34,35 @@ function labelToMessage(label: string, title: string): string {
 //   endpoint?: string   (optional — current device's push endpoint for ownership check)
 //
 // Rate limit: 3 seconds per user (tracked in push_sync_log)
-export async function POST(req: NextRequest) {
+export const POST = withCoupleAuth(async (req, access) => {
   try {
     const { userName: rawUserName, items, endpoint } = await req.json()
     const userName = typeof rawUserName === 'string' ? rawUserName.toLowerCase() : rawUserName
 
-    if (!userName || !Array.isArray(items)) {
+    if (!userName || !Array.isArray(items) || items.length > 1000) {
       return NextResponse.json({ error: 'Missing userName or items' }, { status: 400 })
     }
 
-    // Validate against the known user list — this is a private app with fixed users.
-    // Rejects attempts to create reminder rows for arbitrary user names.
-    const KNOWN_USERS = new Set(['mateo', 'seval'])
-    if (!KNOWN_USERS.has(userName)) {
-      console.warn('[sync-reminders] Rejected unknown userName:', userName)
-      return NextResponse.json({ error: 'Unknown user' }, { status: 403 })
-    }
-
-    const supabase  = getAdminClient()
+    const supabase = getAdminClient()
     if (!supabase) return supabaseUnavailable()
+    await requireRecipient(supabase, access, userName)
+    for (const item of items) {
+      if (!item || typeof item.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(item.id) ||
+          !['event', 'todo', 'goal', 'wishlist', 'countdown', 'focus'].includes(item.type) ||
+          typeof item.title !== 'string' || item.title.length > 500 || !Array.isArray(item.reminders) || item.reminders.length > 10 ||
+          !item.reminders.every((r: { fireAt?: unknown; label?: unknown } | null) => r && typeof r.fireAt === 'string' && Number.isFinite(Date.parse(r.fireAt)) &&
+            typeof r.label === 'string' && Object.prototype.hasOwnProperty.call(LABEL_PREFIX, r.label))) {
+        throw new AccessError(400, 'Invalid reminders')
+      }
+    }
+    if (endpoint) {
+      validateEndpoint(endpoint)
+      const { data: device, error } = await supabase.from('push_subscriptions').select('id')
+        .eq('endpoint', endpoint).eq('couple_id', access.stateId).eq('user_name', access.userName).maybeSingle()
+      if (error) throw new AccessError(503, 'Could not verify device')
+      if (!device) throw new AccessError(403, 'Device does not belong to this account')
+    }
+    const rateKey = access.coupleId + ':' + userName
     const now       = new Date()
     const nowIso    = now.toISOString()
     const MIN_SYNC_INTERVAL_MS = 3000
@@ -56,7 +71,7 @@ export async function POST(req: NextRequest) {
     const { data: syncLog } = await supabase
       .from('push_sync_log')
       .select('last_sync_at')
-      .eq('user_name', userName)
+      .eq('user_name', rateKey)
       .single()
 
     if (syncLog?.last_sync_at) {
@@ -70,24 +85,7 @@ export async function POST(req: NextRequest) {
 
     await supabase
       .from('push_sync_log')
-      .upsert({ user_name: userName, last_sync_at: nowIso }, { onConflict: 'user_name' })
-
-    // ── Optional device ownership check ───────────────────────────────────────
-    if (endpoint) {
-      const { data: sub } = await supabase
-        .from('push_subscriptions')
-        .select('user_name')
-        .eq('endpoint', endpoint)
-        .single()
-
-      if (!sub || sub.user_name !== userName) {
-        console.warn(
-          `[sync-reminders] Endpoint ownership mismatch for ${userName} — proceeding with sync but logging`,
-          { claimed: userName, actual: sub?.user_name ?? 'not found' },
-        )
-        // Non-fatal: sync proceeds. The subscription may be unregistered on the client side.
-      }
-    }
+      .upsert({ user_name: rateKey, last_sync_at: nowIso }, { onConflict: 'user_name' })
 
     // ── Build rows ─────────────────────────────────────────────────────────────
     const rows: Record<string, unknown>[] = []
@@ -112,7 +110,7 @@ export async function POST(req: NextRequest) {
         const reminderKey = `${userName}:${type}:${id}:${label}`
 
         rows.push({
-          couple_id:            'sema',
+          couple_id:            access.stateId,
           user_name:            userName,
           item_id:              id,
           item_type:            type,
@@ -143,7 +141,7 @@ export async function POST(req: NextRequest) {
 
       if (upsertErr) {
         console.error('[sync-reminders] Upsert error:', upsertErr.message, upsertErr.details)
-        return NextResponse.json({ error: upsertErr.message }, { status: 500 })
+        return NextResponse.json({ error: 'Request could not be completed.' }, { status: 500 })
       }
     }
 
@@ -161,6 +159,7 @@ export async function POST(req: NextRequest) {
       let q = supabase
         .from('push_reminders')
         .delete()
+        .eq('couple_id', access.stateId)
         .eq('user_name', userName)
         .eq('item_id', id)
         .eq('item_type', type)
@@ -181,7 +180,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, upserted: rows.length })
   } catch (err) {
+    if (err instanceof AccessError) throw err
     console.error('[sync-reminders] Unexpected error:', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: 'Request could not be completed.' }, { status: 500 })
   }
-}
+})

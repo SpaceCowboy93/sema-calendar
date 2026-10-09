@@ -1,6 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { authenticatedFetch } from '@/lib/authenticated-fetch'
+import { getAuthContext, isCurrentAuth, subscribeAuth } from '@/lib/auth-session'
+
+import { useEffect, useState, useCallback, useSyncExternalStore } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { OTHER_USER } from '@/types'
 import type { UserName } from '@/types'
@@ -83,9 +86,14 @@ async function getCurrentSub(): Promise<PushSubscription | null> {
 }
 
 async function fetchServerSaved(userName: string): Promise<boolean> {
+  const context = getAuthContext()
+  if (!context || context.userName !== userName) return false
   try {
-    const res  = await fetch(`/api/push/status?userName=${encodeURIComponent(userName.toLowerCase())}`)
+    const subscription = await getCurrentSub()
+    if (!subscription || !isCurrentAuth(context)) return false
+    const res  = await authenticatedFetch(`/api/push/status?userName=${encodeURIComponent(userName.toLowerCase())}&endpoint=${encodeURIComponent(subscription.endpoint)}`)
     const data = await res.json()
+    if (!isCurrentAuth(context)) return false
     LOG('serverSaved check for', userName, ':', data.hasSubscription)
     return data.hasSubscription === true
   } catch {
@@ -93,22 +101,6 @@ async function fetchServerSaved(userName: string): Promise<boolean> {
   }
 }
 
-/** Tell the active Service Worker which user is signed in so it can
- *  correctly re-save a renewed subscription on pushsubscriptionchange. */
-async function notifySWOfUser(userName: string) {
-  try {
-    const reg = await navigator.serviceWorker.ready
-    const sw  = reg.active
-    if (sw) {
-      sw.postMessage({ type: 'SET_USER', userName: userName.toLowerCase() })
-      LOG('Sent SET_USER to SW for', userName)
-    } else {
-      LOG('SW not yet active — SET_USER not sent')
-    }
-  } catch (err) {
-    LOG('notifySWOfUser failed (non-critical):', err)
-  }
-}
 
 // ── Reminder computation ──────────────────────────────────────────────────────
 
@@ -242,7 +234,8 @@ function collectDatedItems(
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function usePushNotifications() {
-  const currentUser = useAppStore(s => s.currentUser)
+  const context = useSyncExternalStore(subscribeAuth, getAuthContext, () => null)
+  const currentUser = context?.userName ?? null
 
   const [status,      setStatus]      = useState<PushStatus>('default')
   const [swError,     setSwError]     = useState<string | null>(null)
@@ -257,7 +250,15 @@ export function usePushNotifications() {
   // Initialise: register SW, detect existing subscription, check server record
   useEffect(() => {
     if (typeof window === 'undefined') return
+    let active = true
+    const current = () => active && !!context && isCurrentAuth(context)
+    setServerSaved(null)
+    setEndpoint(null)
+    setLoading(false)
+    setSwError(null)
     setInitialized(false)
+    if (!context) return
+
 
     ;(async () => {
       try {
@@ -281,6 +282,7 @@ export function usePushNotifications() {
         }
 
         const reg = await registerSW()
+        if (!current()) return
         if (!reg) {
           ERR('SW registration failed — showing degraded UI')
           setSwError('Service worker failed to register. Try refreshing.')
@@ -290,14 +292,16 @@ export function usePushNotifications() {
         setSwReady(true)
 
         const sub = await getCurrentSub()
+        if (!current()) return
         if (sub) {
           LOG('Device is already subscribed — endpoint suffix:', sub.endpoint.slice(-40))
           setStatus('subscribed')
           setEndpoint(sub.endpoint)
-          // Re-send identity to SW in case it was restarted (e.g. browser update)
+          // Verify this device belongs to the current authenticated account.
           if (currentUser) {
-            notifySWOfUser(currentUser)
+
             const saved = await fetchServerSaved(currentUser)
+            if (!current()) return
             setServerSaved(saved)
             if (!saved) {
               LOG('Server has no subscription for', currentUser,
@@ -318,10 +322,11 @@ export function usePushNotifications() {
         }
       } finally {
         // Always mark initialized so the card can show the correct state
-        setInitialized(true)
+        if (current()) setInitialized(true)
       }
     })()
-  }, [currentUser])
+    return () => { active = false }
+  }, [context, currentUser])
 
   // ── Reminder sync ───────────────────────────────────────────────────────────
   // Sends the full current-state item list to the server so push_reminders rows
@@ -331,6 +336,7 @@ export function usePushNotifications() {
   // user. A 429 response is handled gracefully (logged, not thrown).
 
   const syncReminders = useCallback(async (userName: UserName) => {
+    if (!context || !isCurrentAuth(context)) return
     try {
       const store = useAppStore.getState()
       const items = collectDatedItems(store, userName)
@@ -343,8 +349,9 @@ export function usePushNotifications() {
 
       // Include this device's endpoint so the server can do an ownership check
       const sub = await getCurrentSub()
+      if (!context || !isCurrentAuth(context)) return
 
-      const res  = await fetch('/api/push/sync-reminders', {
+      const res  = await authenticatedFetch('/api/push/sync-reminders', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
@@ -354,6 +361,7 @@ export function usePushNotifications() {
         }),
       })
       const data = await res.json()
+      if (!context || !isCurrentAuth(context)) return
 
       if (res.status === 429) {
         LOG('syncReminders rate-limited — retryAfter:', data.retryAfter, 's')
@@ -363,15 +371,27 @@ export function usePushNotifications() {
     } catch (err) {
       ERR('syncReminders failed:', err)
     }
-  }, [])
+  }, [context])
 
   // Sync reminders for BOTH users so shared events reach both
   const syncBothUsers = useCallback(async (triggerUser: UserName) => {
     LOG('syncBothUsers — triggered by', triggerUser)
     const other = OTHER_USER[triggerUser]
     await syncReminders(triggerUser)
-    await syncReminders(other)
-  }, [syncReminders])
+    if (context && isCurrentAuth(context)) await syncReminders(other)
+  }, [context, syncReminders])
+
+  useEffect(() => {
+    if (!context) return
+    const renew = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_RECONNECT_REQUIRED' && isCurrentAuth(context)) {
+        setServerSaved(false)
+        setSwError('Your device subscription changed. Please reconnect notifications.')
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', renew)
+    return () => navigator.serviceWorker?.removeEventListener('message', renew)
+  }, [context])
 
   // Auto-sync reminders once when the device is fully subscribed and confirmed by server.
   // This ensures planner/event reminders are current after every page load.
@@ -385,7 +405,7 @@ export function usePushNotifications() {
   // ── Enable ──────────────────────────────────────────────────────────────────
 
   const enable = useCallback(async () => {
-    if (!currentUser) {
+    if (!context || !isCurrentAuth(context) || !currentUser) {
       ERR('enable() called but currentUser is null')
       return
     }
@@ -394,6 +414,7 @@ export function usePushNotifications() {
     if (!swReady) {
       LOG('SW not ready — attempting registration before subscribe')
       reg = await registerSW()
+      if (!isCurrentAuth(context)) return
       if (!reg) {
         ERR('SW still cannot register — cannot subscribe')
         setSwError('Service worker failed. Try refreshing the page.')
@@ -407,6 +428,7 @@ export function usePushNotifications() {
     try {
       LOG('Requesting notification permission …')
       const perm = await Notification.requestPermission()
+      if (!isCurrentAuth(context)) return
       LOG('Permission result:', perm)
       if (perm !== 'granted') {
         setStatus(perm === 'denied' ? 'denied' : 'default')
@@ -423,6 +445,7 @@ export function usePushNotifications() {
 
       LOG('Waiting for SW ready …')
       const swReg = reg ?? await navigator.serviceWorker.ready
+      if (!isCurrentAuth(context)) return
       LOG('SW ready — scope:', swReg.scope)
 
       LOG('Calling PushManager.subscribe() …')
@@ -430,18 +453,20 @@ export function usePushNotifications() {
         userVisibleOnly:      true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
+      if (!isCurrentAuth(context)) return
       LOG('PushManager.subscribe() succeeded')
       LOG('  endpoint suffix:', sub.endpoint.slice(-40))
       LOG('  p256dh present:',  !!sub.toJSON().keys?.p256dh)
       LOG('  auth present:',    !!sub.toJSON().keys?.auth)
 
       LOG('Saving subscription for user:', currentUser)
-      const res  = await fetch('/api/push/subscribe', {
+      const res  = await authenticatedFetch('/api/push/subscribe', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
       })
       const data = await res.json()
+      if (!context || !isCurrentAuth(context)) return
       LOG('/api/push/subscribe response:', res.status, data)
 
       if (res.ok) {
@@ -449,8 +474,8 @@ export function usePushNotifications() {
         setEndpoint(sub.endpoint)
         setSwError(null)
         setServerSaved(true)
-        // Anchor identity in the SW so pushsubscriptionchange works correctly
-        await notifySWOfUser(currentUser)
+        // Refresh reminders after authenticated registration.
+
         await syncBothUsers(currentUser)
       } else if (res.status === 503) {
         ERR('subscribe API 503 — push not configured in this environment')
@@ -463,24 +488,25 @@ export function usePushNotifications() {
       }
     } catch (err) {
       ERR('enable() error:', err)
-      setSwError(String(err))
+      if (context && isCurrentAuth(context)) setSwError(String(err))
     } finally {
-      setLoading(false)
+      if (context && isCurrentAuth(context)) setLoading(false)
     }
-  }, [swReady, currentUser, syncBothUsers])
+  }, [context, swReady, currentUser, syncBothUsers])
 
   // ── Reconnect ───────────────────────────────────────────────────────────────
   // Re-saves the existing PushManager subscription under the active user.
   // Use when the device was registered under the wrong user.
 
   const reconnect = useCallback(async () => {
-    if (!currentUser) {
+    if (!context || !isCurrentAuth(context) || !currentUser) {
       ERR('reconnect() called but currentUser is null')
       return
     }
     setLoading(true)
     try {
       const sub = await getCurrentSub()
+      if (!context || !isCurrentAuth(context)) return
       if (!sub) {
         LOG('reconnect() — no PushManager subscription found')
         setSwError('No browser subscription found. Tap "Enable notifications" to set up from scratch.')
@@ -493,12 +519,13 @@ export function usePushNotifications() {
 
       LOG('reconnect() — re-saving subscription for user:', currentUser)
       LOG('  endpoint suffix:', sub.endpoint.slice(-40))
-      const res  = await fetch('/api/push/subscribe', {
+      const res  = await authenticatedFetch('/api/push/subscribe', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ subscription: sub.toJSON(), userName: currentUser }),
       })
       const data = await res.json()
+      if (!context || !isCurrentAuth(context)) return
       LOG('reconnect /api/push/subscribe response:', res.status, data)
 
       if (res.ok) {
@@ -506,7 +533,7 @@ export function usePushNotifications() {
         setEndpoint(sub.endpoint)
         setSwError(null)
         setServerSaved(true)
-        await notifySWOfUser(currentUser)
+
         await syncBothUsers(currentUser)
       } else if (res.status === 503) {
         ERR('reconnect API 503 — push not configured in this environment')
@@ -518,31 +545,35 @@ export function usePushNotifications() {
       }
     } catch (err) {
       ERR('reconnect() error:', err)
-      setSwError(String(err))
+      if (context && isCurrentAuth(context)) setSwError(String(err))
     } finally {
-      setLoading(false)
+      if (context && isCurrentAuth(context)) setLoading(false)
     }
-  }, [currentUser, syncBothUsers])
+  }, [context, currentUser, syncBothUsers])
 
   // ── Disable ─────────────────────────────────────────────────────────────────
 
   const disable = useCallback(async () => {
+    if (!context || !isCurrentAuth(context)) return
     setLoading(true)
     try {
       const sub = await getCurrentSub()
+      if (!context || !isCurrentAuth(context)) return
       if (sub) {
         LOG('Removing subscription …')
-        const res = await fetch('/api/push/subscribe', {
+        const res = await authenticatedFetch('/api/push/subscribe', {
           method:  'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ endpoint: sub.endpoint }),
         })
         LOG('DELETE /api/push/subscribe:', res.status)
+        if (!isCurrentAuth(context)) return
         await sub.unsubscribe()
         LOG('sub.unsubscribe() done')
       } else {
         LOG('disable() — no active subscription found')
       }
+      if (!isCurrentAuth(context)) return
       setStatus('default')
       setEndpoint(null)
       setServerSaved(null)
@@ -550,9 +581,9 @@ export function usePushNotifications() {
     } catch (err) {
       ERR('disable() error:', err)
     } finally {
-      setLoading(false)
+      if (context && isCurrentAuth(context)) setLoading(false)
     }
-  }, [])
+  }, [context])
 
   return {
     status,

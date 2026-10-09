@@ -269,6 +269,8 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
         }
 
       } else if (type === 'dream') {
+        // Pass checklist atomically to addGoal so it lands on goal.checklist AND
+        // event.todos in a single synchronous store write — same pattern as startTime.
         const newId = addGoal(
           'life',
           title.trim(),
@@ -276,9 +278,9 @@ export function FullCreateSheet({ open, onClose, primary, initialDate, initialTy
           date || undefined,
           0,
           time || undefined,
+          checkItems.length ? checkStrings : undefined,
         )
         const updates: Partial<Goal> = {}
-        if (checkItems.length) updates.checklist = checkStrings
         if (pendingFiles.length > 0) {
           setUploading(true)
           const urls = await uploadPendingFiles(`goals/${newId}`)

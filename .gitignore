@@ -6,6 +6,9 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/.backups/
 
 # next.js
 /.next/
@@ -23,8 +26,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# environment files (never commit credentials)
+.env
+.env.*
+!.env.example
+
+# supabase local CLI cache (project ref, org ID, pooler URL — not credentials but not public)
+supabase/.temp/
 
 # vercel
 .vercel

@@ -18,6 +18,9 @@ import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
+import { logout } from '@/lib/logout'
+import { toast } from '@/store/useToastStore'
+import { NotificationSetup } from '@/components/NotificationSetup'
 import { useLightboxStore } from '@/store/useLightboxStore'
 import { AnniversarySheet } from '@/components/ui/AnniversarySheet'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -660,7 +663,10 @@ export default function UsPage() {
         action={
           <div style={{ marginTop: 7, marginRight: 6 }}>
             <button
-              onClick={() => { setCurrentUser(null); router.replace('/') }}
+              onClick={async () => {
+                try { await logout(); router.replace('/') }
+                catch (error) { toast.error(error instanceof Error ? error.message : 'Could not sign out.') }
+              }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white/50 active:bg-white/70"
             >
               <LogOut size={14} /> Sign out
@@ -1007,6 +1013,12 @@ export default function UsPage() {
             <p className="text-xs italic">Every day a little more.</p>
             <Heart size={11} style={{ color: primary, opacity: 0.4 }} />
           </div>
+        </section>
+
+        {/* ── 8. Notifications ── */}
+        <section className="pb-8">
+          <C2SectionLabel as="h2" className="mb-3">Notifications</C2SectionLabel>
+          <NotificationSetup primary={primary} />
         </section>
 
       </div>
