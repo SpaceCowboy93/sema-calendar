@@ -166,6 +166,46 @@ it('does not overwrite a newer conflicting scalar, including after logout and ca
   second.unmount()
 })
 
+it('pulls newer partner data despite an unresolved pending-field conflict', async () => {
+  mocks.read.mockResolvedValue(remote)
+  const hook = await start()
+  act(() => useAppStore.setState({ monthlyIncome: 555 }))
+  const partnerTodo = { id: 'partner-todo', title: 'Partner addition' }
+  mocks.read.mockResolvedValue({ data: {
+    state: { monthlyIncome: 999, todos: [partnerTodo] }, updated_at: '2026-09-24',
+  } })
+
+  await act(async () => { triggerPull() })
+
+  expect(useAppStore.getState().todos).toEqual([partnerTodo])
+  expect(useAppStore.getState().monthlyIncome).toBe(555)
+  expect(pendingKeys(access).has('monthlyIncome')).toBe(true)
+  expect(mocks.write).not.toHaveBeenCalled()
+  hook.unmount()
+})
+
+it('saves an independent pending addition without overwriting or discarding a conflicting field', async () => {
+  mocks.read.mockResolvedValue(remote)
+  const hook = await start()
+  const localTodo = { id: 'local-todo', title: 'Local addition' }
+  act(() => useAppStore.setState({ monthlyIncome: 555, todos: [localTodo] as never }))
+  mocks.read.mockResolvedValue({ data: {
+    state: { monthlyIncome: 999, todos: [], legacySetting: 'preserve' }, updated_at: '2026-09-24',
+  } })
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(800) })
+
+  expect(mocks.write).toHaveBeenCalledTimes(1)
+  expect(mocks.write.mock.lastCall?.[0].state).toMatchObject({
+    monthlyIncome: 999, todos: [localTodo], legacySetting: 'preserve',
+  })
+  expect(useAppStore.getState().monthlyIncome).toBe(555)
+  expect(useAppStore.getState().todos).toEqual([localTodo])
+  expect(pendingKeys(access).has('monthlyIncome')).toBe(true)
+  expect(pendingKeys(access).has('todos')).toBe(false)
+  hook.unmount()
+})
+
 it('retains edits made during a save and includes them in the next conditional write', async () => {
   mocks.read.mockResolvedValue(remote)
   let resolve!: (value: unknown) => void
