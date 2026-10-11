@@ -157,8 +157,14 @@ export function useSupabaseSync(context: AuthContext | null) {
           const local = selectSharedState(useAppStore.getState())
           const remote = { ...defaults, ...selectSharedState(remoteRow.state) }
           const merged = rebaseSharedState(base, local, remote, pending)
-          if (merged.conflicts.length) { setStatus('error'); return }
-          const sentKeys = new Set(pending)
+          // An unresolved field must retain both versions without blocking
+          // independent edits or incoming changes to the other shared fields.
+          const sentKeys = new Set([...pending].filter(key => !merged.conflicts.includes(key)))
+          if (!sentKeys.size) {
+            applyRemote(remoteRow.state, remoteRow.updated_at)
+            setStatus(dirty ? 'error' : 'ok')
+            return
+          }
           // Preserve unknown/legacy JSON fields, and always advance the version,
           // even for two saves in one millisecond or a slow local clock.
           const state = { ...remoteRow.state, ...merged.state }
@@ -186,7 +192,7 @@ export function useSupabaseSync(context: AuthContext | null) {
           lastAt = data.updated_at
           lastRemote = state
           dirty = pending.size > 0
-          setStatus(dirty ? 'syncing' : 'ok')
+          setStatus(merged.conflicts.length ? 'error' : dirty ? 'syncing' : 'ok')
           return
         }
         setStatus('error')
@@ -203,7 +209,6 @@ export function useSupabaseSync(context: AuthContext | null) {
     }
     async function pull() {
       if (!current() || reading || saving) return
-      if (ready && dirty) { await save(); return }
       reading = true
       try {
         const { data, error } = await supabase.from('couple_state')
