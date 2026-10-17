@@ -65,6 +65,14 @@ function DrumColumn({ items, selected, onSelect, accentColor, label }: DrumProps
     scrollTo(selected)
   }, [selected, scrollTo])
 
+  // Mouse/trackpad wheel: add a small 25% boost while preserving native touch momentum.
+  function handleWheel(e: React.WheelEvent<HTMLDivElement>) {
+    if (e.deltaY === 0) return
+    e.preventDefault()
+    const el = listRef.current
+    if (el) el.scrollTop += e.deltaY * 1.25
+  }
+
   // Snap after user stops scrolling (debounced)
   function handleScroll() {
     if (programmatic.current) return
@@ -122,6 +130,7 @@ function DrumColumn({ items, selected, onSelect, accentColor, label }: DrumProps
           aria-label={label}
           tabIndex={0}
           onScroll={handleScroll}
+          onWheel={handleWheel}
           onKeyDown={handleKeyDown}
           className="h-full overflow-y-scroll outline-none"
           style={{
