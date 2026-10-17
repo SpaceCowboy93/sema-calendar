@@ -156,7 +156,7 @@ function DrumColumn({ items, selected, onSelect, accentColor, label }: DrumProps
                 cursor:          'pointer',
                 fontVariantNumeric: 'tabular-nums',
                 fontSize:        '1.125rem',
-                fontWeight:      v === selected ? 700 : 400,
+                fontWeight:      v === selected ? 900 : 400,
                 color:           v === selected ? accentColor : '#6B7280',
                 transition:      'color 120ms, font-weight 120ms',
               }}
