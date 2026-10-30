@@ -55,12 +55,12 @@ describe('C2Dialog — ARIA', () => {
     expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true')
   })
 
-  it('title has id c2-dialog-title referenced by aria-labelledby', () => {
+  it('title has a unique id referenced by aria-labelledby', () => {
     render(<C2Dialog open title="Delete item" onCancel={vi.fn()} />)
     const dialog = screen.getByRole('dialog')
     const labelledBy = dialog.getAttribute('aria-labelledby')
-    expect(labelledBy).toBe('c2-dialog-title')
-    expect(document.getElementById('c2-dialog-title')).toHaveTextContent('Delete item')
+    expect(labelledBy).toBeTruthy()
+    expect(document.getElementById(labelledBy!)).toHaveTextContent('Delete item')
   })
 })
 

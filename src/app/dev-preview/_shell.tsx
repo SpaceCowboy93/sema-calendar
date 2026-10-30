@@ -140,7 +140,7 @@ export function DevPreviewShell({ children }: { children: React.ReactNode }) {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="h-dvh overflow-hidden flex flex-col">
+      <div className="app-viewport h-dvh overflow-hidden flex flex-col">
 
         {/* Persistent preview banner */}
         <div
@@ -154,7 +154,7 @@ export function DevPreviewShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overscroll-none pb-24">
+        <main className="app-scroll min-h-0 flex-1 overflow-y-auto overscroll-none pb-24">
           {children}
         </main>
 
@@ -172,7 +172,7 @@ export function DevPreviewShell({ children }: { children: React.ReactNode }) {
           aria-label="Add something"
           aria-hidden={overlayCount > 0}
           tabIndex={overlayCount > 0 ? -1 : undefined}
-          className="fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
+          className="app-fab fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
                      flex items-center justify-center text-white backdrop-blur-sm"
           style={{
             background:    primary,

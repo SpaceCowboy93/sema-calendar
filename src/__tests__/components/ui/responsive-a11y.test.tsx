@@ -208,11 +208,11 @@ describe('C2Dialog — initial focus and keyboard', () => {
     expect(dialog.contains(document.activeElement)).toBe(true)
   })
 
-  it('Cancel button is focused first (default first focusable)', () => {
+  it('panel is focused on open without summoning the keyboard', () => {
     render(
       <C2Dialog open title="Confirm?" onCancel={vi.fn()} cancelLabel="Cancel" />,
     )
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }).closest('[tabindex="-1"]'))
   })
 
   it('Confirm button is reachable by Tab from Cancel', async () => {

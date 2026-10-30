@@ -13,7 +13,8 @@
  *   </C2Sheet>
  */
 
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { useModalInteraction } from '@/hooks/useModalInteraction'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from '@/design/iconSystem'
 import { cn } from '@/lib/utils'
@@ -27,9 +28,10 @@ const BACKDROP_TRANSITION = { duration: 0.22, ease: 'easeOut' } as const
 
 interface BackdropProps {
   onClick?: () => void
+  zIndex?: number
 }
 
-export function C2SheetBackdrop({ onClick }: BackdropProps) {
+export function C2SheetBackdrop({ onClick, zIndex = 50 }: BackdropProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -40,6 +42,7 @@ export function C2SheetBackdrop({ onClick }: BackdropProps) {
       aria-hidden="true"
       className="fixed inset-0 z-50"
       style={{
+        zIndex,
         background: 'rgba(45,41,38,0.35)',
         backdropFilter: 'blur(3px)',
         WebkitBackdropFilter: 'blur(3px)',
@@ -73,7 +76,7 @@ export function C2CloseButton({ onClose, label = 'Close', className, ...rest }: 
       onClick={onClose}
       aria-label={label}
       className={cn(
-        'w-8 h-8 flex items-center justify-center rounded-full c2-sheet-x shrink-0',
+        'w-11 h-11 flex items-center justify-center rounded-full c2-sheet-x shrink-0',
         'transition-opacity active:opacity-70',
         className,
       )}
@@ -113,7 +116,7 @@ export function C2SheetHeader({
       {children ?? (
         <div className="flex items-start justify-between mb-1">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold text-gray-800 leading-snug">{title ?? ''}</h2>
+            <h2 className="text-base font-bold text-gray-800 leading-snug break-words">{title ?? ''}</h2>
             {subtitle && (
               <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
             )}
@@ -253,79 +256,16 @@ export function C2Sheet({
 }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Lock body scroll while sheet is open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
-  // Keep a stable ref to onClose so the focus-trap effect never re-fires
-  // just because the parent re-renders and passes a new function reference.
-  const onCloseRef = useRef(onClose)
-  useEffect(() => { onCloseRef.current = onClose }, [onClose])
-
-  // Trap focus inside sheet when open
-  useEffect(() => {
-    if (!open) return
-    const panel = panelRef.current
-    if (!panel) return
-
-    const focusableSelectors = [
-      'button:not([disabled])',
-      '[href]',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(', ')
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onCloseRef.current()
-        return
-      }
-      if (e.key !== 'Tab') return
-
-      const focusable = Array.from(panel!.querySelectorAll<HTMLElement>(focusableSelectors))
-      if (focusable.length === 0) return
-
-      const first = focusable[0]
-      const last  = focusable[focusable.length - 1]
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    // Auto-focus first interactive element (only on open, not on every re-render)
-    const first = panel.querySelector<HTMLElement>(focusableSelectors)
-    if (first) first.focus()
-
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  useModalInteraction(open, panelRef, onClose)
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          <C2SheetBackdrop onClick={closeOnBackdrop ? onClose : undefined} />
-
+          <C2SheetBackdrop zIndex={zIndex} onClick={closeOnBackdrop ? onClose : undefined} />
           <motion.div
             ref={panelRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label={ariaLabel}
@@ -333,8 +273,7 @@ export function C2Sheet({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={SHEET_SPRING}
-            className="fixed bottom-0 left-0 right-0 c2-sheet-bg rounded-t-[2rem] shadow-modal
-                       max-w-lg mx-auto flex flex-col c2-sheet-panel"
+            className="fixed bottom-0 left-0 right-0 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col c2-sheet-panel"
             style={{ zIndex: zIndex + 1 }}
           >
             {children}

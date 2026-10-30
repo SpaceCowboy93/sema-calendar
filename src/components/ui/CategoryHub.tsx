@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -247,7 +249,7 @@ export function CategoryHubSheet({
         onClick={onClose}
         className="fixed inset-0 z-50 c2-backdrop"
       />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal
@@ -348,7 +350,7 @@ export function CategoryHubSheet({
             </>
           )}
         </div>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={showDeleteConfirm}
@@ -373,7 +375,7 @@ export function CategoryHubSheet({
               onClick={() => setEditingId(null)}
               className="fixed inset-0 z-[60] c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setEditingId(null)}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
               className="fixed bottom-0 left-0 right-0 z-[60] c2-sheet-bg rounded-t-[2rem] shadow-modal
@@ -500,7 +502,7 @@ export function CategoryHubSheet({
                   </motion.button>
                 </div>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>

@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -555,10 +557,10 @@ export default function FinancePage() {
               onClick={() => setIncomeEditing(false)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setIncomeEditing(false)}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+              className="c2-dialog-viewport fixed inset-0 z-50 flex items-center justify-center p-6"
             >
               <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <h3 className="font-bold text-gray-800 mb-1">Monthly Income</h3>
@@ -580,7 +582,7 @@ export default function FinancePage() {
                   <button onClick={saveIncome} className="flex-1 py-3 rounded-2xl text-white font-medium text-sm" style={{ background: '#9EC9B3' }}>Save</button>
                 </div>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>
@@ -645,10 +647,10 @@ export default function FinancePage() {
               onClick={() => setConfirmFinalize(false)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setConfirmFinalize(false)}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+              className="c2-dialog-viewport fixed inset-0 z-50 flex items-center justify-center p-6"
             >
               <div className="c2-sheet-bg rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <div className="text-center mb-4">
@@ -668,7 +670,7 @@ export default function FinancePage() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>
@@ -690,10 +692,10 @@ export default function FinancePage() {
               onClick={() => setDeleteTxId(null)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setDeleteTxId(null)}
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-6"
+              className="c2-dialog-viewport fixed inset-0 z-50 flex items-center justify-center p-6"
             >
               <div className="c2-sheet-bg rounded-3xl p-6 w-full max-w-sm shadow-modal">
                 <h3 className="font-bold mb-3 text-center" style={{ color: '#2D2926' }}>Remove transaction?</h3>
@@ -703,7 +705,7 @@ export default function FinancePage() {
                     className="flex-1 py-3 rounded-2xl c2-sheet-danger font-medium text-sm">Delete</button>
                 </div>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>
@@ -872,7 +874,7 @@ function FinanceCategoryEditorSheet({
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
@@ -1027,7 +1029,7 @@ function FinanceCategoryEditorSheet({
               <Trash2 size={13} /> Remove Category
             </button>
           </div>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={confirmDel}
@@ -1216,7 +1218,7 @@ function AddBudgetSheet({
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -1259,7 +1261,7 @@ function AddBudgetSheet({
             Add Category
           </button>
         </div>
-      </motion.div>
+      </SheetPanel>
     </>
   )
 }
@@ -1287,7 +1289,7 @@ function SavingsSheet({
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose} className="fixed inset-0 z-50 c2-backdrop" />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 380 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -1355,7 +1357,7 @@ function SavingsSheet({
             {type === 'add' ? 'Add Contribution' : 'Record Withdrawal'}
           </button>
         </div>
-      </motion.div>
+      </SheetPanel>
     </>
   )
 }

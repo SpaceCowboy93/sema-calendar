@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Trash2, AlertTriangle } from '@/design/iconSystem'
@@ -86,7 +88,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
         onClick={onClose}
         className="fixed inset-0 z-[80] c2-backdrop"
       />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
         className="fixed bottom-0 left-0 right-0 z-[80] c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[92vh] overflow-y-auto"
@@ -251,7 +253,7 @@ export function ReceiptReviewSheet({ result: initialResult, photos, onClose, onS
             Save receipt
           </motion.button>
         </div>
-      </motion.div>
+      </SheetPanel>
     </>
   )
 }

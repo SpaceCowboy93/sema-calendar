@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   --font-inter: 'Inter', system-ui, sans-serif;
 
   /* ── Botanical Journal palette ────────────────────────────── */
@@ -81,19 +85,25 @@ body {
 }
 
 /* Safe area padding for notched phones */
-.safe-top    { padding-top:    env(safe-area-inset-top);    }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-.pb-safe     { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top    { padding-top:    var(--safe-top);    }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.pb-safe     { padding-bottom: var(--safe-bottom); }
 
 /* Sheet footer — clears the bottom nav (64px) + device safe area */
-.pb-sheet-footer { padding-bottom: max(5.5rem, calc(4rem + env(safe-area-inset-bottom))); }
+.pb-sheet-footer { padding-bottom: max(1rem, var(--safe-bottom)); }
 
 /* Sheet panel max-height — portrait default, reduced in landscape to avoid cramping */
-.c2-sheet-panel { max-height: calc(100dvh - 48px); }
+.c2-sheet-panel {
+  bottom: max(0px, calc(100dvh - var(--visual-height, 100dvh) - var(--visual-top, 0px)));
+  max-height: calc(var(--visual-height, 100dvh) - max(16px, var(--safe-top)));
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  overflow: hidden;
+}
 @media (orientation: landscape) and (max-height: 600px) {
-  .c2-sheet-panel { max-height: calc(100dvh - 16px); }
+  .c2-sheet-panel { max-height: calc(var(--visual-height, 100dvh) - max(8px, var(--safe-top))); }
   /* In landscape, the nav bar is typically alongside content; reduce footer clearance */
-  .pb-sheet-footer { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+  .pb-sheet-footer { padding-bottom: max(1.5rem, var(--safe-bottom)); }
 }
 
 /* Custom scrollbar */
@@ -381,3 +391,61 @@ input.input-ghost:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Shared viewport geometry: insets are zero on ordinary desktops. */
+.app-viewport { padding-top: var(--safe-top); }
+.app-scroll {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: calc(6rem + var(--safe-bottom));
+  scroll-padding-block: 1rem;
+}
+.app-fab { bottom: calc(74px + var(--safe-bottom)); }
+.login-viewport {
+  justify-content: safe center;
+  height: var(--visual-height, 100dvh);
+  overflow-y: auto;
+  padding-top: max(1.5rem, var(--safe-top));
+  padding-bottom: max(1.5rem, var(--safe-bottom));
+}
+.login-viewport > div { flex-shrink: 0; }
+.c2-dialog-viewport {
+  top: var(--visual-top, 0px);
+  bottom: auto;
+  height: var(--visual-height, 100dvh);
+  padding: max(1rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+}
+.c2-dialog-panel { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.c2-sheet-panel { overflow-wrap: anywhere; }
+.c2-sheet-panel input, .c2-sheet-panel textarea, .c2-sheet-panel select { min-width: 0; max-width: 100%; scroll-margin-block: 1rem; }
+@media (pointer: coarse) {
+  /* Safari zooms focused fields below 16px. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: 16px !important; }
+  .c2-sheet-panel button, .c2-dialog-panel button { min-height: 44px; }
+  [data-keyboard-open] .glass-nav, [data-keyboard-open] .app-fab { visibility: hidden; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .page-enter { animation: none; }
+}
+
+.activity-bell { top: calc(0.75rem + var(--safe-top)); right: max(1rem, var(--safe-right)); }
+
+/* Legacy editors share visible-viewport geometry while retaining their forms. */
+.c2-sheet-bg.fixed.bottom-0:not(.c2-sheet-panel) {
+  bottom: max(0px, calc(100dvh - var(--visual-height, 100dvh) - var(--visual-top, 0px)));
+  max-height: calc(var(--visual-height, 100dvh) - max(16px, var(--safe-top))) !important;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+
+.c2-sheet-panel[data-scroll-panel="true"] { overflow-y: auto; overscroll-behavior: contain; }
+
+.c2-dialog-viewport.c2-sheet-panel { max-height: none; bottom: auto; overflow: visible; }
+.c2-dialog-viewport.c2-sheet-panel > div { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+
+.partner-note-trigger { bottom: calc(134px + var(--safe-bottom)); }
+@media (pointer: coarse) { [data-keyboard-open] .partner-note-trigger { visibility: hidden; pointer-events: none; } }

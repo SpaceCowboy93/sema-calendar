@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, Clock, CalendarDays, CheckSquare, X, FileText } from '@/design/iconSystem'
@@ -401,7 +403,7 @@ function CategoryHubModal({
       />
 
       {/* Sheet */}
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -595,7 +597,7 @@ function CategoryHubModal({
             Plan a moment in {colorOption.label}
           </button>
         </div>
-      </motion.div>
+      </SheetPanel>
     </>
   )
 }

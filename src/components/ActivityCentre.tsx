@@ -463,8 +463,8 @@ export function ActivityCentreBell({ className }: ActivityCentreBellProps) {
         }
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed top-3 right-4 z-30',
-          'w-9 h-9 flex items-center justify-center rounded-full',
+          'activity-bell fixed top-3 right-4 z-30',
+          'w-11 h-11 flex items-center justify-center rounded-full',
           'bg-white/80 backdrop-blur-sm shadow-sm',
           'transition-opacity active:opacity-70',
           className,

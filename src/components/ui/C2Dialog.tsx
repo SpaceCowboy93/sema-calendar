@@ -18,7 +18,8 @@
  *   </C2Dialog>
  */
 
-import { useEffect, useRef } from 'react'
+import { useRef, useId } from 'react'
+import { useModalInteraction } from '@/hooks/useModalInteraction'
 import { motion, AnimatePresence } from 'framer-motion'
 import { type LucideIcon, Trash2 } from '@/design/iconSystem'
 import { cn } from '@/lib/utils'
@@ -66,38 +67,8 @@ export function C2Dialog({
 }: C2DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Focus trap + Escape key
-  useEffect(() => {
-    if (!open) return
-
-    const panel = panelRef.current
-    if (!panel) return
-
-    const selectors = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
-      if (e.key !== 'Tab') return
-
-      const focusable = Array.from(panel!.querySelectorAll<HTMLElement>(selectors))
-      if (!focusable.length) return
-
-      const first = focusable[0]
-      const last  = focusable[focusable.length - 1]
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKey)
-    const firstBtn = panel.querySelector<HTMLElement>(selectors)
-    if (firstBtn) firstBtn.focus()
-
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [open, onCancel])
+  const titleId = useId()
+  useModalInteraction(open, panelRef, onCancel)
 
   const iconBg = iconVariant === 'danger'
     ? 'rgba(194,122,99,0.12)'
@@ -112,10 +83,10 @@ export function C2Dialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[90] flex items-center justify-center p-6"
+          className="c2-dialog-viewport fixed inset-0 z-[90] flex items-center justify-center p-6"
           aria-modal="true"
           role="dialog"
-          aria-labelledby="c2-dialog-title"
+          aria-labelledby={titleId}
         >
           {/* Backdrop */}
           <div
@@ -128,12 +99,13 @@ export function C2Dialog({
           {/* Panel */}
           <motion.div
             ref={panelRef}
+            tabIndex={-1}
             initial={{ scale: 0.94, opacity: 0, y: 8 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 8 }}
             transition={DIALOG_TRANSITION}
             className={cn(
-              'relative c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal',
+              'relative c2-dialog-panel c2-sheet-bg rounded-3xl p-6 w-full max-w-xs text-center shadow-modal',
               className,
             )}
           >
@@ -149,7 +121,7 @@ export function C2Dialog({
 
             {/* Title */}
             <h3
-              id="c2-dialog-title"
+              id={titleId}
               className="font-bold mb-1"
               style={{ color: '#2D2926' }}
             >

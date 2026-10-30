@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
-const ITEM_H = 40   // px — height of each drum item
+const ITEM_H = 44   // px — height of each drum item
 const VISIBLE = 5   // odd number of visible rows (selected is the middle)
 const HALF = Math.floor(VISIBLE / 2)
 
@@ -123,7 +123,7 @@ function DrumColumn({ items, selected, onSelect, accentColor, label }: DrumProps
           tabIndex={0}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
-          className="h-full overflow-y-scroll outline-none"
+          className="h-full overflow-y-scroll overscroll-contain outline-none"
           style={{
             scrollSnapType:   'y mandatory',
             scrollbarWidth:   'none',
@@ -208,7 +208,7 @@ export function TimePicker({
 
   // Close on Escape
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') { e.preventDefault(); setOpen(false) }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOpen(false) }
     if (e.key === 'Enter')  { e.preventDefault(); handleConfirm() }
   }
 

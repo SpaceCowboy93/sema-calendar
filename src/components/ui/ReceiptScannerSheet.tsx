@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 
 import { useState, useRef } from 'react'
@@ -85,7 +87,7 @@ export function ReceiptScannerSheet({ onClose, onResultReady }: Props) {
       />
 
       {/* Sheet */}
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
         className="fixed bottom-0 left-0 right-0 z-[80] c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto max-h-[88vh] overflow-y-auto"
@@ -263,7 +265,7 @@ export function ReceiptScannerSheet({ onClose, onResultReady }: Props) {
           className="hidden"
           onChange={e => handleFiles(e.target.files)}
         />
-      </motion.div>
+      </SheetPanel>
     </>
   )
 }

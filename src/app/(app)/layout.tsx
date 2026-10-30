@@ -73,8 +73,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="h-dvh overflow-hidden">
-      <main ref={mainRef} className="h-full overflow-y-auto overscroll-none pb-24">
+    <div className="app-viewport h-dvh overflow-hidden">
+      <main ref={mainRef} className="app-scroll h-full overflow-y-auto overscroll-none pb-24">
         {children}
       </main>
 
@@ -93,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         aria-label="Add something"
         aria-hidden={overlayCount > 0}
         tabIndex={overlayCount > 0 ? -1 : undefined}
-        className="fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
+        className="app-fab fixed bottom-[74px] right-5 z-30 w-[46px] h-[46px] rounded-full
                    flex items-center justify-center text-white backdrop-blur-sm"
         style={{
           background:    primary,

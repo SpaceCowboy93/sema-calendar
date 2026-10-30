@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Check, X, Sparkles } from '@/design/iconSystem'
@@ -331,7 +333,7 @@ function WishDetailModal({
       />
 
       {/* Sheet */}
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -417,7 +419,7 @@ function WishDetailModal({
             Delete Wish
           </button>
         </C2SheetFooter>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={showConfirmDelete}

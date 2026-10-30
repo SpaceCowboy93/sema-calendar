@@ -66,7 +66,13 @@ export function DatePicker({
   }
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full', className)} onKeyDown={event => {
+      if (open && event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        setOpen(false)
+      }
+    }}>
       {/* Trigger */}
       <button
         type="button"

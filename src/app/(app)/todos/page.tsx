@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, Check, ChevronDown, ChevronUp, Pencil, X, CalendarDays, FileText, Sparkles } from '@/design/iconSystem'
@@ -529,7 +531,7 @@ function EditTodoModal({
         onClick={onClose}
         className="fixed inset-0 z-50 c2-backdrop"
       />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -630,7 +632,7 @@ function EditTodoModal({
             Remove Plan
           </button>
         </C2SheetFooter>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={showDelete}

@@ -71,7 +71,7 @@ export function PartnerNoteNotification() {
               y:       { repeat: Infinity, duration: 2.8, ease: 'easeInOut', delay: 0.4 },
             }}
             onClick={handleOpen}
-            className="fixed bottom-24 right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5
+            className="partner-note-trigger fixed bottom-24 right-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5
                        rounded-full shadow-lg active:scale-95 transition-transform max-w-[200px]"
             style={{ background: bubbleSenderColor }}
           >

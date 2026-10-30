@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, Pencil, Trash2, Check, ChevronUp, Target, CalendarDays, type LucideIcon, Globe, Coins, Dumbbell, Leaf, BookOpen, Palette, Trophy, PartyPopper } from '@/design/iconSystem'
@@ -246,7 +248,7 @@ function CategoryModal({
       />
 
       {/* Sheet */}
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -370,7 +372,7 @@ function CategoryModal({
             </button>
           </div>
         )}
-      </motion.div>
+      </SheetPanel>
 
       {/* Edit modal */}
       <AnimatePresence>
@@ -711,7 +713,7 @@ function GoalEditModal({
         onClick={onClose}
         className="fixed inset-0 z-[60] c2-backdrop"
       />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -811,7 +813,7 @@ function GoalEditModal({
             Let go of this dream
           </button>
         </C2SheetFooter>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={showDelete}

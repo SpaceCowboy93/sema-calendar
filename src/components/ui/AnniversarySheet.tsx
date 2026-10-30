@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { differenceInCalendarDays, differenceInYears, differenceInMonths, addYears, addMonths, startOfDay, parseISO } from 'date-fns'
@@ -181,7 +183,7 @@ export function AnniversarySheet({
         className="fixed inset-0 z-50"
         style={{ background: 'rgba(45,41,38,0.35)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
       />
-      <motion.div
+      <SheetPanel onClose={dirty ? handleSave : onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
@@ -416,7 +418,7 @@ export function AnniversarySheet({
             </motion.button>
           </div>
         </C2SheetFooter>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={showDeleteConfirm}

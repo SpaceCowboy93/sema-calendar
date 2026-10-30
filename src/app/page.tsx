@@ -46,7 +46,7 @@ export default function LandingPage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      <div className="login-viewport flex flex-col items-center justify-center px-6 relative">
         <div
           className="absolute inset-0 -z-10"
           style={{
@@ -71,11 +71,11 @@ export default function LandingPage() {
           <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.35 }} onSubmit={handleSubmit} className="rounded-3xl bg-white/90 border border-white shadow-soft p-5 text-left space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-gray-500 mb-1.5">Email</label>
-              <input id="email" type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
+              <input id="email" type="email" enterKeyHint="next" autoCapitalize="none" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
             </div>
             <div>
               <label htmlFor="password" className="block text-xs font-medium text-gray-500 mb-1.5">Password</label>
-              <input id="password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
+              <input id="password" type="password" enterKeyHint="go" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
             </div>
             {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
             <button type="submit" disabled={submitting} className="w-full rounded-xl bg-violet-500 py-3 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-60 active:opacity-85">

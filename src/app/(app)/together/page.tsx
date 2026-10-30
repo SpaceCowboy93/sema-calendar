@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isSameMonth, isToday, parseISO, differenceInCalendarDays } from 'date-fns'
@@ -657,7 +659,7 @@ export default function TogetherPage() {
               onClick={() => { if (!noteSent) { setNoteOpen(false); setNoteText('') } }}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => { if (!noteSent) { setNoteOpen(false); setNoteText('') } }}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -711,7 +713,7 @@ export default function TogetherPage() {
                   )}
                 </AnimatePresence>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>

@@ -269,7 +269,7 @@ export function usePushNotifications() {
           typeof Notification !== 'undefined' ? Notification.permission : 'N/A')
         LOG('currentUser:', currentUser)
 
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
           LOG('Push not supported on this platform')
           setStatus('unsupported')
           return
@@ -410,20 +410,12 @@ export function usePushNotifications() {
       return
     }
 
-    let reg: ServiceWorkerRegistration | null = null
-    if (!swReady) {
-      LOG('SW not ready — attempting registration before subscribe')
-      reg = await registerSW()
-      if (!isCurrentAuth(context)) return
-      if (!reg) {
-        ERR('SW still cannot register — cannot subscribe')
-        setSwError('Service worker failed. Try refreshing the page.')
-        return
-      }
-      setSwReady(true)
-      setSwError(null)
+    if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') {
+      setStatus('unsupported')
+      return
     }
-
+    if (Notification.permission === 'denied') { setStatus('denied'); return }
+    // Keep the permission call in the direct user action, before SW/network awaits.
     setLoading(true)
     try {
       LOG('Requesting notification permission …')
@@ -433,6 +425,20 @@ export function usePushNotifications() {
       if (perm !== 'granted') {
         setStatus(perm === 'denied' ? 'denied' : 'default')
         return
+      }
+
+      let reg: ServiceWorkerRegistration | null = null
+      if (!swReady) {
+        LOG('SW not ready — attempting registration before subscribe')
+        reg = await registerSW()
+        if (!isCurrentAuth(context)) return
+        if (!reg) {
+          ERR('SW still cannot register — cannot subscribe')
+          setSwError('Service worker failed. Try refreshing the page.')
+          return
+        }
+        setSwReady(true)
+        setSwError(null)
       }
 
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY

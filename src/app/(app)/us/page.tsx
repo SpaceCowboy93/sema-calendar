@@ -1,5 +1,7 @@
 'use client'
 
+import { SheetPanel } from '@/components/ui/SheetPanel'
+
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
@@ -309,7 +311,7 @@ function MemorySheet({
         onClick={onClose}
         className="fixed inset-0 z-50 c2-backdrop"
       />
-      <motion.div
+      <SheetPanel onClose={onClose}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 360 }}
         className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
@@ -502,7 +504,7 @@ function MemorySheet({
             </motion.button>
           </div>
         </div>
-      </motion.div>
+      </SheetPanel>
 
       <DeleteConfirmSheet
         open={confirmDel}
@@ -1032,7 +1034,7 @@ export default function UsPage() {
               onClick={() => setBoomBoomSheet(false)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setBoomBoomSheet(false)}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -1072,7 +1074,7 @@ export default function UsPage() {
                   Cancel
                 </button>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>
@@ -1107,7 +1109,7 @@ export default function UsPage() {
               onClick={() => setMoodPopup(false)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setMoodPopup(false)}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -1167,7 +1169,7 @@ export default function UsPage() {
                   Share this feeling
                 </motion.button>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>
@@ -1219,7 +1221,7 @@ export default function UsPage() {
               onClick={() => setAddCdOpen(false)}
               className="fixed inset-0 z-50 c2-backdrop"
             />
-            <motion.div
+            <SheetPanel onClose={() => setAddCdOpen(false)}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 380 }}
               className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto"
@@ -1278,7 +1280,7 @@ export default function UsPage() {
                   Add Milestone
                 </motion.button>
               </div>
-            </motion.div>
+            </SheetPanel>
           </>
         )}
       </AnimatePresence>

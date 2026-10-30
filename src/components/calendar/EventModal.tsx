@@ -1,5 +1,7 @@
 'use client'
 
+import { useModalInteraction } from '@/hooks/useModalInteraction'
+
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Clock, FileText, Plus, Check, Camera, Trash2 } from '@/design/iconSystem'
@@ -27,6 +29,8 @@ interface EventModalProps {
 }
 
 export function EventModal({ isOpen, onClose, date, event, initialColor }: EventModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useModalInteraction(isOpen, panelRef, onClose)
   const currentUser       = useAppStore(s => s.currentUser)
   const addEvent          = useAppStore(s => s.addEvent)
   const updateEvent       = useAppStore(s => s.updateEvent)
@@ -267,8 +271,9 @@ export function EventModal({ isOpen, onClose, date, event, initialColor }: Event
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
-            style={{ maxHeight: 'calc(100dvh - 48px)' }}
+            ref={panelRef}
+            role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit event' : 'New event'} tabIndex={-1}
+            className="c2-sheet-panel fixed bottom-0 left-0 right-0 z-50 c2-sheet-bg rounded-t-[2rem] shadow-modal max-w-lg mx-auto flex flex-col"
           >
             {/* Non-scrolling header */}
             <div className="px-5 pt-4 shrink-0">

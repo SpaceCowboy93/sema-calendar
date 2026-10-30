@@ -38,13 +38,21 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const url = event.notification.data?.url ?? '/'
+  // Only navigate within this app, even if a push payload contains an external URL.
+  let target = new URL('/', self.location.origin)
+  try {
+    const candidate = new URL(event.notification.data?.url ?? '/', self.location.origin)
+    if (candidate.origin === self.location.origin && /^https?:$/.test(candidate.protocol)) target = candidate
+  } catch { /* Invalid payload: open the app root. */ }
+  const url = target.href
   event.waitUntil(
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then(list => {
         for (const c of list) {
-          if (c.url.includes(self.location.origin) && 'focus' in c) return c.focus()
+          if (new URL(c.url).origin === self.location.origin && 'focus' in c) {
+            return c.navigate(url).then(navigated => (navigated ?? c).focus())
+          }
         }
         return clients.openWindow(url)
       })
