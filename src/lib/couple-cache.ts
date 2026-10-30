@@ -4,13 +4,21 @@ import { SHARED_KEYS, selectSharedState, type SharedState } from './shared-state
 
 let scope: CoupleAccess | null = null
 export function setCacheScope(access: CoupleAccess | null) { scope = access }
-const keyFor = (access: CoupleAccess) => `semacalendar-v2:${access.coupleId}:${access.stateId}`
+function usesV2Backend() {
+  try { return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').hostname === 'wwxdinkdjkjiqzynfbdk.supabase.co' }
+  catch { return false }
+}
+// Backend provenance cannot be inferred from matching household IDs. This
+// Preview starts a separate cache without migrating or deleting earlier work.
+const keyFor = (access: CoupleAccess) => usesV2Backend()
+  ? `semacalendar-v2:project:wwxdinkdjkjiqzynfbdk:iphone-preview-v1:${access.coupleId}:${access.stateId}`
+  : `semacalendar-v2:${access.coupleId}:${access.stateId}`
 export function pendingKeys(access: CoupleAccess): Set<keyof SharedState> {
   const saved = localStorage.getItem(keyFor(access) + ':pending')
   // Caches created before tracking was added may contain unsynced work.
   if (saved === null) {
     const owner = localStorage.getItem('sema-legacy-cache-owner')
-    const legacy = access.stateId === 'sema' && (!owner || owner === access.coupleId)
+    const legacy = !usesV2Backend() && access.stateId === 'sema' && (!owner || owner === access.coupleId)
       ? localStorage.getItem('semacalendar-v1') : null
     const cache = localStorage.getItem(keyFor(access)) ?? legacy
     // Older caches may predate shared fields. Only cached fields can contain
@@ -38,6 +46,7 @@ export const coupleStorage: StateStorage = {
     if (!scope || typeof localStorage === 'undefined') return null
     const saved = localStorage.getItem(keyFor(scope))
     if (saved !== null) return saved
+    if (usesV2Backend()) return null
     // Preserve the original cache. Import it only into the verified legacy household.
     const owner = localStorage.getItem('sema-legacy-cache-owner')
     if (scope.stateId !== 'sema' || (owner && owner !== scope.coupleId)) return null

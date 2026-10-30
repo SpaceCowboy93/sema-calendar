@@ -65,3 +65,6 @@ Use a small SE-class device and a notched/Dynamic Island device where available.
 ## Quality results, files and final Git state
 
 Resumed 30 October 2026 on fix/iphone-pwa: 41 staged files (749 insertions, 203 deletions before this note). Prior checkpoint: 1,097 tests, TypeScript, WebKit and Chromium 320px focused checks passed. Final lint passed with warnings; optimized build and its TypeScript check passed. git diff --cached --check passed. Sync-recovery stash preserved unchanged at 4ecb62a420f029b57dc4e857d417cb041a8e1356. Physical iPhone acceptance remains pending. iPhone priority applies to this work session.
+
+## Preview sign-in follow-up — 30 October 2026
+The deployed Preview points to sema-calendar-v2, which was inactive. User authorized reactivation and read-only verification. No records or schemas were modified. This branch lacked the earlier v2 Preview cache provenance safeguards; added a dedicated project-bound iphone-preview-v1 cache namespace and disabled legacy import for v2 only. Earlier caches and the sync-recovery stash are preserved. Focused cache isolation/security-sync: 21 tests passed. TypeScript passed. Original-backend legacy behavior remains covered.
