@@ -1,4 +1,5 @@
 'use client'
+import { DaysTogetherCard } from '@/components/ui/DaysTogetherCard'
 
 import { SheetPanel } from '@/components/ui/SheetPanel'
 
@@ -303,6 +304,7 @@ export default function TogetherPage() {
 
       {/* ── Calendar header ── */}
       <div className="px-5 pb-3 relative z-10">
+        <DaysTogetherCard countdowns={countdowns} className="mb-3" />
         {/* Notification prompt — visible only until this device is subscribed */}
         <NotificationPromptCard primary={primary} />
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, type RefObject } from 'react'
+import { isIOSDevice } from './useIOSDevice'
 
 const layers: HTMLElement[] = []
 let unlock: (() => void) | undefined
@@ -14,6 +15,9 @@ export function useModalInteraction(open: boolean, ref: RefObject<HTMLElement>, 
     if (!open || !panel) return
     const previous = document.activeElement as HTMLElement | null
     if (!layers.length) {
+      // Page stacking contexts can put fixed shell controls above inline editors.
+      // Scope their suppression to iOS; other platforms keep existing behavior.
+      if (isIOSDevice()) document.documentElement.setAttribute('data-ios-modal-open', '')
       const targets = [document.body, ...document.querySelectorAll<HTMLElement>('main')]
       const saved = targets.map(el => el.style.overflow)
       targets.forEach(el => { el.style.overflow = 'hidden' })
@@ -42,7 +46,10 @@ export function useModalInteraction(open: boolean, ref: RefObject<HTMLElement>, 
     return () => {
       document.removeEventListener('keydown', keydown)
       layers.splice(layers.indexOf(panel), 1)
-      if (!layers.length) { unlock?.(); unlock = undefined }
+      if (!layers.length) {
+        unlock?.(); unlock = undefined
+        document.documentElement.removeAttribute('data-ios-modal-open')
+      }
       if (previous?.isConnected && (!layers.length || layers[layers.length - 1].contains(previous))) previous.focus({ preventScroll: true })
     }
   }, [open, ref])

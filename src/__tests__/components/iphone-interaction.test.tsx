@@ -4,6 +4,26 @@ import { useRef } from 'react'
 import { useModalInteraction } from '@/hooks/useModalInteraction'
 import { VisualViewport } from '@/components/layout/VisualViewport'
 
+it.each([
+  ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', true],
+  ['Mozilla/5.0 (Linux; Android 15; Samsung)', false],
+])('scopes modal shell suppression to iOS: %s', (userAgent, ios) => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'userAgent')
+  Object.defineProperty(navigator, 'userAgent', { configurable: true, value: userAgent })
+  try {
+    const { rerender, unmount } = render(<Modal open close={() => {}} />)
+    expect(document.documentElement.hasAttribute('data-ios-modal-open')).toBe(ios)
+    rerender(<Modal open close={() => {}}><Modal open close={() => {}} /></Modal>)
+    rerender(<Modal open close={() => {}} />)
+    expect(document.documentElement.hasAttribute('data-ios-modal-open')).toBe(ios)
+    unmount()
+    expect(document.documentElement).not.toHaveAttribute('data-ios-modal-open')
+  } finally {
+    if (original) Object.defineProperty(navigator, 'userAgent', original)
+    else Reflect.deleteProperty(navigator, 'userAgent')
+  }
+})
+
 function Modal({ open, close, children }: { open: boolean; close: () => void; children?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   useModalInteraction(open, ref, close)

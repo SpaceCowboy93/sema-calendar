@@ -449,3 +449,10 @@ input.input-ghost:focus-visible {
 
 .partner-note-trigger { bottom: calc(134px + var(--safe-bottom)); }
 @media (pointer: coarse) { [data-keyboard-open] .partner-note-trigger { visibility: hidden; pointer-events: none; } }
+
+/* iOS inline editors must own the screen, including when their page creates a
+   stacking context. Keep Android and desktop shell presentation unchanged. */
+[data-ios-modal-open] :is(.glass-nav, .app-fab, .activity-bell, .partner-note-trigger) {
+  visibility: hidden;
+  pointer-events: none;
+}

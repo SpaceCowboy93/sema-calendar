@@ -17,6 +17,7 @@ import { SeMaRoomHeader } from '@/components/ui/SeMaRoomHeader'
 import { C2_ROOM_HEADERS } from '@/lib/c2RoomHeaders'
 import { getLivingMoment } from '@/lib/livingMoment'
 import { C2SectionLabel } from '@/components/ui/C2SectionLabel'
+import { DailyBudgetCard } from '@/components/ui/DailyBudgetCard'
 import { useAppStore } from '@/store/useAppStore'
 import { cn, generateId, getTodayString } from '@/lib/utils'
 import type { BudgetItem, FinanceMonth, FinanceMonthReport, FinanceCategoryItem } from '@/types'
@@ -278,6 +279,8 @@ export default function FinancePage() {
           />
         ) : (
           <>
+            <DailyBudgetCard key={currentMonth.key} month={currentMonth}
+              onSave={dailyBudgets => updateFinanceMonth(monthKey, { dailyBudgets })} />
             {/* Month-end report (if finalized) */}
             {currentMonth.isFinalized && currentMonth.report && (
               <ReportCard report={currentMonth.report} />

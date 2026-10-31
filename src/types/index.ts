@@ -263,6 +263,8 @@ export interface Memory {
 export interface FinanceMonth {
   key: string              // 'YYYY-MM'
   income: number
+  /** Optional planning limits by local calendar date; not additional expenses. */
+  dailyBudgets?: Record<string, number>
   budgetItems: BudgetItem[]
   isFinalized: boolean
   report?: FinanceMonthReport

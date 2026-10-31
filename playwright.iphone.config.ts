@@ -3,7 +3,7 @@ import base from './playwright.config'
 
 export default defineConfig({
   ...base,
-  testMatch: '**/iphone-pwa.spec.ts',
+  testMatch: '**/iphone-*.spec.ts',
   reporter: [['list']],
   timeout: 120_000,
   use: { ...base.use, actionTimeout: 10_000, navigationTimeout: 30_000 },

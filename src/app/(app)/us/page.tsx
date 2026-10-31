@@ -1,4 +1,7 @@
 'use client'
+import { DaysTogetherCard } from '@/components/ui/DaysTogetherCard'
+import { RELATIONSHIP_START } from '@/lib/relationship'
+import { useIOSDevice } from '@/hooks/useIOSDevice'
 
 import { SheetPanel } from '@/components/ui/SheetPanel'
 
@@ -36,7 +39,6 @@ import {
 import { MOOD_CONFIG, getTodayString, cn } from '@/lib/utils'
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
-const RELATIONSHIP_START = new Date('2025-03-05T21:00:00')
 
 const MILESTONE_OPTIONS: { key: string; icon: LucideIcon; label: string }[] = [
   { key: 'heart',  icon: Heart,        label: 'Heart'     },
@@ -120,6 +122,8 @@ function FloatingHeart({ x, delay, primary }: { x: number; delay: number; primar
 
 /* ── RelationshipHero ──────────────────────────────────────────────────────── */
 function RelationshipHero({ primary }: { primary: string }) {
+  const ios = useIOSDevice()
+  const [showTotalDays, setShowTotalDays] = useState(false)
   const prefersReduced = useReducedMotion()
   const [mounted, setMounted]  = useState(false)
   const [dur,     setDur]      = useState(calcDuration)
@@ -134,6 +138,7 @@ function RelationshipHero({ primary }: { primary: string }) {
   }, [])
 
   function handleTap() {
+    if (ios) setShowTotalDays(value => !value)
     if (prefersReduced) return
     setPulse(true)
     setTimeout(() => setPulse(false), 600)
@@ -157,6 +162,13 @@ function RelationshipHero({ primary }: { primary: string }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
       onClick={handleTap}
+      role={ios ? 'button' : undefined}
+      tabIndex={ios ? 0 : undefined}
+      aria-label={ios ? 'Toggle total days together' : undefined}
+      aria-pressed={ios ? showTotalDays : undefined}
+      onKeyDown={ios ? event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleTap() }
+      } : undefined}
       className="relative overflow-hidden rounded-3xl cursor-pointer select-none"
       style={{
         background: 'rgba(255,255,255,0.72)',
@@ -184,11 +196,13 @@ function RelationshipHero({ primary }: { primary: string }) {
           Every second since then has been part of us.
         </p>
         <div className="flex items-end gap-3 mb-3">
-          {[
+          {(ios && showTotalDays ? [
+            { value: differenceInCalendarDays(new Date(), RELATIONSHIP_START), label: 'days together' },
+          ] : [
             { value: dur.years,  label: dur.years  === 1 ? 'year'  : 'years'  },
             { value: dur.months, label: dur.months === 1 ? 'month' : 'months' },
             { value: dur.days,   label: dur.days   === 1 ? 'day'   : 'days'   },
-          ].map(({ value, label }) => (
+          ]).map(({ value, label }) => (
             <div key={label} className="flex-1 text-center">
               <div className="rounded-2xl py-3" style={{ background: 'rgba(45,41,38,0.04)' }}>
                 <motion.p
@@ -678,6 +692,7 @@ export default function UsPage() {
       />
 
       <div className="px-5 pt-4 space-y-8">
+        <DaysTogetherCard countdowns={countdowns} />
 
         {/* ── 1. Relationship Hero ── */}
         <RelationshipHero primary={primary} />

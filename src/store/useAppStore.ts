@@ -140,7 +140,7 @@ export interface AppState {
   financeMonths: FinanceMonth[]
   savingsTransactions: SavingsTransaction[]
   createFinanceMonth: (key: string, copyFromKey?: string) => void
-  updateFinanceMonth: (key: string, updates: Partial<Pick<FinanceMonth, 'income' | 'budgetItems' | 'isFinalized' | 'report'>>) => void
+  updateFinanceMonth: (key: string, updates: Partial<Pick<FinanceMonth, 'income' | 'budgetItems' | 'isFinalized' | 'report' | 'dailyBudgets'>>) => void
   deleteFinanceMonth: (key: string) => void
   addSavingsTransaction: (monthKey: string, amount: number, note?: string) => void
   deleteSavingsTransaction: (id: string) => void
