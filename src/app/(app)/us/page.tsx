@@ -1,4 +1,5 @@
 'use client'
+import { PillTracker } from '@/components/PillTracker'
 import { DaysTogetherCard } from '@/components/ui/DaysTogetherCard'
 import { RELATIONSHIP_START } from '@/lib/relationship'
 import { useIOSDevice } from '@/hooks/useIOSDevice'
@@ -1037,6 +1038,8 @@ export default function UsPage() {
           <C2SectionLabel as="h2" className="mb-3">Notifications</C2SectionLabel>
           <NotificationSetup primary={primary} />
         </section>
+
+        <PillTracker />
 
       </div>
 

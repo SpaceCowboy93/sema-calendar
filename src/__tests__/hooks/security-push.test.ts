@@ -151,7 +151,7 @@ it('syncReminders produces stable reminder labels on repeated calls (idempotency
   expect(calls).toHaveLength(2)
 
   type ReminderRow = { label: string }
-  type ItemRow     = { reminders: ReminderRow[] }
+  type ItemRow     = { type: string; reminders: ReminderRow[] }
   const labels = (call: typeof calls[0]) =>
     (JSON.parse(call[1]!.body as string).items as ItemRow[])
       .flatMap(i => i.reminders.map(r => r.label))
@@ -162,8 +162,12 @@ it('syncReminders produces stable reminder labels on repeated calls (idempotency
   // Labels must be identical across both calls (stable reminder_key inputs)
   expect(labels1).toEqual(labels2)
   expect(labels1.length).toBeGreaterThan(0)
-  // All labels must come from the approved offset set
+  // Standard reminders retain approved offsets; pills use stable daily keys.
   const VALID_LABELS = new Set(['prev_day_8pm', '1h_before', '5min_before'])
-  expect(labels1.every(l => VALID_LABELS.has(l))).toBe(true)
+  const items = JSON.parse(calls[0][1]!.body as string).items as ItemRow[]
+  expect(items.filter(i => i.type === 'pill')).toHaveLength(4)
+  expect(items.every(i => i.reminders.every(r => i.type === 'pill'
+    ? /^\d{4}-\d{2}-\d{2}$/.test(r.label)
+    : VALID_LABELS.has(r.label)))).toBe(true)
   hook.unmount()
 })

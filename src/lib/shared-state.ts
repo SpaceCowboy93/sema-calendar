@@ -4,7 +4,7 @@ export const SHARED_KEYS = [
   'events', 'todos', 'moods', 'loveNotes', 'wishlistItems', 'countdowns', 'memories',
   'goals', 'partnerNotes', 'shoppingLists', 'monthlyIncome', 'budgetItems',
   'savingsGoals', 'financeMonths', 'savingsTransactions', 'focusActivities',
-  'focusCarryOver', 'boomBoomCount',
+  'focusCarryOver', 'boomBoomCount', 'pillDoses',
 ] as const satisfies readonly (keyof AppState)[]
 export type SharedState = Pick<AppState, typeof SHARED_KEYS[number]>
 

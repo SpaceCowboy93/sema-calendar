@@ -1,5 +1,6 @@
 'use client'
 
+import { PILL_SCHEDULE } from '@/lib/pills'
 import { authenticatedFetch } from '@/lib/authenticated-fetch'
 import { getAuthContext, isCurrentAuth, subscribeAuth } from '@/lib/auth-session'
 
@@ -36,7 +37,7 @@ export interface ReminderEntry {
 
 export interface DatedItem {
   id:        string
-  type:      'event' | 'todo' | 'goal' | 'wishlist' | 'countdown' | 'focus'
+  type:      'event' | 'todo' | 'goal' | 'wishlist' | 'countdown' | 'focus' | 'pill'
   title:     string
   reminders: ReminderEntry[]
 }
@@ -152,8 +153,21 @@ function collectDatedItems(
   store: ReturnType<typeof useAppStore.getState>,
   _userName: UserName,   // kept for future per-user filtering; currently shared data
 ): DatedItem[] {
-  void _userName
+
   const items: DatedItem[] = []
+  // Rolling month of reminders survives closing the app; refreshed on each visit.
+  PILL_SCHEDULE.forEach(({ pill, hour }) => {
+    const reminders: ReminderEntry[] = []
+    for (let offset = 0; offset < 30; offset++) {
+      const date = new Date()
+      date.setDate(date.getDate() + offset)
+      date.setHours(hour, 0, 0, 0)
+      const day = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+      const taken = store.pillDoses.some(d => d.userId === _userName && d.date === day && d.pill === pill)
+      if (!taken && date.getTime() > Date.now()) reminders.push({ fireAt: date.toISOString(), label: day })
+    }
+    items.push({ id: 'pill-' + pill, type: 'pill', title: 'Time to take Pill ' + pill, reminders })
+  })
 
   store.events.forEach(e => {
     if (e.date && e.startTime) {
@@ -399,6 +413,15 @@ export function usePushNotifications() {
     if (status === 'subscribed' && serverSaved === true && currentUser) {
       LOG('Auto-sync reminders for confirmed subscribed device:', currentUser)
       syncBothUsers(currentUser as UserName).catch(() => {})
+      let timer: ReturnType<typeof setTimeout>
+      const unsub = useAppStore.subscribe((state, previous) => {
+        if (state.pillDoses === previous.pillDoses) return
+        clearTimeout(timer)
+        timer = setTimeout(() => { syncBothUsers(currentUser).catch(() => {}) }, 3500)
+      })
+      const refresh = () => { if (document.visibilityState === 'visible') syncBothUsers(currentUser).catch(() => {}) }
+      document.addEventListener('visibilitychange', refresh)
+      return () => { unsub(); clearTimeout(timer); document.removeEventListener('visibilitychange', refresh) }
     }
   }, [status, serverSaved, currentUser, syncBothUsers])
 

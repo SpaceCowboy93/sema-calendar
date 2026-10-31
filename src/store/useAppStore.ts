@@ -40,6 +40,9 @@ import { getAuthContext, isCurrentAuth } from '@/lib/auth-session'
 import { toast } from '@/store/useToastStore'
 
 export interface AppState {
+  pillDoses: { id: string; userId: UserName; date: string; pill: number }[]
+  togglePillDose: (pill: number) => void
+
   // Session
   currentUser: UserName | null
   setCurrentUser: (user: UserName | null) => void
@@ -319,6 +322,15 @@ export const useAppStore = create<AppState>()(
   persist<AppState, [], [], Partial<SharedState>>(
     (set, get) => ({
       // ── Session ─────────────────────────────────────────────────────────────
+      pillDoses: [],
+      togglePillDose: (pill) => set(s => {
+        if (!s.currentUser || pill < 1 || pill > 4) return {}
+        const date = getTodayString()
+        const id = s.currentUser + ':' + date + ':' + pill
+        return { pillDoses: s.pillDoses.some(d => d.id === id)
+          ? s.pillDoses.filter(d => d.id !== id)
+          : [...s.pillDoses, { id, userId: s.currentUser, date, pill }] }
+      }),
       currentUser: null,
       setCurrentUser: (user) => set({ currentUser: user }),
 

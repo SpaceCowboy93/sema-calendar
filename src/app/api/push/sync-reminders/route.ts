@@ -48,10 +48,12 @@ export const POST = withCoupleAuth(async (req, access) => {
     await requireRecipient(supabase, access, userName)
     for (const item of items) {
       if (!item || typeof item.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(item.id) ||
-          !['event', 'todo', 'goal', 'wishlist', 'countdown', 'focus'].includes(item.type) ||
-          typeof item.title !== 'string' || item.title.length > 500 || !Array.isArray(item.reminders) || item.reminders.length > 10 ||
+          !['event', 'todo', 'goal', 'wishlist', 'countdown', 'focus', 'pill'].includes(item.type) ||
+          typeof item.title !== 'string' || item.title.length > 500 || !Array.isArray(item.reminders) || item.reminders.length > (item.type === 'pill' ? 30 : 10) ||
           !item.reminders.every((r: { fireAt?: unknown; label?: unknown } | null) => r && typeof r.fireAt === 'string' && Number.isFinite(Date.parse(r.fireAt)) &&
-            typeof r.label === 'string' && Object.prototype.hasOwnProperty.call(LABEL_PREFIX, r.label))) {
+            typeof r.label === 'string' && (item.type === 'pill'
+              ? /^\d{4}-\d{2}-\d{2}$/.test(r.label)
+              : Object.prototype.hasOwnProperty.call(LABEL_PREFIX, r.label)))) {
         throw new AccessError(400, 'Invalid reminders')
       }
     }
