@@ -17,7 +17,7 @@ export default defineConfig({
       name: `chromium-${width}`,
       use: { ...devices['iPhone 14'], browserName: 'chromium' as const, viewport: { width, height: width === 320 ? 568 : 844 } },
     })),
-    { name: 'android', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
+    { name: 'android', use: { ...devices['Pixel 7'], browserName: 'chromium', userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36' } },
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 } } },
   ],
 })

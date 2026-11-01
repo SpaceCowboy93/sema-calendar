@@ -23,7 +23,6 @@ test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({
   await name.fill('Pears')
   await qty.fill('2')
   await price.fill('3.50')
-  if (ios) {
     await expect(qty).toHaveAttribute('type', 'text')
     await qty.pressSequentially('eE+-x')
     await expect(qty).toHaveValue('2')
@@ -40,12 +39,6 @@ test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({
     await expect(name).toBeFocused()
     await expect(sheet.getByText('Apples', { exact: true })).toBeVisible()
     await expect(sheet).toBeVisible()
-  } else {
-    await expect(qty).toHaveAttribute('type', 'number')
-    await expect(qty).toHaveAttribute('inputmode', 'decimal')
-    await price.press('Enter')
-    await expect(name).toHaveValue('Pears')
-  }
   await sheet.getByRole('button', { name: 'Close', exact: true }).click()
   const first = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect width="30" height="30" fill="red"/></svg>')
   const second = first.replace('red', 'blue')
@@ -69,7 +62,6 @@ test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({
   const editor = page.getByRole('dialog', { name: 'Edit Shopping List' })
   const editName = editor.getByPlaceholder('Item name…')
   const editQty = editor.getByLabel('Item quantity', { exact: true })
-  if (ios) {
     await expect(editQty).toHaveAttribute('type', 'text')
     await editName.fill('New edit-list item')
     await editQty.fill('4')
@@ -79,6 +71,7 @@ test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({
     await expect(editName).toBeFocused()
     await expect(editName).toHaveValue('')
     await expect(editQty).toHaveValue('1')
-  } else await expect(editQty).toHaveAttribute('type', 'number')
+    await expect(editor.getByText('New edit-list item', { exact: true })).toHaveCount(1)
+    await expect(editor).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('shopping-367.png') })
 })

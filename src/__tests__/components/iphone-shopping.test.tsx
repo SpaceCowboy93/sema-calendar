@@ -69,16 +69,21 @@ it('rejects exponent/letter/pasted quantity text while accepting digits', () => 
   expect(isShoppingQuantity('003')).toBe(true)
 })
 
-it('leaves the Android quantity input and Enter behavior unchanged', () => {
-  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15; Samsung)')
+it('rejects letters and adds the next item from quantity on the failing Android identity', () => {
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 16; Pixel 10) Chrome/156.0.0.0 Mobile Safari/537.36')
   render(<ShoppingListEditorSheet mode="create" onSave={() => {}} onClose={() => {}} />)
   const qty = screen.getByLabelText('Item quantity')
-  expect(qty).toHaveAttribute('type', 'number')
-  expect(qty).toHaveAttribute('inputmode', 'decimal')
+  expect(qty).toHaveAttribute('type', 'text')
+  expect(qty).toHaveAttribute('inputmode', 'numeric')
   const name = screen.getByPlaceholderText('Item name…')
   fireEvent.change(name, { target: { value: 'Pears' } })
-  fireEvent.keyDown(screen.getByPlaceholderText('€'), { key: 'Enter' })
-  expect(name).toHaveValue('Pears')
+  fireEvent.change(qty, { target: { value: '4' } })
+  fireEvent.change(qty, { target: { value: '4e' } })
+  expect(qty).toHaveValue('4')
+  fireEvent.keyDown(qty, { key: 'Enter' })
+  expect(name).toHaveValue('')
+  expect(name).toHaveFocus()
+  expect(screen.getAllByText('Pears')).toHaveLength(1)
 })
 
 it('uses only the first attached photo, with a single-photo fallback', () => {

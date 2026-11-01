@@ -243,8 +243,7 @@ export default function ShoppingPage() {
     setAddName('')
     setAddQty('1')
     setAddPrice('')
-    if (phoneShopping) addInputRef.current?.focus({ preventScroll: true })
-    else requestAnimationFrame(() => addInputRef.current?.focus())
+    addInputRef.current?.focus({ preventScroll: true })
   }
 
   function cancelAdd() {
@@ -549,10 +548,10 @@ export default function ShoppingPage() {
                                               placeholder="Item name"
                                             />
                                             <input
-                                              type={phoneShopping ? 'text' : 'number'} min="0" step="any" inputMode={phoneShopping ? 'numeric' : 'decimal'}
-                                              aria-label="Edit item quantity" pattern={phoneShopping ? '[0-9]*' : undefined}
+                                              type="text" min="0" step="any" inputMode="numeric"
+                                              aria-label="Edit item quantity" pattern="[0-9]*"
                                               value={editQty}
-                                              onChange={e => { if (!phoneShopping || isShoppingQuantity(e.target.value)) setEditQty(e.target.value) }}
+                                              onChange={e => { if (isShoppingQuantity(e.target.value)) setEditQty(e.target.value) }}
                                               className="w-12 text-sm text-center rounded-xl px-2 py-2.5 outline-none"
                                               style={{ background: 'rgba(30,25,18,0.04)', color: C.textDark }}
                                             />
@@ -646,8 +645,8 @@ export default function ShoppingPage() {
                                       value={addName}
                                       onChange={e => setAddName(e.target.value)}
                                       onKeyDown={e => {
-                                        if (phoneShopping && e.nativeEvent.isComposing) return
-                                        if (phoneShopping && e.key === 'Enter') e.preventDefault()
+                                        if (e.nativeEvent.isComposing) return
+                                        if (e.key === 'Enter') e.preventDefault()
                                         if (e.key === 'Enter') confirmAdd()
                                         if (e.key === 'Escape') cancelAdd()
                                       }}
@@ -657,12 +656,12 @@ export default function ShoppingPage() {
                                       style={{ fontSize: 14, color: C.textDark }}
                                     />
                                     <input
-                                      type={phoneShopping ? 'text' : 'number'} min="0" step="any" inputMode={phoneShopping ? 'numeric' : 'decimal'}
-                                      aria-label="Item quantity" pattern={phoneShopping ? '[0-9]*' : undefined}
-                                      enterKeyHint={phoneShopping ? 'next' : undefined}
-                                      onKeyDown={phoneShopping ? e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } } : undefined}
+                                      type="text" min="0" step="any" inputMode="numeric"
+                                      aria-label="Item quantity" pattern="[0-9]*"
+                                      enterKeyHint="next"
+                                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } }}
                                       value={addQty}
-                                      onChange={e => { if (!phoneShopping || isShoppingQuantity(e.target.value)) setAddQty(e.target.value) }}
+                                      onChange={e => { if (isShoppingQuantity(e.target.value)) setAddQty(e.target.value) }}
                                       className="w-8 text-center bg-transparent outline-none tabular-nums"
                                       style={{ fontSize: 13, color: C.textMid }}
                                     />
@@ -685,8 +684,8 @@ export default function ShoppingPage() {
                                     <input
                                       type="number" min="0" step="any" inputMode="decimal"
                                       value={addPrice}
-                                      onKeyDown={phoneShopping ? e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } } : undefined}
-                                      enterKeyHint={phoneShopping ? 'next' : undefined}
+                                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } }}
+                                      enterKeyHint="next"
                                       onChange={e => setAddPrice(e.target.value)}
                                       placeholder="Unit price €"
                                       className="flex-1 outline-none bg-transparent"
