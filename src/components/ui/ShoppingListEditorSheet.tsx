@@ -11,6 +11,8 @@ import { PhotoGallery } from '@/components/ui/PhotoGallery'
 import { C2Sheet, C2SheetHeader, C2SheetBody, C2SheetFooter } from '@/components/ui'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { TimePicker } from '@/components/ui/TimePicker'
+import { useIOSDevice } from '@/hooks/useIOSDevice'
+import { isShoppingQuantity } from '@/lib/shopping-input'
 
 const RED = '#ef4444'
 
@@ -59,6 +61,8 @@ interface Props {
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalone = true }: Props) {
+  const ios = useIOSDevice()
+  const itemNameRef = useRef<HTMLInputElement>(null)
   const createList      = useAppStore(s => s.createShoppingList)
   const updateList      = useAppStore(s => s.updateShoppingList)
   const addStoreItem    = useAppStore(s => s.addShoppingItem)
@@ -135,7 +139,15 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
       addStoreItem(list.id, itemName.trim(), parseFloat(itemQty) || 1, itemNotes.trim() || undefined, parseFloat(itemPrice) || undefined, itemPhoto)
     }
     setItemName(''); setItemQty('1'); setItemPrice(''); setItemNotes(''); setItemPhoto(undefined)
-  }, [mode, list, itemName, itemQty, itemPrice, itemNotes, itemPhoto, addStoreItem])
+    if (ios) itemNameRef.current?.focus({ preventScroll: true })
+  }, [mode, list, itemName, itemQty, itemPrice, itemNotes, itemPhoto, addStoreItem, ios])
+
+  function addItemOnEnter(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+    event.preventDefault()
+    event.stopPropagation()
+    handleAddItem()
+  }
 
   /* ── Item inline editing (edit mode) ─────────────────────────────────── */
   function startEditItem(item: ShoppingItem) {
@@ -306,16 +318,21 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
               </button>
             )}
             <input
+              ref={itemNameRef}
               type="text" value={itemName} onChange={e => setItemName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddItem()}
+              onKeyDown={ios ? addItemOnEnter : e => e.key === 'Enter' && handleAddItem()}
+              enterKeyHint={ios ? 'next' : undefined}
               placeholder="Item name…"
               className="flex-1 text-sm text-gray-700 bg-white rounded-xl px-3 py-2 outline-none border border-gray-100 min-w-0"
             />
-            <input type="number" value={itemQty} onChange={e => setItemQty(e.target.value)}
+            <input type={ios ? 'text' : 'number'} value={itemQty} onChange={e => { if (!ios || isShoppingQuantity(e.target.value)) setItemQty(e.target.value) }}
+              aria-label="Item quantity" pattern={ios ? '[0-9]*' : undefined}
+              onKeyDown={ios ? addItemOnEnter : undefined} enterKeyHint={ios ? 'next' : undefined}
               onFocus={e => e.target.select()}
-              min="0" step="any" inputMode="decimal"
+              min="0" step="any" inputMode={ios ? 'numeric' : 'decimal'}
               className="w-10 text-xs text-center bg-white rounded-xl px-1 py-2 outline-none border border-gray-100 shrink-0" />
             <input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="€"
+              onKeyDown={ios ? addItemOnEnter : undefined} enterKeyHint={ios ? 'next' : undefined}
               min="0" step="any" inputMode="decimal"
               className="w-14 text-xs bg-white rounded-xl px-2 py-2 outline-none border border-gray-100 shrink-0" />
             <button
@@ -401,9 +418,10 @@ export function ShoppingListEditorSheet({ mode, list, onSave, onClose, standalon
                           className="flex-1 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-1.5 outline-none min-w-0"
                         />
                         <input
-                          type="number" value={editQty} onChange={e => setEditQty(e.target.value)}
+                          type={ios ? 'text' : 'number'} value={editQty} onChange={e => { if (!ios || isShoppingQuantity(e.target.value)) setEditQty(e.target.value) }}
+                          aria-label="Edit item quantity" pattern={ios ? '[0-9]*' : undefined}
                           onFocus={e => e.target.select()}
-                          min="0" step="any" inputMode="decimal"
+                          min="0" step="any" inputMode={ios ? 'numeric' : 'decimal'}
                           className="w-12 text-xs text-center bg-gray-50 rounded-lg px-1.5 py-1.5 outline-none shrink-0"
                         />
                         <input

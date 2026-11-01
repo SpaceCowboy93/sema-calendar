@@ -164,6 +164,7 @@ export interface ShoppingItem {
   price?: number
   link?: string
   photo?: string  // base64 data URL
+  photos?: string[] // optional item gallery; the first photo is its thumbnail
 }
 
 export interface FinanceCategoryItem {

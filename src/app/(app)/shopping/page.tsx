@@ -12,6 +12,8 @@ import {
   type LucideIcon,
 } from '@/design/iconSystem'
 import { useAppStore } from '@/store/useAppStore'
+import { useIOSDevice } from '@/hooks/useIOSDevice'
+import { firstShoppingPhoto, isShoppingQuantity } from '@/lib/shopping-input'
 import { getLivingMoment } from '@/lib/livingMoment'
 import { getTodayString, cn } from '@/lib/utils'
 import { C2PageBackground } from '@/components/ui/C2PageBackground'
@@ -85,8 +87,10 @@ function getCategoryIcon(name: string): LucideIcon {
   return ShoppingBag
 }
 
-function CategoryBadge({ name, dim = false }: { name: string; dim?: boolean }) {
+function CategoryBadge({ name, dim = false, photo }: { name: string; dim?: boolean; photo?: string }) {
   const Icon = getCategoryIcon(name)
+  if (photo) return <img src={photo} alt={`${name} photo`} width={30} height={30}
+    className="shrink-0 rounded-lg object-cover" style={{ width: 30, height: 30, opacity: dim ? 0.55 : 1 }} />
   return (
     <div
       className="shrink-0 flex items-center justify-center"
@@ -107,6 +111,7 @@ const ACTIVE_LIMIT = 5
    Page
 ───────────────────────────────────────────────────────────────────────────── */
 export default function ShoppingPage() {
+  const ios = useIOSDevice()
   const currentUser  = useAppStore(s => s.currentUser)!
   const lists        = useAppStore(s => s.shoppingLists)
   const events       = useAppStore(s => s.events)
@@ -238,7 +243,8 @@ export default function ShoppingPage() {
     setAddName('')
     setAddQty('1')
     setAddPrice('')
-    requestAnimationFrame(() => addInputRef.current?.focus())
+    if (ios) addInputRef.current?.focus({ preventScroll: true })
+    else requestAnimationFrame(() => addInputRef.current?.focus())
   }
 
   function cancelAdd() {
@@ -543,9 +549,10 @@ export default function ShoppingPage() {
                                               placeholder="Item name"
                                             />
                                             <input
-                                              type="number" min="0" step="any" inputMode="decimal"
+                                              type={ios ? 'text' : 'number'} min="0" step="any" inputMode={ios ? 'numeric' : 'decimal'}
+                                              aria-label="Edit item quantity" pattern={ios ? '[0-9]*' : undefined}
                                               value={editQty}
-                                              onChange={e => setEditQty(e.target.value)}
+                                              onChange={e => { if (!ios || isShoppingQuantity(e.target.value)) setEditQty(e.target.value) }}
                                               className="w-12 text-sm text-center rounded-xl px-2 py-2.5 outline-none"
                                               style={{ background: 'rgba(30,25,18,0.04)', color: C.textDark }}
                                             />
@@ -599,7 +606,7 @@ export default function ShoppingPage() {
                                             className="shrink-0 rounded-full border-[1.5px] flex items-center justify-center"
                                             style={{ width: 20, height: 20, borderColor: '#C8D8C4' }}
                                           />
-                                          <CategoryBadge name={item.name} />
+                                          <CategoryBadge name={item.name} photo={ios ? firstShoppingPhoto(item) : undefined} />
                                           <div className="flex-1 min-w-0">
                                             <p className="truncate" style={{ fontSize: 14, fontWeight: 500, color: C.textDark, lineHeight: 1.3 }}>
                                               {item.name}
@@ -639,6 +646,8 @@ export default function ShoppingPage() {
                                       value={addName}
                                       onChange={e => setAddName(e.target.value)}
                                       onKeyDown={e => {
+                                        if (ios && e.nativeEvent.isComposing) return
+                                        if (ios && e.key === 'Enter') e.preventDefault()
                                         if (e.key === 'Enter') confirmAdd()
                                         if (e.key === 'Escape') cancelAdd()
                                       }}
@@ -648,9 +657,12 @@ export default function ShoppingPage() {
                                       style={{ fontSize: 14, color: C.textDark }}
                                     />
                                     <input
-                                      type="number" min="0" step="any" inputMode="decimal"
+                                      type={ios ? 'text' : 'number'} min="0" step="any" inputMode={ios ? 'numeric' : 'decimal'}
+                                      aria-label="Item quantity" pattern={ios ? '[0-9]*' : undefined}
+                                      enterKeyHint={ios ? 'next' : undefined}
+                                      onKeyDown={ios ? e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } } : undefined}
                                       value={addQty}
-                                      onChange={e => setAddQty(e.target.value)}
+                                      onChange={e => { if (!ios || isShoppingQuantity(e.target.value)) setAddQty(e.target.value) }}
                                       className="w-8 text-center bg-transparent outline-none tabular-nums"
                                       style={{ fontSize: 13, color: C.textMid }}
                                     />
@@ -673,6 +685,8 @@ export default function ShoppingPage() {
                                     <input
                                       type="number" min="0" step="any" inputMode="decimal"
                                       value={addPrice}
+                                      onKeyDown={ios ? e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); confirmAdd() } } : undefined}
+                                      enterKeyHint={ios ? 'next' : undefined}
                                       onChange={e => setAddPrice(e.target.value)}
                                       placeholder="Unit price €"
                                       className="flex-1 outline-none bg-transparent"
@@ -765,7 +779,7 @@ export default function ShoppingPage() {
                                             >
                                               <Check size={9} strokeWidth={2.5} style={{ color: C.sage }} />
                                             </motion.button>
-                                            <CategoryBadge name={item.name} dim />
+                                            <CategoryBadge name={item.name} dim photo={ios ? firstShoppingPhoto(item) : undefined} />
                                             <p className="flex-1 line-through truncate" style={{ fontSize: 13, color: C.textMid }}>
                                               {item.name}
                                             </p>
