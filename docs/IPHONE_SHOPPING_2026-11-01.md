@@ -9,3 +9,9 @@ Branch: `fix/iphone-pwa`. The sync-recovery stash remains unchanged at `4ecb62a4
 - Physical iPhone keyboard behavior remains for user confirmation. Desktop Chrome's generic Responsive mode keeps desktop identification; select an iPhone device and reload to preview iPhone-specific behavior.
 
 Only Preview deployment is authorized. Production, original-database configuration and real caches remain untouched.
+
+## Responsive-mode follow-up
+
+The first fix identified iOS devices only, so the user's generic Chrome Responsive view still received the old quantity/Enter behavior. Shopping now enables these controls for iOS and for narrow non-Android viewports (up to 767 CSS px), including responsive resizing without reload. Full-width desktop and Android retain their previous controls. This applies to thumbnails as well as quantity/Enter handling.
+
+Regression checks specifically exercise both New and Edit Shopping List: `e`/`E` rejection, invalid paste rejection, Enter from quantity adding an item and restoring name-field focus without submitting the list. Six focused unit tests and four browser cases passed, including generic desktop Responsive mode at 367×599, WebKit/iPhone, Chromium/iPhone and Android.

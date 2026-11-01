@@ -12,7 +12,8 @@ test.beforeEach(async ({ page }) => {
 test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 367, height: 599 })
   await page.goto('/dev-preview/shopping')
-  const ios = await page.evaluate(() => /iPhone|iPad|iPod/.test(navigator.userAgent))
+  const ios = await page.evaluate(() => /iPhone|iPad|iPod/.test(navigator.userAgent)
+    || (matchMedia('(max-width: 767px)').matches && !/Android/i.test(navigator.userAgent)))
   await page.getByRole('button', { name: /New list/ }).click()
   const sheet = page.getByRole('dialog', { name: 'New Shopping List' })
   await sheet.getByPlaceholder(/List name/).fill('Keyboard QA')
@@ -64,5 +65,20 @@ test('shopping Enter, digits-only quantity and first-photo thumbnails', async ({
     if (ios) { await expect(photo).toHaveCount(1); await expect(photo).toHaveAttribute('src', first) }
     else await expect(photo).toHaveCount(0)
   }
+  await page.getByRole('button', { name: 'Edit Photo QA', exact: true }).click()
+  const editor = page.getByRole('dialog', { name: 'Edit Shopping List' })
+  const editName = editor.getByPlaceholder('Item name…')
+  const editQty = editor.getByLabel('Item quantity', { exact: true })
+  if (ios) {
+    await expect(editQty).toHaveAttribute('type', 'text')
+    await editName.fill('New edit-list item')
+    await editQty.fill('4')
+    await editQty.pressSequentially('eE')
+    await expect(editQty).toHaveValue('4')
+    await editQty.press('Enter')
+    await expect(editName).toBeFocused()
+    await expect(editName).toHaveValue('')
+    await expect(editQty).toHaveValue('1')
+  } else await expect(editQty).toHaveAttribute('type', 'number')
   await page.screenshot({ path: testInfo.outputPath('shopping-367.png') })
 })
